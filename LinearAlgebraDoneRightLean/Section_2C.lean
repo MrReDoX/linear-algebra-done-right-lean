@@ -40,6 +40,7 @@ namespace LADR.Section_2C
 open LADR.Section_2A (Spans)
 open LADR.Section_2B (IsBasis)
 open LADR.Section_1C (IsDirectSum)
+open Module (finrank Finite)
 
 variable {F : Type*} [Field F] {V : Type*} [AddCommGroup V] [Module F V]
 
@@ -58,16 +59,16 @@ theorem basis_card_eq {m n : ℕ} (v : Fin m → V) (w : Fin n → V)
 /-! 2.35 Definition: dimension, dim V
 
 The *dimension* of a finite-dimensional vector space is the length of any
-basis. mathlib's {name}`Module.finrank` is exactly this, so we use it
+basis. mathlib's {name}`finrank` is exactly this, so we use it
 directly throughout (no custom {lit}`dim` abbreviation). Note that
-{name}`Module.finrank` has no finite-dimensionality hypothesis: mathlib
+{name}`finrank` has no finite-dimensionality hypothesis: mathlib
 just assigns the garbage value {lean}`0` when {lean}`V` is
 infinite-dimensional. -/
 
-/-! Bridging: the length of any basis equals {lit}`Module.finrank F V`. -/
+/-! Bridging: the length of any basis equals {lit}`finrank F V`. -/
 
-theorem isBasis_card_eq_finrank [Module.Finite F V] {m : ℕ} (v : Fin m → V)
-    (hv : IsBasis F v) : m = Module.finrank F V := by
+theorem isBasis_card_eq_finrank [Finite F V] {m : ℕ} (v : Fin m → V)
+    (hv : IsBasis F v) : m = finrank F V := by
   obtain ⟨hv_li, hv_span⟩ := hv
   rw [Spans] at hv_span
   let b : Module.Basis (Fin m) F V :=
@@ -76,20 +77,20 @@ theorem isBasis_card_eq_finrank [Module.Finite F V] {m : ℕ} (v : Fin m → V)
 
 /-! 2.36 Example: dimensions -/
 
-example (n : ℕ) : Module.finrank F (Fin n → F) = n := by simp
+example (n : ℕ) : finrank F (Fin n → F) = n := by simp
 
-example (m : ℕ) : Module.finrank F (Polynomial.degreeLT F (m + 1)) = m + 1 := by
+example (m : ℕ) : finrank F (Polynomial.degreeLT F (m + 1)) = m + 1 := by
   simp only [(Polynomial.degreeLTEquiv F (m + 1)).finrank_eq,
     Module.finrank_pi, Fintype.card_fin]
 
-example : Module.finrank F (LADR.Section_2B.U_27e F) = 2 := by
+example : finrank F (LADR.Section_2B.U_27e F) = 2 := by
   obtain ⟨hli, hspan⟩ := LADR.Section_2B.isBasis_basisVec_27e (F := F)
   rw [Spans] at hspan
   let b : Module.Basis (Fin 2) F (LADR.Section_2B.U_27e F) :=
     Module.Basis.mk hli (by rw [hspan])
   simp [Module.finrank_eq_card_basis b]
 
-example : Module.finrank F (LADR.Section_2B.U_27f F) = 2 := by
+example : finrank F (LADR.Section_2B.U_27f F) = 2 := by
   obtain ⟨hli, hspan⟩ := LADR.Section_2B.isBasis_basisVec_27f (F := F)
   rw [Spans] at hspan
   let b : Module.Basis (Fin 2) F (LADR.Section_2B.U_27f F) :=
@@ -99,8 +100,8 @@ example : Module.finrank F (LADR.Section_2B.U_27f F) = 2 := by
 /-! 2.37 Dimension of a subspace -/
 
 @[avoiding Submodule.finrank_le]
-theorem finrank_submodule_le [Module.Finite F V] (U : Submodule F V) :
-    Module.finrank F U ≤ Module.finrank F V := by
+theorem finrank_submodule_le [Finite F V] (U : Submodule F V) :
+    finrank F U ≤ finrank F V := by
   classical
   obtain ⟨m, u, hu_basis⟩ :=
     LADR.Section_2B.exists_basis (F := F) (V := U)
@@ -111,18 +112,18 @@ theorem finrank_submodule_le [Module.Finite F V] (U : Submodule F V) :
       (LinearMap.ker_eq_bot_of_injective Subtype.val_injective)
   have hmn : m ≤ n :=
     LADR.Section_2A.linearIndependent_le_spanning uV w hu_li_V hw_basis.2
-  have hm : m = Module.finrank F U := isBasis_card_eq_finrank u hu_basis
-  have hn : n = Module.finrank F V := isBasis_card_eq_finrank w hw_basis
+  have hm : m = finrank F U := isBasis_card_eq_finrank u hu_basis
+  have hn : n = finrank F V := isBasis_card_eq_finrank w hw_basis
   omega
 
 /-! 2.38 Linearly independent list of the right length is a basis -/
 
 @[avoiding LinearIndependent.span_eq_top_of_card_eq_finrank']
-theorem isBasis_of_linearIndependent_of_card_eq [Module.Finite F V] {m : ℕ}
-    (v : Fin m → V) (hv : LinearIndependent F v) (hm : m = Module.finrank F V) :
+theorem isBasis_of_linearIndependent_of_card_eq [Finite F V] {m : ℕ}
+    (v : Fin m → V) (hv : LinearIndependent F v) (hm : m = finrank F V) :
     IsBasis F v := by
   obtain ⟨n, w, hmn, hw_basis, hw_prefix⟩ := LADR.Section_2B.exists_basis_extending v hv
-  have hn : n = Module.finrank F V := isBasis_card_eq_finrank w hw_basis
+  have hn : n = finrank F V := isBasis_card_eq_finrank w hw_basis
   have hmn_eq : m = n := by omega
   subst hmn_eq
   have hv_eq : v = w := by
@@ -134,8 +135,8 @@ theorem isBasis_of_linearIndependent_of_card_eq [Module.Finite F V] {m : ℕ}
 /-! 2.39 Subspace of full dimension equals the whole space -/
 
 @[avoiding Submodule.eq_top_of_finrank_eq]
-theorem subspace_eq_top_of_finrank_eq [Module.Finite F V] (U : Submodule F V)
-    (h : Module.finrank F U = Module.finrank F V) : U = ⊤ := by
+theorem subspace_eq_top_of_finrank_eq [Finite F V] (U : Submodule F V)
+    (h : finrank F U = finrank F V) : U = ⊤ := by
   classical
   obtain ⟨m, u, hu_basis⟩ :=
     LADR.Section_2B.exists_basis (F := F) (V := U)
@@ -143,8 +144,8 @@ theorem subspace_eq_top_of_finrank_eq [Module.Finite F V] (U : Submodule F V)
   have hu_li_V : LinearIndependent F uV :=
     hu_basis.1.map' U.subtype
       (LinearMap.ker_eq_bot_of_injective Subtype.val_injective)
-  have hm_U : m = Module.finrank F U := isBasis_card_eq_finrank u hu_basis
-  have hm_V : m = Module.finrank F V := hm_U.trans h
+  have hm_U : m = finrank F U := isBasis_card_eq_finrank u hu_basis
+  have hm_V : m = finrank F V := hm_U.trans h
   have huV_basis : IsBasis F uV :=
     isBasis_of_linearIndependent_of_card_eq uV hu_li_V hm_V
   have hspan : Submodule.span F (Set.range uV) = ⊤ := huV_basis.2
@@ -310,33 +311,33 @@ private lemma X_not_mem_U_2_41 :
   simp at this
 
 /-- {lit}`U_2_41` is finite-dimensional (as a submodule of a fin-dim space). -/
-instance : Module.Finite ℝ U_2_41 := by
-  have : Module.Finite ℝ (Polynomial.degreeLT ℝ 4) :=
+instance : Finite ℝ U_2_41 := by
+  have : Finite ℝ (Polynomial.degreeLT ℝ 4) :=
     Module.Finite.equiv (Polynomial.degreeLTEquiv ℝ 4).symm
   exact Module.Finite.of_injective U_2_41.subtype Subtype.val_injective
 
 /-- {lit}`dim U_2_41 = 3`. -/
-private theorem finrank_U_2_41 : Module.finrank ℝ U_2_41 = 3 := by
+private theorem finrank_U_2_41 : finrank ℝ U_2_41 = 3 := by
   -- Lower bound: the 3-vector LI list lives in {lit}`U_2_41`, so
   -- {lit}`3 ≤ dim U_2_41`.
   have hLI := linearIndependent_basisVec_2_41
-  have hP : Module.Finite ℝ (Polynomial.degreeLT ℝ 4) :=
+  have hP : Finite ℝ (Polynomial.degreeLT ℝ 4) :=
     Module.Finite.equiv (Polynomial.degreeLTEquiv ℝ 4).symm
-  have hge : 3 ≤ Module.finrank ℝ U_2_41 := by
+  have hge : 3 ≤ finrank ℝ U_2_41 := by
     haveI : FiniteDimensional ℝ U_2_41 := inferInstance
     have := hLI.fintype_card_le_finrank
     simpa using this
   -- Upper bound: {lit}`dim U_2_41 ≤ dim P₃(ℝ) = 4`. We exclude {lit}`= 4`
   -- because {lit}`X ∉ U_2_41`, so {lit}`U_2_41 ≠ ⊤`; by 2.39 this forces
   -- {lit}`dim U_2_41 ≠ 4`, hence {lit}`≤ 3`.
-  have hdimP : Module.finrank ℝ (Polynomial.degreeLT ℝ 4) = 4 := by
+  have hdimP : finrank ℝ (Polynomial.degreeLT ℝ 4) = 4 := by
     simp only [(Polynomial.degreeLTEquiv ℝ 4).finrank_eq,
       Module.finrank_pi, Fintype.card_fin]
-  have hle_4 : Module.finrank ℝ U_2_41 ≤ 4 := by
+  have hle_4 : finrank ℝ U_2_41 ≤ 4 := by
     have := finrank_submodule_le U_2_41
     rw [hdimP] at this; exact this
   have hne_top : U_2_41 ≠ ⊤ := fun h => X_not_mem_U_2_41 (by rw [h]; trivial)
-  have hne_4 : Module.finrank ℝ U_2_41 ≠ 4 := by
+  have hne_4 : finrank ℝ U_2_41 ≠ 4 := by
     intro heq
     apply hne_top
     apply subspace_eq_top_of_finrank_eq
@@ -349,8 +350,8 @@ theorem isBasis_basisVec_2_41 : IsBasis ℝ basisVec_2_41 :=
 
 /-! 2.42 Spanning list of the right length is a basis -/
 @[avoiding linearIndependent_of_top_le_span_of_card_eq_finrank]
-theorem isBasis_of_spans_of_card_eq [Module.Finite F V] {m : ℕ}
-    (v : Fin m → V) (hv : Spans F v) (hm : m = Module.finrank F V) :
+theorem isBasis_of_spans_of_card_eq [Finite F V] {m : ℕ}
+    (v : Fin m → V) (hv : Spans F v) (hm : m = finrank F V) :
     IsBasis F v := by
   refine ⟨?_, hv⟩
   by_contra hdep
@@ -366,7 +367,7 @@ theorem isBasis_of_spans_of_card_eq [Module.Finite F V] {m : ℕ}
     show Submodule.span F (Set.range w) = ⊤
     rw [hw_range, ← hspan_eq]; exact hv
   obtain ⟨n, u, hu_basis⟩ := LADR.Section_2B.exists_basis (F := F) (V := V)
-  have hn : n = Module.finrank F V := isBasis_card_eq_finrank u hu_basis
+  have hn : n = finrank F V := isBasis_card_eq_finrank u hu_basis
   have hle : n ≤ m' :=
     LADR.Section_2A.linearIndependent_le_spanning u w hu_basis.1 hw_spans
   omega
@@ -382,16 +383,16 @@ hence {lit}`dim(V₁+V₂) = m + j + k = (m+j) + (m+k) - m = dim V₁ + dim V₂
 
 section dim_sum
 
-variable [Module.Finite F V] (V₁ V₂ : Submodule F V)
+variable [Finite F V] (V₁ V₂ : Submodule F V)
 
 @[avoiding Submodule.finrank_sup_add_finrank_inf_eq]
 theorem finrank_sup_add_finrank_inf_eq :
-    Module.finrank F ↥(V₁ ⊔ V₂) + Module.finrank F ↥(V₁ ⊓ V₂) =
-      Module.finrank F V₁ + Module.finrank F V₂ := by
+    finrank F ↥(V₁ ⊔ V₂) + finrank F ↥(V₁ ⊓ V₂) =
+      finrank F V₁ + finrank F V₂ := by
   classical
   obtain ⟨m, u, hu_basis⟩ :=
     LADR.Section_2B.exists_basis (F := F) (V := ↥(V₁ ⊓ V₂))
-  have hm_inf : m = Module.finrank F ↥(V₁ ⊓ V₂) :=
+  have hm_inf : m = finrank F ↥(V₁ ⊓ V₂) :=
     isBasis_card_eq_finrank u hu_basis
   let uV1 : Fin m → ↥V₁ := fun i => ⟨(u i : V), (u i).property.1⟩
   let uV2 : Fin m → ↥V₂ := fun i => ⟨(u i : V), (u i).property.2⟩
@@ -406,12 +407,12 @@ theorem finrank_sup_add_finrank_inf_eq :
   obtain ⟨n1, v, hmn1, hv_basis, hv_prefix⟩ :=
     LADR.Section_2B.exists_basis_extending uV1 huV1_li
   obtain ⟨j, rfl⟩ : ∃ j, n1 = m + j := ⟨n1 - m, by omega⟩
-  have hv_len : m + j = Module.finrank F ↥V₁ :=
+  have hv_len : m + j = finrank F ↥V₁ :=
     isBasis_card_eq_finrank v hv_basis
   obtain ⟨n2, w, hmn2, hw_basis, hw_prefix⟩ :=
     LADR.Section_2B.exists_basis_extending uV2 huV2_li
   obtain ⟨k, rfl⟩ : ∃ k, n2 = m + k := ⟨n2 - m, by omega⟩
-  have hw_len : m + k = Module.finrank F ↥V₂ :=
+  have hw_len : m + k = finrank F ↥V₂ :=
     isBasis_card_eq_finrank w hw_basis
   let vV : Fin (m + j) → V := fun p => (v p : V)
   let wTail : Fin k → V := fun q => (w (Fin.natAdd m q) : V)
@@ -679,7 +680,7 @@ theorem finrank_sup_add_finrank_inf_eq :
     · show dF q = 0
       exact hdF_zero q
   have hjointS_basis : IsBasis F jointS := ⟨hjointS_li, hjointS_spans⟩
-  have hsup_len : m + j + k = Module.finrank F ↥(V₁ ⊔ V₂) :=
+  have hsup_len : m + j + k = finrank F ↥(V₁ ⊔ V₂) :=
     isBasis_card_eq_finrank jointS hjointS_basis
   omega
 
@@ -687,141 +688,350 @@ end dim_sum
 
 /-! # Exercises -/
 
-/-- 2C.1 The subspaces of {lit}`ℝ²` are precisely {lit}`{0}`, the lines
-through the origin, and {lit}`ℝ²`. -/
+/-- 2C.1 (we replace lines containing 0 with subspaces of rank 1) -/
 theorem exercise_2C_1 (U : Submodule ℝ (Fin 2 → ℝ)) :
-    U = ⊥ ∨ Module.finrank ℝ U = 1 ∨ U = ⊤ := by
+    U = ⊥ ∨ finrank ℝ U = 1 ∨ U = ⊤ := by
   sorry
 
-/-- 2C.2 The subspaces of {lit}`ℝ³` are precisely {lit}`{0}`, the lines
-through the origin, the planes through the origin, and {lit}`ℝ³`. -/
+/-- 2C.2 (we replace lines containing 0 with subspaces of rank 1, and
+planes through the origin with subspaces of rank 2) -/
 theorem exercise_2C_2 (U : Submodule ℝ (Fin 3 → ℝ)) :
-    U = ⊥ ∨ Module.finrank ℝ U = 1 ∨ Module.finrank ℝ U = 2 ∨ U = ⊤ := by
+    U = ⊥ ∨ finrank ℝ U = 1 ∨ finrank ℝ U = 2 ∨ U = ⊤ := by
   sorry
 
-/-! 2C.3 Let {lit}`U = {p ∈ P₄(F) : p(6) = 0}`. (a) Find a basis of {lit}`U`.
-(b) Extend to a basis of {lit}`P₄(F)`. (c) Find {lit}`W` with
-{lit}`P₄(F) = U ⊕ W`. (Stated; explicit subspace not encoded here — would
-need a polynomial-evaluation linear map and its kernel.) -/
+/-! 2C.3 -/
 
-/-! 2C.4 Let {lit}`U = {p ∈ P₄(ℝ) : p''(6) = 0}`. (Stated; not encoded —
-requires {lit}`Polynomial.derivative`.) -/
+def U_2C_3 (F : Type*) [Field F] : Submodule F (Polynomial.degreeLT F 5) where
+  carrier := {p | (p.val.eval 6 : F) = 0}
+  zero_mem' := by simp
+  add_mem' := by
+    intro p q hp hq
+    show (p.val + q.val).eval 6 = 0
+    rw [Polynomial.eval_add, hp, hq, add_zero]
+  smul_mem' := by
+    intro a p hp
+    show (a • p.val).eval 6 = 0
+    rw [Polynomial.eval_smul, hp, smul_zero]
 
-/-! 2C.5 Let {lit}`U = {p ∈ P₄(F) : p(2) = p(5)}`. (Stated; explicit subspace
-not encoded here.) -/
+/-- 2C.3 (a): find a list for a basis of {lit}`U_2C_3`. -/
+noncomputable def U_2C_3_basis (F : Type*) [Field F] : Fin sorry → U_2C_3 F := sorry
+theorem exercise_2C_3a [CharZero F] : IsBasis F (U_2C_3_basis F) := by
+  sorry
 
-/-! 2C.6 Let {lit}`U = {p ∈ P₄(F) : p(2) = p(5) = p(6)}`. (Stated; explicit
-subspace not encoded here.) -/
+/-- (b) Extension of the {lit}`U_2C_3` basis to a basis of {lit}`P₄(F)`. -/
+noncomputable def U_2C_3_extension (F : Type*) [Field F] :
+    Fin sorry → Polynomial.degreeLT F 5 := sorry
+theorem exercise_2C_3b [CharZero F] :
+    IsBasis F (Fin.append (fun i => ((U_2C_3_basis F i : Polynomial.degreeLT F 5)))
+      (U_2C_3_extension F)) := by
+  sorry
 
-/-! 2C.7 Let {lit}`U = {p ∈ P₄(ℝ) : ∫₋₁¹ p = 0}`. (Stated; not encoded —
-requires interval integration.) -/
+noncomputable def W_2C_3 (F : Type*) [Field F] :
+    Submodule F (Polynomial.degreeLT F 5) := sorry
+theorem exercise_2C_3c [CharZero F] : IsCompl (U_2C_3 F) (W_2C_3 F) := by
+  sorry
 
-/-- 2C.8 Suppose {lit}`v₁, …, vₘ` is linearly independent in {lit}`V` and
-{lit}`w ∈ V`. Prove {lit}`dim span(v₁ + w, …, vₘ + w) ≥ m - 1`. -/
+/-! 2C.4 -/
+noncomputable def U_2C_4 : Submodule ℝ (Polynomial.degreeLT ℝ 5) where
+  carrier := {p | (p.val.derivative.derivative.eval 6 : ℝ) = 0}
+  zero_mem' := by simp
+  add_mem' := by
+    intro p q hp hq
+    show (p.val + q.val).derivative.derivative.eval 6 = 0
+    rw [Polynomial.derivative_add, Polynomial.derivative_add,
+      Polynomial.eval_add, hp, hq, add_zero]
+  smul_mem' := by
+    intro a p hp
+    show (a • p.val).derivative.derivative.eval 6 = 0
+    rw [Polynomial.derivative_smul, Polynomial.derivative_smul,
+      Polynomial.eval_smul, hp, smul_zero]
+
+/-- (a) A basis of {lit}`U_2C_4`. -/
+noncomputable def U_2C_4_basis : Fin sorry → U_2C_4 := sorry
+
+/-- 2C.4 (a): the chosen list is a basis of {lit}`U_2C_4`. -/
+theorem exercise_2C_4a : IsBasis ℝ U_2C_4_basis := by
+  sorry
+
+/-- (b) Extension of the {lit}`U_2C_4` basis to a basis of {lit}`P₄(ℝ)`. -/
+noncomputable def U_2C_4_extension : Fin sorry → Polynomial.degreeLT ℝ 5 := sorry
+
+/-- 2C.4 (b): appending the extension to the basis of {lit}`U_2C_4` gives a
+basis of {lit}`P₄(ℝ)`. -/
+theorem exercise_2C_4b :
+    IsBasis ℝ (Fin.append (fun i => ((U_2C_4_basis i : Polynomial.degreeLT ℝ 5)))
+      U_2C_4_extension) := by
+  sorry
+
+/-- (c) Complement of {lit}`U_2C_4` inside {lit}`P₄(ℝ)`. -/
+noncomputable def W_2C_4 : Submodule ℝ (Polynomial.degreeLT ℝ 5) := sorry
+
+/-- 2C.4 (c): {lit}`U_2C_4` and {lit}`W_2C_4` are complementary. -/
+theorem exercise_2C_4c : IsCompl U_2C_4 W_2C_4 := by
+  sorry
+
+/-! 2C.5 -/
+
+def U_2C_5 (F : Type*) [Field F] : Submodule F (Polynomial.degreeLT F 5) where
+  carrier := {p | (p.val.eval 2 : F) = p.val.eval 5}
+  zero_mem' := by simp
+  add_mem' := by
+    intro p q hp hq
+    show (p.val + q.val).eval 2 = (p.val + q.val).eval 5
+    rw [Polynomial.eval_add, Polynomial.eval_add, hp, hq]
+  smul_mem' := by
+    intro a p hp
+    show (a • p.val).eval 2 = (a • p.val).eval 5
+    rw [Polynomial.eval_smul, Polynomial.eval_smul, hp]
+
+/-- (a) A basis of {lit}`U_2C_5`. -/
+noncomputable def U_2C_5_basis (F : Type*) [Field F] : Fin sorry → U_2C_5 F := sorry
+
+/-- 2C.5 (a): the chosen list is a basis of {lit}`U_2C_5`. -/
+theorem exercise_2C_5a [CharZero F] : IsBasis F (U_2C_5_basis F) := by
+  sorry
+
+/-- (b) Extension of the {lit}`U_2C_5` basis to a basis of {lit}`P₄(F)`. -/
+noncomputable def U_2C_5_extension (F : Type*) [Field F] :
+    Fin sorry → Polynomial.degreeLT F 5 := sorry
+
+/-- 2C.5 (b): appending the extension to the basis of {lit}`U_2C_5` gives a
+basis of {lit}`P₄(F)`. -/
+theorem exercise_2C_5b [CharZero F] :
+    IsBasis F (Fin.append (fun i => ((U_2C_5_basis F i : Polynomial.degreeLT F 5)))
+      (U_2C_5_extension F)) := by
+  sorry
+
+/-- (c) Complement of {lit}`U_2C_5` inside {lit}`P₄(F)`. -/
+noncomputable def W_2C_5 (F : Type*) [Field F] :
+    Submodule F (Polynomial.degreeLT F 5) := sorry
+
+/-- 2C.5 (c): {lit}`U_2C_5` and {lit}`W_2C_5` are complementary. -/
+theorem exercise_2C_5c [CharZero F] : IsCompl (U_2C_5 F) (W_2C_5 F) := by
+  sorry
+
+/-! 2C.6 -/
+
+/-- {lit}`{p ∈ P₄(F) : p(2) = p(5) = p(6)}`. -/
+def U_2C_6 (F : Type*) [Field F] : Submodule F (Polynomial.degreeLT F 5) where
+  carrier := {p | (p.val.eval 2 : F) = p.val.eval 5 ∧ p.val.eval 5 = p.val.eval 6}
+  zero_mem' := by simp
+  add_mem' := by
+    intro p q hp hq
+    refine ⟨?_, ?_⟩
+    · show (p.val + q.val).eval 2 = (p.val + q.val).eval 5
+      rw [Polynomial.eval_add, Polynomial.eval_add, hp.1, hq.1]
+    · show (p.val + q.val).eval 5 = (p.val + q.val).eval 6
+      rw [Polynomial.eval_add, Polynomial.eval_add, hp.2, hq.2]
+  smul_mem' := by
+    intro a p hp
+    refine ⟨?_, ?_⟩
+    · show (a • p.val).eval 2 = (a • p.val).eval 5
+      rw [Polynomial.eval_smul, Polynomial.eval_smul, hp.1]
+    · show (a • p.val).eval 5 = (a • p.val).eval 6
+      rw [Polynomial.eval_smul, Polynomial.eval_smul, hp.2]
+
+/-- (a) A basis of {lit}`U_2C_6`. -/
+noncomputable def U_2C_6_basis (F : Type*) [Field F] : Fin sorry → U_2C_6 F := sorry
+
+/-- 2C.6 (a): the chosen list is a basis of {lit}`U_2C_6`. -/
+theorem exercise_2C_6a [CharZero F] : IsBasis F (U_2C_6_basis F) := by
+  sorry
+
+/-- (b) Extension of the {lit}`U_2C_6` basis to a basis of {lit}`P₄(F)`. -/
+noncomputable def U_2C_6_extension (F : Type*) [Field F] :
+    Fin sorry → Polynomial.degreeLT F 5 := sorry
+
+/-- 2C.6 (b): appending the extension to the basis of {lit}`U_2C_6` gives a
+basis of {lit}`P₄(F)`. -/
+theorem exercise_2C_6b [CharZero F] :
+    IsBasis F (Fin.append (fun i => ((U_2C_6_basis F i : Polynomial.degreeLT F 5)))
+      (U_2C_6_extension F)) := by
+  sorry
+
+/-- (c) Complement of {lit}`U_2C_6` inside {lit}`P₄(F)`. -/
+noncomputable def W_2C_6 (F : Type*) [Field F] :
+    Submodule F (Polynomial.degreeLT F 5) := sorry
+
+/-- 2C.6 (c): {lit}`U_2C_6` and {lit}`W_2C_6` are complementary. -/
+theorem exercise_2C_6c [CharZero F] : IsCompl (U_2C_6 F) (W_2C_6 F) := by
+  sorry
+
+/-! 2C.7 Let {lit}`U = {p ∈ P₄(ℝ) : ∫₋₁¹ p = 0}`. We encode the integral
+algebraically: for {lit}`p = ∑ cᵢ Xⁱ` of degree {lit}`< 5`,
+{lit}`∫₋₁¹ p = ∑ᵢ cᵢ · (1 - (-1)^(i+1))/(i+1) = 2 c₀ + (2/3) c₂ + (2/5) c₄`.
+Vanishing of this linear form on coefficients is what we use. -/
+
+/-- {lit}`{p ∈ P₄(ℝ) : ∫₋₁¹ p = 0}`, encoded via the closed-form integral
+{lit}`2 c₀ + (2/3) c₂ + (2/5) c₄ = 0` on coefficients. -/
+noncomputable def U_2C_7 : Submodule ℝ (Polynomial.degreeLT ℝ 5) where
+  carrier := {p | (2 * p.val.coeff 0 + (2 / 3) * p.val.coeff 2
+                   + (2 / 5) * p.val.coeff 4 : ℝ) = 0}
+  zero_mem' := by simp
+  add_mem' := by
+    intro p q hp hq
+    show 2 * (p.val + q.val).coeff 0 + (2 / 3) * (p.val + q.val).coeff 2
+         + (2 / 5) * (p.val + q.val).coeff 4 = 0
+    simp only [Polynomial.coeff_add]
+    have hp' : 2 * p.val.coeff 0 + (2 / 3) * p.val.coeff 2
+               + (2 / 5) * p.val.coeff 4 = 0 := hp
+    have hq' : 2 * q.val.coeff 0 + (2 / 3) * q.val.coeff 2
+               + (2 / 5) * q.val.coeff 4 = 0 := hq
+    linarith
+  smul_mem' := by
+    intro a p hp
+    show 2 * (a • p.val).coeff 0 + (2 / 3) * (a • p.val).coeff 2
+         + (2 / 5) * (a • p.val).coeff 4 = 0
+    simp only [Polynomial.coeff_smul, smul_eq_mul]
+    have hp' : 2 * p.val.coeff 0 + (2 / 3) * p.val.coeff 2
+               + (2 / 5) * p.val.coeff 4 = 0 := hp
+    linear_combination a * hp'
+
+/-- (a) A basis of {lit}`U_2C_7`. -/
+noncomputable def U_2C_7_basis : Fin sorry → U_2C_7 := sorry
+
+/-- 2C.7 (a): the chosen list is a basis of {lit}`U_2C_7`. -/
+theorem exercise_2C_7a : IsBasis ℝ U_2C_7_basis := by
+  sorry
+
+/-- (b) Extension of the {lit}`U_2C_7` basis to a basis of {lit}`P₄(ℝ)`. -/
+noncomputable def U_2C_7_extension : Fin sorry → Polynomial.degreeLT ℝ 5 := sorry
+
+/-- 2C.7 (b): appending the extension to the basis of {lit}`U_2C_7` gives a
+basis of {lit}`P₄(ℝ)`. -/
+theorem exercise_2C_7b :
+    IsBasis ℝ (Fin.append (fun i => ((U_2C_7_basis i : Polynomial.degreeLT ℝ 5)))
+      U_2C_7_extension) := by
+  sorry
+
+/-- (c) Complement of {lit}`U_2C_7` inside {lit}`P₄(ℝ)`. -/
+noncomputable def W_2C_7 : Submodule ℝ (Polynomial.degreeLT ℝ 5) := sorry
+
+/-- 2C.7 (c): {lit}`U_2C_7` and {lit}`W_2C_7` are complementary. -/
+theorem exercise_2C_7c : IsCompl U_2C_7 W_2C_7 := by
+  sorry
+
+/-- 2C.8 -/
 theorem exercise_2C_8 {m : ℕ} (v : Fin m → V) (hv : LinearIndependent F v)
     (w : V) :
-    m - 1 ≤ Module.finrank F
-      ↥(Submodule.span F (Set.range (fun i : Fin m => v i + w))) := by
+    m - 1 ≤ finrank F
+      (Submodule.span F (Set.range (fun i : Fin m => v i + w))) := by
   sorry
 
-/-- 2C.9 Suppose {lit}`m ≥ 1` and {lit}`p₀, p₁, …, pₘ ∈ P(F)` are such that
-each {lit}`pₖ` has degree {lit}`k`. Prove that {lit}`p₀, p₁, …, pₘ` is a
-basis of {lit}`Pₘ(F)`. -/
+/-- 2C.9 -/
 theorem exercise_2C_9 [Infinite F] (m : ℕ) (hm : 1 ≤ m)
     (p : Fin (m + 1) → Polynomial.degreeLT F (m + 1))
     (hp : ∀ k : Fin (m + 1), (p k : Polynomial F).degree = (k : ℕ)) :
     IsBasis F p := by
   sorry
 
-/-- 2C.10 Let {lit}`m ≥ 1` and {lit}`pₖ(x) = xᵏ (1 - x)ᵐ⁻ᵏ` for
-{lit}`0 ≤ k ≤ m`. Show that {lit}`p₀, …, pₘ` is a basis of {lit}`Pₘ(F)`. -/
+/-- {lit}`X^a (1 - X)^b` lies in {lit}`degreeLT F (a + b + 1)`: its
+{lit}`natDegree` is at most {lit}`a + b`. -/
+private lemma X_pow_one_sub_X_pow_mem_degreeLT (a b : ℕ) :
+    (Polynomial.X ^ a * (1 - Polynomial.X) ^ b : Polynomial F)
+      ∈ Polynomial.degreeLT F (a + b + 1) := by
+  rw [Polynomial.mem_degreeLT]
+  calc (Polynomial.X ^ a * (1 - Polynomial.X) ^ b : Polynomial F).degree
+      ≤ (Polynomial.X ^ a : Polynomial F).degree
+          + ((1 - Polynomial.X) ^ b : Polynomial F).degree :=
+        Polynomial.degree_mul_le _ _
+    _ ≤ (a : WithBot ℕ) + b := by
+        gcongr
+        · simp only [Polynomial.degree_X_pow_le (R := F) a]
+        · have hdeg : (1 - Polynomial.X : Polynomial F).degree ≤ 1 := by
+            calc (1 - Polynomial.X : Polynomial F).degree
+                ≤ max (1 : Polynomial F).degree (-Polynomial.X : Polynomial F).degree := by
+                  rw [sub_eq_add_neg]; exact Polynomial.degree_add_le _ _
+              _ ≤ 1 := by simp [Polynomial.degree_one, Polynomial.degree_neg,
+                  Polynomial.degree_X]
+          calc ((1 - Polynomial.X) ^ b : Polynomial F).degree
+              ≤ b • (1 - Polynomial.X : Polynomial F).degree :=
+                Polynomial.degree_pow_le _ _
+            _ ≤ b • (1 : WithBot ℕ) := by gcongr
+            _ = b := by simp
+    _ < (a + b + 1 : ℕ) := by push_cast; exact_mod_cast Nat.lt_succ_self _
+
+/-- 2C.10 -/
 theorem exercise_2C_10 [Infinite F] (m : ℕ) (hm : 1 ≤ m) :
     IsBasis F (fun k : Fin (m + 1) =>
       (⟨Polynomial.X ^ (k : ℕ) * (1 - Polynomial.X) ^ (m - (k : ℕ)), by
-        sorry⟩ : Polynomial.degreeLT F (m + 1))) := by
+        have hk : (k : ℕ) + (m - (k : ℕ)) = m := by have := k.isLt; omega
+        have := X_pow_one_sub_X_pow_mem_degreeLT (F := F) (k : ℕ) (m - (k : ℕ))
+        rwa [hk] at this⟩ : Polynomial.degreeLT F (m + 1))) := by
   sorry
 
-/-- 2C.11 If {lit}`U, W` are 4-dimensional subspaces of {lit}`ℂ⁶`, prove
-that there exist two vectors in {lit}`U ∩ W` such that neither is a scalar
-multiple of the other. -/
+/-- 2C.11 -/
 theorem exercise_2C_11 (U W : Submodule ℂ (Fin 6 → ℂ))
-    (hU : Module.finrank ℂ U = 4) (hW : Module.finrank ℂ W = 4) :
+    (hU : finrank ℂ U = 4) (hW : finrank ℂ W = 4) :
     ∃ x y : (U ⊓ W : Submodule ℂ (Fin 6 → ℂ)),
       (∀ a : ℂ, x ≠ a • y) ∧ (∀ b : ℂ, y ≠ b • x) := by
   sorry
 
-/-- 2C.12 Suppose {lit}`U, W ≤ ℝ⁸` with {lit}`dim U = 3, dim W = 5,
-U + W = ℝ⁸`. Prove {lit}`ℝ⁸ = U ⊕ W`. -/
+/-- 2C.12 -/
 theorem exercise_2C_12 (U W : Submodule ℝ (Fin 8 → ℝ))
-    (hU : Module.finrank ℝ U = 3) (hW : Module.finrank ℝ W = 5)
+    (hU : finrank ℝ U = 3) (hW : finrank ℝ W = 5)
     (hUW : U ⊔ W = ⊤) : IsCompl U W := by
   sorry
 
-/-- 2C.13 If {lit}`U, W` are 5-dimensional subspaces of {lit}`ℝ⁹`, prove
-{lit}`U ∩ W ≠ {0}`. -/
+/-- 2C.13 -/
 theorem exercise_2C_13 (U W : Submodule ℝ (Fin 9 → ℝ))
-    (hU : Module.finrank ℝ U = 5) (hW : Module.finrank ℝ W = 5) :
+    (hU : finrank ℝ U = 5) (hW : finrank ℝ W = 5) :
     U ⊓ W ≠ ⊥ := by
   sorry
 
-/-- 2C.14 If {lit}`V` is 10-dim and {lit}`V₁, V₂, V₃` are subspaces of {lit}`V`
-with {lit}`dim V₁ = dim V₂ = dim V₃ = 7`, prove {lit}`V₁ ∩ V₂ ∩ V₃ ≠ {0}`. -/
-theorem exercise_2C_14 [Module.Finite F V] (hV : Module.finrank F V = 10)
+/-- 2C.14 -/
+theorem exercise_2C_14 [Finite F V] (hV : finrank F V = 10)
     (V₁ V₂ V₃ : Submodule F V)
-    (hV₁ : Module.finrank F V₁ = 7) (hV₂ : Module.finrank F V₂ = 7)
-    (hV₃ : Module.finrank F V₃ = 7) :
+    (hV₁ : finrank F V₁ = 7) (hV₂ : finrank F V₂ = 7)
+    (hV₃ : finrank F V₃ = 7) :
     V₁ ⊓ V₂ ⊓ V₃ ≠ ⊥ := by
   sorry
 
-/-- 2C.15 If {lit}`V` is finite-dimensional and {lit}`V₁, V₂, V₃` are
-subspaces with {lit}`dim V₁ + dim V₂ + dim V₃ > 2 dim V`, prove
-{lit}`V₁ ∩ V₂ ∩ V₃ ≠ {0}`. -/
-theorem exercise_2C_15 [Module.Finite F V] (V₁ V₂ V₃ : Submodule F V)
-    (hsum : Module.finrank F V₁ + Module.finrank F V₂ + Module.finrank F V₃ >
-      2 * Module.finrank F V) :
+/-- 2C.15 -/
+theorem exercise_2C_15 [Finite F V] (V₁ V₂ V₃ : Submodule F V)
+    (hsum : finrank F V₁ + finrank F V₂ + finrank F V₃ >
+      2 * finrank F V) :
     V₁ ⊓ V₂ ⊓ V₃ ≠ ⊥ := by
   sorry
 
-/-- 2C.16 If {lit}`V` is finite-dimensional and {lit}`U ≤ V` with
-{lit}`U ≠ V`, let {lit}`n = dim V` and {lit}`m = dim U`. Prove that there
-exist {lit}`n - m` subspaces of {lit}`V`, each of dimension {lit}`n - 1`,
-whose intersection equals {lit}`U`. -/
-theorem exercise_2C_16 [Module.Finite F V] (U : Submodule F V) (hU : U ≠ ⊤) :
-    ∃ (W : Fin (Module.finrank F V - Module.finrank F U) → Submodule F V),
-      (∀ i, Module.finrank F (W i) = Module.finrank F V - 1) ∧
+/-- 2C.16 -/
+theorem exercise_2C_16 [Finite F V] (U : Submodule F V) (hU : U ≠ ⊤) :
+    ∃ (W : Fin (finrank F V - finrank F U) → Submodule F V),
+      (∀ i, finrank F (W i) = finrank F V - 1) ∧
       ⨅ i, W i = U := by
   sorry
 
-/-- 2C.17 Suppose {lit}`V₁, …, Vₘ` are finite-dimensional subspaces of
-{lit}`V`. Prove that {lit}`V₁ + ⋯ + Vₘ` is finite-dimensional and
-{lit}`dim(V₁ + ⋯ + Vₘ) ≤ dim V₁ + ⋯ + dim Vₘ`. -/
+/-- 2C.17 -/
 theorem exercise_2C_17 {m : ℕ} (W : Fin m → Submodule F V)
-    (hW : ∀ i, Module.Finite F (W i)) :
-    Module.Finite F ↥(⨆ i, W i) ∧
-      Module.finrank F ↥(⨆ i, W i) ≤ ∑ i, Module.finrank F (W i) := by
+    (hW : ∀ i, Finite F (W i)) :
+    Finite F ↥(⨆ i, W i) ∧
+      finrank F ↥(⨆ i, W i) ≤ ∑ i, finrank F (W i) := by
   sorry
 
-/-- 2C.18 Suppose {lit}`V` is finite-dimensional with {lit}`dim V = n ≥ 1`.
-Prove that there exist 1-dimensional subspaces {lit}`V₁, …, Vₙ` of {lit}`V`
-such that {lit}`V = V₁ ⊕ ⋯ ⊕ Vₙ`. -/
-theorem exercise_2C_18 [Module.Finite F V] (hV : 1 ≤ Module.finrank F V) :
-    ∃ (W : Fin (Module.finrank F V) → Submodule F V),
-      (∀ i, Module.finrank F (W i) = 1) ∧ IsDirectSum W ∧ ⨆ i, W i = ⊤ := by
+/-- 2C.18 -/
+theorem exercise_2C_18 [Finite F V] (hV : 1 ≤ finrank F V) :
+    ∃ (W : Fin (finrank F V) → Submodule F V),
+      (∀ i, finrank F (W i) = 1) ∧ IsDirectSum W ∧ ⨆ i, W i = ⊤ := by
   sorry
 
-/-- 2C.19 Prove or counterexample: if {lit}`V₁, V₂, V₃ ≤ V` (fin-dim), then
-{lit}`dim(V₁ + V₂ + V₃) = dim V₁ + dim V₂ + dim V₃ - dim(V₁ ∩ V₂) -
-dim(V₁ ∩ V₃) - dim(V₂ ∩ V₃) + dim(V₁ ∩ V₂ ∩ V₃)`. -/
+/-- 2C.19 -/
 def exercise_2C_19 :
-    Decidable (∀ (V₁ V₂ V₃ : Submodule F V) [Module.Finite F V],
-      Module.finrank F ↥(V₁ ⊔ V₂ ⊔ V₃) + Module.finrank F ↥(V₁ ⊓ V₂) +
-        Module.finrank F ↥(V₁ ⊓ V₃) + Module.finrank F ↥(V₂ ⊓ V₃) =
-        Module.finrank F V₁ + Module.finrank F V₂ + Module.finrank F V₃ +
-          Module.finrank F ↥(V₁ ⊓ V₂ ⊓ V₃)) := by
+    Decidable (∀ (V₁ V₂ V₃ : Submodule F V) [Finite F V],
+      finrank F ↥(V₁ ⊔ V₂ ⊔ V₃) =
+        finrank F V₁ + finrank F V₂ + finrank F V₃ -
+        finrank F ↥(V₁ ⊓ V₂) - finrank F ↥(V₁ ⊓ V₃) - finrank F ↥(V₂ ⊓ V₃) +
+        finrank F ↥(V₁ ⊓ V₂ ⊓ V₃)) := by
   -- first line should be `apply isTrue` or `apply isFalse`
   sorry
 
-/-! 2C.20 The "strange formula" for {lit}`dim(V₁ + V₂ + V₃)`. (Stated;
-formula encoding involves rational arithmetic.) -/
+/-- 2C.20 The {lit}`/3` makes this a rational identity in general; we encode it by
+clearing the denominator, i.e. multiplying both sides by 3. -/
+def exercise_2C_20 :
+    Decidable (∀ (V₁ V₂ V₃ : Submodule F V) [Finite F V],
+      3 * finrank F ↥(V₁ ⊔ V₂ ⊔ V₃) =
+      3 * (finrank F V₁ + finrank F V₂ + finrank F V₃) - finrank F ↥((V₁ ⊔ V₂) ⊓ V₃) -
+        finrank F ↥((V₁ ⊔ V₃) ⊓ V₂) - finrank F ↥((V₂ ⊔ V₃) ⊓ V₁)) := by
+  -- first line should be `apply isTrue` or `apply isFalse`
+  sorry
 
 end LADR.Section_2C
