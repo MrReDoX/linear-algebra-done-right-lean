@@ -116,7 +116,7 @@ def U_27e (F : Type*) [Field F] : Submodule F (Fin 3 → F) where
 def basisVec_27e : Fin 2 → U_27e F :=
   ![⟨![1, 1, 0], rfl⟩, ⟨![0, 0, 1], rfl⟩]
 
-example : IsBasis F (basisVec_27e (F := F)) := by
+theorem isBasis_basisVec_27e : IsBasis F (basisVec_27e (F := F)) := by
   sorry  -- exercise 2B.2
 
 /-! (f) The list {lit}`(1, -1, 0), (1, 0, -1)` is a basis of
@@ -145,7 +145,7 @@ def basisVec_27f : Fin 2 → U_27f F :=
   ![⟨![1, -1, 0], by show (1 : F) + (-1) + 0 = 0; ring⟩,
     ⟨![1, 0, -1], by show (1 : F) + 0 + (-1) = 0; ring⟩]
 
-example : IsBasis F (basisVec_27f (F := F)) := by
+theorem isBasis_basisVec_27f : IsBasis F (basisVec_27f (F := F)) := by
   sorry  -- exercise 2B.2
 
 /-! (g) The list {lit}`1, z, …, zᵐ` is the *standard basis* of {lit}`Pₘ(F)`. -/
