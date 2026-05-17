@@ -167,10 +167,9 @@ theorem exercise_1A_10 :
       ![12 - 5 * I, 7 + 22 * I, -32 - 9 * I] := by
   sorry
 
-@[avoiding add_assoc]
+@[avoiding Pi.addSemigroup]
 theorem exercise_1A_11 (x y z : Fin n → F) :
-    (x + y) + z = x + (y + z) := by
-  sorry
+    (x + y) + z = x + (y + z) := by sorry
 
 @[avoiding mul_smul, smul_smul]
 theorem exercise_1A_12 (a b : F) (x : Fin n → F) :
