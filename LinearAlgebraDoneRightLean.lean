@@ -7,6 +7,7 @@ import LinearAlgebraDoneRightLean.Section_2C
 import LinearAlgebraDoneRightLean.Section_3A
 import LinearAlgebraDoneRightLean.Section_3B
 import LinearAlgebraDoneRightLean.Section_3C
+import LinearAlgebraDoneRightLean.Section_3D
 
 /-!
 # Lean Companion to Axler's *Linear Algebra Done Right* (4e)
@@ -32,4 +33,5 @@ point of an exercise, the exercise is marked with {lit}`@[avoiding …]` from
 - {module}`LinearAlgebraDoneRightLean.Section_3A` — Vector Space of Linear Maps
 - {module}`LinearAlgebraDoneRightLean.Section_3B` — Null Spaces and Ranges
 - {module}`LinearAlgebraDoneRightLean.Section_3C` — Matrices
+- {module}`LinearAlgebraDoneRightLean.Section_3D` — Invertibility and Isomorphisms
 -/

@@ -62,8 +62,9 @@ on the human-vs-AI split as we accumulate playthroughs.
 | 2B. Bases | ✓ | ✓ | — |
 | 2C. Dimension | ✓ | ✓ | — |
 | 3A. Vector Space of Linear Maps | ✓ | ✓ | — |
-| 3B. Null Spaces and Ranges | ✓ | — | — |
+| 3B. Null Spaces and Ranges | ✓ | ✓ | — |
 | 3C. Matrices | ✓ | — | — |
+| 3D. Invertibility and Isomorphisms | ✓ | — | — |
 
 ## Building
 
