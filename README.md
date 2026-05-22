@@ -61,20 +61,8 @@ on the human-vs-AI split as we accumulate playthroughs.
 | 2A. Span and Linear Independence | ✓ | ✓ | — |
 | 2B. Bases | ✓ | ✓ | — |
 | 2C. Dimension | ✓ | ✓ | — |
-
-## Layout
-
-```
-LinearAlgebraDoneRightLean/
-├── Section_1A.lean
-├── Section_1B.lean
-├── Section_1C.lean
-├── Section_2A.lean
-├── Section_2B.lean
-└── Section_2C.lean
-```
-
-One file per section. Future chapters follow the same pattern (`Section_2A.lean`, …).
+| 3A. Vector Space of Linear Maps | ✓ | ✓ | — |
+| 3B. Null Spaces and Ranges | ✓ | — | — |
 
 ## Building
 

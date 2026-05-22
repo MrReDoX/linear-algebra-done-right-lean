@@ -42,6 +42,19 @@ def IsBasis (F : Type*) {V : Type*} [Field F] [AddCommGroup V] [Module F V]
     {m : ℕ} (v : Fin m → V) : Prop :=
   LinearIndependent F v ∧ Spans F v
 
+/-! Bridge to mathlib's bundled {name}`Module.Basis`. The book's {name}`IsBasis`
+is a {lit}`Prop` mirroring Axler 2.26 ("linearly independent and spans");
+mathlib's {name}`Module.Basis` is the structured datum carrying
+{lit}`b.constr`, {lit}`b.repr`, etc. Chapter 3 (e.g. the linear map lemma 3.4)
+needs that structure, so we expose a one-liner conversion. -/
+noncomputable def IsBasis.toModuleBasis {m : ℕ} {v : Fin m → V}
+    (hv : IsBasis F v) : Module.Basis (Fin m) F V :=
+  Module.Basis.mk hv.1 (by rw [← hv.2])
+
+@[simp] theorem IsBasis.toModuleBasis_apply {m : ℕ} {v : Fin m → V}
+    (hv : IsBasis F v) (k : Fin m) : hv.toModuleBasis k = v k := by
+  simp [IsBasis.toModuleBasis]
+
 /-! 2.27 Example: bases -/
 
 /-! (a) The standard basis of {lit}`Fⁿ`:
