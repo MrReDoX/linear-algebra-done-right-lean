@@ -122,9 +122,30 @@ In mathlib, {name}`LinearMap.ker` already returns a {name}`Submodule`. -/
 
 example (T : V →ₗ[F] W) : Submodule F V := LinearMap.ker T
 
+/-- For illustration, here is the same fact built by hand: we exhibit
+{lit}`{v : V | T v = 0}` as a {name}`Submodule` by checking the three subspace
+axioms — closure under {lit}`0`, addition, and scalar multiplication. -/
+example (T : V →ₗ[F] W) : Submodule F V where
+  carrier := {v : V | T v = 0}
+  zero_mem' := T.map_zero
+  add_mem' := by
+    intro a b ha hb
+    show T (a + b) = 0
+    rw [T.map_add, ha, hb, add_zero]
+  smul_mem' := by
+    intro c v hv
+    show T (c • v) = 0
+    rw [T.map_smul, hv, smul_zero]
+
 /-! 3.14 Definition: injective -/
 
 example (T : V → W) : Prop := Function.Injective T
+
+omit [AddCommGroup V] [AddCommGroup W] in
+/-- Axler's definition: {lit}`T` is injective when {lit}`T x = T y` implies
+{lit}`x = y`. This is definitionally mathlib's {name}`Function.Injective`. -/
+theorem injective_iff_axler (T : V → W) :
+    Function.Injective T ↔ ∀ x y, T x = T y → x = y := Iff.rfl
 
 /-! 3.15 {lit}`T` injective iff {lit}`null T = {0}` -/
 
@@ -166,24 +187,87 @@ def T_3_17 : (Fin 2 → ℝ) →ₗ[ℝ] (Fin 3 → ℝ) where
     funext i; fin_cases i <;>
       simp [Matrix.cons_val_zero, Matrix.cons_val_one] <;> ring
 
+/-! Helpers shared between (c) below and the {lit}`𝒫₅ → 𝒫₄` example in 3.20. -/
+
+/-- The antiderivative {lit}`∑ q.coeff k / (k+1) * X^(k+1)` of a real polynomial. -/
+private noncomputable def antiderivative (q : Polynomial ℝ) : Polynomial ℝ :=
+  q.sum (fun n a => Polynomial.C (a / (n + 1)) * Polynomial.X ^ (n + 1))
+
+private lemma derivative_antiderivative (q : Polynomial ℝ) :
+    Polynomial.derivative (antiderivative q) = q := by
+  rw [antiderivative, Polynomial.sum_def, Polynomial.derivative_sum]
+  conv_rhs => rw [← Polynomial.sum_C_mul_X_pow_eq q, Polynomial.sum_def]
+  refine Finset.sum_congr rfl (fun n _ => ?_)
+  rw [Polynomial.derivative_C_mul_X_pow]
+  have hn1 : ((n : ℝ) + 1) ≠ 0 := by positivity
+  rw [Nat.add_sub_cancel, Nat.cast_add, Nat.cast_one]
+  congr 1
+  rw [Polynomial.C_inj]
+  field_simp
+
+/-- Differentiation drops the degree by at least one: if {lit}`p.degree < m + 1`
+then {lit}`(D p).degree < m`. -/
+private lemma degree_derivative_lt_of_degree_lt {p : Polynomial ℝ} {m : ℕ}
+    (hp : p.degree < (m + 1 : ℕ)) : (Polynomial.derivative p).degree < (m : ℕ) := by
+  by_cases hp_const : p.natDegree = 0
+  · rw [Polynomial.derivative_of_natDegree_zero hp_const, Polynomial.degree_zero]
+    exact WithBot.bot_lt_coe _
+  by_cases hdp0 : Polynomial.derivative p = 0
+  · rw [hdp0, Polynomial.degree_zero]
+    exact WithBot.bot_lt_coe _
+  have hp0 : p ≠ 0 := fun h => hp_const (by rw [h]; simp)
+  have hp_lt : p.natDegree < m + 1 :=
+    (Polynomial.natDegree_lt_iff_degree_lt (n := m + 1) hp0).mpr hp
+  have hdp_lt : (Polynomial.derivative p).natDegree < p.natDegree :=
+    Polynomial.natDegree_derivative_lt hp_const
+  exact (Polynomial.natDegree_lt_iff_degree_lt (n := m) hdp0).mp (by omega)
+
+/-- Antiderivative raises the degree-LT bound by one: if {lit}`q.degree < m`
+then {lit}`antiderivative q ∈ degreeLT ℝ (m + 1)`. -/
+private lemma antiderivative_mem_degreeLT (q : Polynomial ℝ) {m : ℕ}
+    (hq : q.degree < (m : ℕ)) :
+    antiderivative q ∈ Polynomial.degreeLT ℝ (m + 1) := by
+  rw [antiderivative, Polynomial.sum_def]
+  refine Submodule.sum_mem _ (fun k hk => ?_)
+  rw [Polynomial.mem_degreeLT]
+  have hk_q : (k : WithBot ℕ) ≤ q.degree := Polynomial.le_degree_of_mem_supp k hk
+  have hk_lt : (k : ℕ) < m := by exact_mod_cast lt_of_le_of_lt hk_q hq
+  refine lt_of_le_of_lt (Polynomial.degree_C_mul_X_pow_le _ _) ?_
+  exact_mod_cast (by omega : (k + 1 : ℕ) < m + 1)
+
 /-! (c) Range of differentiation on {lit}`𝒫(ℝ)` is all of {lit}`𝒫(ℝ)`. -/
 
 example : LinearMap.range
     (Polynomial.derivative : Polynomial ℝ →ₗ[ℝ] Polynomial ℝ) = ⊤ := by
   rw [LinearMap.range_eq_top]
-  intro q
-  -- The antiderivative ∑ q.coeff k / (k+1) * X^(k+1) works.
-  exact ⟨q.sum (fun n a => Polynomial.C (a / (n + 1)) * Polynomial.X ^ (n + 1)), by
-    sorry⟩
+  exact fun q => ⟨antiderivative q, derivative_antiderivative q⟩
 
 /-! 3.18 The range is a subspace (mathlib's {name}`LinearMap.range` is a
 {name}`Submodule`). -/
 
 example (T : V →ₗ[F] W) : Submodule F W := LinearMap.range T
 
+/-- For illustration, here is the same fact built by hand: {lit}`{w : W | ∃ v, T v = w}`
+is a {name}`Submodule` by the three subspace axioms. -/
+example (T : V →ₗ[F] W) : Submodule F W where
+  carrier := {w : W | ∃ v : V, T v = w}
+  zero_mem' := ⟨0, T.map_zero⟩
+  add_mem' := by
+    rintro a b ⟨x, hx⟩ ⟨y, hy⟩
+    exact ⟨x + y, by rw [T.map_add, hx, hy]⟩
+  smul_mem' := by
+    rintro c w ⟨v, hv⟩
+    exact ⟨c • v, by rw [T.map_smul, hv]⟩
+
 /-! 3.19 Definition: surjective -/
 
 example (T : V → W) : Prop := Function.Surjective T
+
+omit [AddCommGroup V] [AddCommGroup W] in
+/-- Axler's definition: {lit}`T` is surjective when every {lit}`w` has a
+preimage. This is definitionally mathlib's {name}`Function.Surjective`. -/
+theorem surjective_iff_axler (T : V → W) :
+    Function.Surjective T ↔ ∀ w, ∃ v, T v = w := Iff.rfl
 
 @[avoiding LinearMap.range_eq_top]
 theorem surjective_iff_range_eq_top (T : V →ₗ[F] W) :
@@ -198,15 +282,61 @@ theorem surjective_iff_range_eq_top (T : V →ₗ[F] W) :
     have hw : w ∈ LinearMap.range T := by rw [hT]; exact Submodule.mem_top
     exact hw
 
-/-! 3.20 Example: surjectivity depends on the target space (skipped — the
-contrast in the textbook is between {lit}`D : 𝒫₅(ℝ) → 𝒫₅(ℝ)` and
-{lit}`D : 𝒫₅(ℝ) → 𝒫₄(ℝ)`). -/
+/-! 3.20 Example: surjectivity depends on the target space.
 
-/-! 3.21 Fundamental theorem of linear maps
+We represent {lit}`𝒫ₘ(ℝ)` as {name}`Polynomial.degreeLT` {lit}`ℝ (m+1)` and
+contrast {lit}`D : 𝒫₅(ℝ) → 𝒫₅(ℝ)` (not surjective) with
+{lit}`D : 𝒫₅(ℝ) → 𝒫₄(ℝ)` (surjective). -/
 
-Axler's proof: pick a basis {lit}`u₁, …, u_m` of {lit}`null T`; extend it to
-a basis {lit}`u₁, …, u_m, v₁, …, v_n` of {lit}`V`. Show {lit}`T v₁, …, T v_n`
-is a basis of {lit}`range T`, so {lit}`dim V = m + n = dim null T + dim range T`. -/
+/-- {lit}`D : 𝒫₅(ℝ) → 𝒫₅(ℝ)`, polynomial differentiation viewed as a map
+from degree-{lit}`≤ 5` polynomials to themselves. -/
+noncomputable def D55 :
+    Polynomial.degreeLT ℝ 6 →ₗ[ℝ] Polynomial.degreeLT ℝ 6 :=
+  LinearMap.codRestrict (Polynomial.degreeLT ℝ 6)
+    (Polynomial.derivative.comp (Polynomial.degreeLT ℝ 6).subtype) (by
+      rintro ⟨p, hp⟩
+      rw [Polynomial.mem_degreeLT] at hp ⊢
+      exact lt_trans (degree_derivative_lt_of_degree_lt hp)
+        (by exact_mod_cast (by norm_num : (5 : ℕ) < 6)))
+
+/-- {lit}`D : 𝒫₅(ℝ) → 𝒫₅(ℝ)` is not surjective. The polynomial {lit}`X⁵` lies
+in {lit}`𝒫₅(ℝ)` but is not in the range: any preimage {lit}`p` has
+{lit}`degree p < 6`, so {lit}`degree (D p) < 5`, but {lit}`X⁵` has degree
+{lit}`5`. -/
+example : ¬ Function.Surjective D55 := by
+  intro hsurj
+  let q : Polynomial.degreeLT ℝ 6 :=
+    ⟨Polynomial.X ^ 5, by
+      rw [Polynomial.mem_degreeLT, Polynomial.degree_X_pow]
+      exact_mod_cast (by norm_num : (5 : ℕ) < 6)⟩
+  obtain ⟨p, hp⟩ := hsurj q
+  have hp' : Polynomial.derivative (p : Polynomial ℝ) = Polynomial.X ^ 5 :=
+    congrArg Subtype.val hp
+  have hp_mem : (p : Polynomial ℝ).degree < (6 : ℕ) := by
+    rw [← Polynomial.mem_degreeLT]; exact p.property
+  have hdrop := degree_derivative_lt_of_degree_lt hp_mem
+  rw [hp', Polynomial.degree_X_pow] at hdrop
+  exact_mod_cast (lt_irrefl (5 : WithBot ℕ)) hdrop
+
+/-- {lit}`D : 𝒫₅(ℝ) → 𝒫₄(ℝ)`, the same differentiation but with the codomain
+restricted to {lit}`𝒫₄(ℝ)`. -/
+noncomputable def D54 :
+    Polynomial.degreeLT ℝ 6 →ₗ[ℝ] Polynomial.degreeLT ℝ 5 :=
+  LinearMap.codRestrict (Polynomial.degreeLT ℝ 5)
+    (Polynomial.derivative.comp (Polynomial.degreeLT ℝ 6).subtype) (by
+      rintro ⟨p, hp⟩
+      rw [Polynomial.mem_degreeLT] at hp ⊢
+      exact degree_derivative_lt_of_degree_lt hp)
+
+/-- {lit}`D : 𝒫₅(ℝ) → 𝒫₄(ℝ)` is surjective. Given {lit}`q ∈ 𝒫₄(ℝ)`, the
+antiderivative lies in {lit}`𝒫₅(ℝ)` and maps to {lit}`q`. -/
+example : Function.Surjective D54 := by
+  rintro ⟨q, hq⟩
+  rw [Polynomial.mem_degreeLT] at hq
+  refine ⟨⟨antiderivative q, antiderivative_mem_degreeLT q hq⟩, ?_⟩
+  exact Subtype.ext (derivative_antiderivative q)
+
+/-! 3.21 Fundamental theorem of linear maps -/
 
 @[avoiding LinearMap.finrank_range_add_finrank_ker]
 theorem finrank_ker_add_finrank_range [Finite F V] (T : V →ₗ[F] W) :
@@ -371,7 +501,14 @@ theorem not_surjective_of_finrank_lt [Finite F V] [Finite F W]
   omega
 
 /-! 3.25/3.26 Homogeneous system of linear equations with more variables than
-equations has nonzero solutions. -/
+equations has nonzero solutions.
+
+Axler devotes considerable space (3.25, 3.26, and surrounding discussion) to
+turning a matrix {lit}`A` into the linear map {lit}`x ↦ (∑ k, A j k * x k)ⱼ`
+and arguing that its kernel encodes solutions of the homogeneous system. We
+already did that translation once in {name}`LADR.Section_3A.fromFnToFm`, so
+both 3.25/3.26 and 3.27/3.28 below just apply the abstract finrank theorems
+to that map. -/
 
 theorem homogeneous_system_nonzero_solution {m n : ℕ} (hmn : m < n)
     (A : Fin m → Fin n → F) :
@@ -432,13 +569,13 @@ def exercise_3B_3_T {m : ℕ} (v : Fin m → V) : (Fin m → F) →ₗ[F] V wher
     rw [Pi.smul_apply, smul_eq_mul, mul_smul]
 
 /-- 3B.3 (a) {lit}`v` spans {lit}`V` iff the corresponding {lit}`T` is
-surjective. -/
+surjective. Needs a proof. -/
 theorem exercise_3B_3a {m : ℕ} (v : Fin m → V) :
     Spans F v ↔ Function.Surjective (exercise_3B_3_T (F := F) v) := by
   sorry
 
 /-- 3B.3 (b) {lit}`v` is linearly independent iff the corresponding {lit}`T`
-is injective. -/
+is injective. Needs a proof. -/
 theorem exercise_3B_3b {m : ℕ} (v : Fin m → V) :
     LinearIndependent F v ↔ Function.Injective (exercise_3B_3_T (F := F) v) := by
   sorry
@@ -486,7 +623,12 @@ theorem exercise_3B_10 {n : ℕ} (v : Fin n → V) (hv : Spans F v)
     Submodule.span F (Set.range (fun i => T (v i))) = LinearMap.range T := by
   sorry
 
-/-- 3B.11 -/
+/-- 3B.11
+
+{lit}`Submodule.map T U` is the image of the submodule {lit}`U ⊆ V` under
+{lit}`T`, packaged as a submodule of {lit}`W` (mathlib bundles the
+closure-under-{lit}`+`/{lit}`•` proofs into the definition, so it is
+automatically a submodule). Underlying set: {lit}`T '' U = {T u | u ∈ U}`. -/
 theorem exercise_3B_11 [Finite F V] (T : V →ₗ[F] W) :
     ∃ U : Submodule F V, U ⊓ LinearMap.ker T = ⊥ ∧
       LinearMap.range T = Submodule.map T U := by
@@ -545,8 +687,26 @@ theorem exercise_3B_20 [Finite F W] (T : V →ₗ[F] W) :
       ∃ S : W →ₗ[F] V, T ∘ₗ S = LinearMap.id := by
   sorry
 
-/-- 3B.21 -/
-theorem exercise_3B_21 [Finite F V] (T : V →ₗ[F] W) (Usub : Submodule F W) :
+/-- 3B.21.a — preimage of a subspace is a subspace.
+
+Axler states 3.21 assuming the preimage {lit}`{v ∈ V | T v ∈ U}` is a
+subspace. Mathlib bundles this fact into {lit}`Submodule.comap T U`, whose
+underlying set is exactly that preimage. This exercise asks for the proof
+of the closure properties without appealing to {lit}`Submodule.comap`. -/
+theorem exercise_3B_21_a (T : V →ₗ[F] W) (Usub : Submodule F W) :
+    (0 : V) ∈ {v : V | T v ∈ Usub} ∧
+    (∀ u v : V, u ∈ {v : V | T v ∈ Usub} → v ∈ {v : V | T v ∈ Usub} →
+      u + v ∈ {v : V | T v ∈ Usub}) ∧
+    (∀ (c : F) (v : V), v ∈ {v : V | T v ∈ Usub} →
+      c • v ∈ {v : V | T v ∈ Usub}) := by
+  sorry
+
+/-- 3B.21.b
+
+{lit}`Submodule.comap T Usub` is the preimage {lit}`{v ∈ V | T v ∈ Usub}`
+bundled as a submodule of {lit}`V` (mathlib packages the closure proofs
+from 3B.21.a into the definition). -/
+theorem exercise_3B_21_b [Finite F V] (T : V →ₗ[F] W) (Usub : Submodule F W) :
     finrank F (Submodule.comap T Usub) =
       finrank F (LinearMap.ker T) +
         finrank F ((Usub ⊓ LinearMap.range T : Submodule F W)) := by
@@ -562,8 +722,8 @@ theorem exercise_3B_22 [Finite F U] [Finite F V]
 /-- 3B.23 -/
 theorem exercise_3B_23 [Finite F U] [Finite F V]
     (S : V →ₗ[F] W) (T : U →ₗ[F] V) :
-    finrank F (LinearMap.range (S ∘ₗ T)) ≤ finrank F (LinearMap.range S) ∧
-    finrank F (LinearMap.range (S ∘ₗ T)) ≤ finrank F (LinearMap.range T) := by
+    finrank F (LinearMap.range (S ∘ₗ T)) ≤ min (finrank F (LinearMap.range S))
+      (finrank F (LinearMap.range T)) := by
   sorry
 
 /-- 3B.24 (a) -/
@@ -597,7 +757,9 @@ theorem exercise_3B_27 (P : V →ₗ[F] V) (hP : P ∘ₗ P = P) :
 
 /-- 3B.28 — Axler's "nonconstant" condition is rephrased as
 {lit}`1 ≤ p.natDegree`, and {lit}`deg (D p) = deg p - 1` is rephrased on
-natural-number degrees. -/
+natural-number degrees. (We use {name}`Polynomial.natDegree` rather than
+{name}`Polynomial.degree` here because {lit}`WithBot ℕ` carries no
+subtraction instance — the {lit}`- 1` would not typecheck.) -/
 theorem exercise_3B_28 (D : Polynomial ℝ →ₗ[ℝ] Polynomial ℝ)
     (hD : ∀ p : Polynomial ℝ, 1 ≤ p.natDegree →
       (D p).natDegree = p.natDegree - 1) :
@@ -611,15 +773,14 @@ theorem exercise_3B_29 (p : Polynomial ℝ) :
   sorry
 
 /-- 3B.30 -/
-theorem exercise_3B_30 (phi : V →ₗ[F] F) (hphi : phi ≠ 0) (u : V)
-    (hu : phi u ≠ 0) :
-    IsCompl (LinearMap.ker phi)
+theorem exercise_3B_30 (φ : V →ₗ[F] F) (hφ : φ ≠ 0) (u : V)
+    (hu : φ u ≠ 0) :
+    IsCompl (LinearMap.ker φ)
       (Submodule.span F ({u} : Set V)) := by
   sorry
 
 /-- 3B.31 -/
-theorem exercise_3B_31 [Finite F V] (X : Submodule F V) (Y : Submodule F W)
-    [Finite F Y] :
+theorem exercise_3B_31 [Finite F V] (X : Submodule F V) (Y : Submodule F W) :
     (∃ T : V →ₗ[F] W,
       LinearMap.ker T = X ∧ LinearMap.range T = Y) ↔
     finrank F X + finrank F Y = finrank F V := by
@@ -627,23 +788,41 @@ theorem exercise_3B_31 [Finite F V] (X : Submodule F V) (Y : Submodule F W)
 
 /-- 3B.32 -/
 theorem exercise_3B_32 [Finite F V] (hV : 1 < finrank F V)
-    (phi : (V →ₗ[F] V) →ₗ[F] F)
-    (hphi : ∀ S T : V →ₗ[F] V, phi (S ∘ₗ T) = phi S * phi T) :
-    phi = 0 := by
+    (φ : (V →ₗ[F] V) →ₗ[F] F)
+    (hφ : ∀ S T : V →ₗ[F] V, φ (S ∘ₗ T) = φ S * φ T) :
+    φ = 0 := by
   sorry
 
 open LADR.Section_1B (Complexification exercise_1B_8) in
-/-- 3B.33 (complexification of a real linear map). Uses the complex scalar
-multiplication on {lit}`Complexification V` defined in
-{name}`LADR.Section_1B.exercise_1B_8`. -/
-theorem exercise_3B_33 {V W : Type*} [AddCommGroup V] [Module ℝ V]
+/-- 3B.33.a — complexification of a real linear map, the map itself. -/
+noncomputable def complexification_map {V W : Type*}
+    [AddCommGroup V] [Module ℝ V] [AddCommGroup W] [Module ℝ W]
+    (T : V →ₗ[ℝ] W) :
+    letI : Module ℂ (Complexification V) := exercise_1B_8 V
+    letI : Module ℂ (Complexification W) := exercise_1B_8 W
+    Complexification V →ₗ[ℂ] Complexification W :=
+  letI : Module ℂ (Complexification V) := exercise_1B_8 V
+  letI : Module ℂ (Complexification W) := exercise_1B_8 W
+  { toFun := fun p => (T p.1, T p.2)
+    map_add' := by sorry
+    map_smul' := by sorry }
+
+open LADR.Section_1B (Complexification exercise_1B_8) in
+/-- 3B.33.b — the complexification is injective iff {lit}`T` is. -/
+theorem exercise_3B_33_b {V W : Type*} [AddCommGroup V] [Module ℝ V]
     [AddCommGroup W] [Module ℝ W] (T : V →ₗ[ℝ] W) :
     letI : Module ℂ (Complexification V) := exercise_1B_8 V
     letI : Module ℂ (Complexification W) := exercise_1B_8 W
-    ∃ TC : Complexification V →ₗ[ℂ] Complexification W,
-      (∀ u v : V, TC (u, v) = (T u, T v)) ∧
-      (Function.Injective TC ↔ Function.Injective T) ∧
-      (Function.Surjective TC ↔ Function.Surjective T) := by
+    Function.Injective (complexification_map T) ↔ Function.Injective T := by
+  sorry
+
+open LADR.Section_1B (Complexification exercise_1B_8) in
+/-- 3B.33.c — the complexification is surjective iff {lit}`T` is. -/
+theorem exercise_3B_33_c {V W : Type*} [AddCommGroup V] [Module ℝ V]
+    [AddCommGroup W] [Module ℝ W] (T : V →ₗ[ℝ] W) :
+    letI : Module ℂ (Complexification V) := exercise_1B_8 V
+    letI : Module ℂ (Complexification W) := exercise_1B_8 W
+    Function.Surjective (complexification_map T) ↔ Function.Surjective T := by
   sorry
 
 end LADR.Section_3B
