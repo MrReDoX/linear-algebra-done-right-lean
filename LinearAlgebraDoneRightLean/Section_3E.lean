@@ -142,12 +142,59 @@ theorem directSum_iff_gamma_injective {m : ℕ}
 
 /-! 3.94 A sum is a direct sum iff dimensions add up. -/
 
+/-- The range of {lit}`gamma V_sub` equals the sum of subspaces
+{lit}`∑ V_sub i`. -/
+private theorem gamma_range_eq {m : ℕ} (V_sub : Fin m → Submodule F V) :
+    LinearMap.range (gamma V_sub) = ∑ i, V_sub i := by
+  classical
+  apply le_antisymm
+  · -- {lit}`range γ ⊆ ∑ V_sub i`.
+    rintro _ ⟨u, rfl⟩
+    show (∑ i, ((u i : V))) ∈ (∑ i : Fin m, V_sub i : Submodule F V)
+    refine Submodule.sum_mem _ (fun i _ => ?_)
+    -- {lit}`(u i : V) ∈ V_sub i ≤ ∑ V_sub i`.
+    exact (Finset.single_le_sum (f := V_sub) (fun j _ => bot_le)
+      (Finset.mem_univ i)) (u i).property
+  · -- {lit}`∑ V_sub i ⊆ range γ`: each {lit}`V_sub i ⊆ range γ`,
+    -- and range is a submodule.
+    have h_each : ∀ i, V_sub i ≤ LinearMap.range (gamma V_sub) := by
+      intro i v hv
+      classical
+      let u : (j : Fin m) → V_sub j := fun j =>
+        if h : j = i then h ▸ (⟨v, hv⟩ : V_sub i) else 0
+      refine ⟨u, ?_⟩
+      show ∑ j, ((u j : V_sub j) : V) = v
+      rw [Finset.sum_eq_single i]
+      · show ((u i : V_sub i) : V) = v
+        simp [u]
+      · intros j _ hji
+        show ((u j : V_sub j) : V) = 0
+        simp [u, hji]
+      · intro h; exact absurd (Finset.mem_univ i) h
+    exact Finset.sum_induction (f := V_sub)
+      (p := fun U => U ≤ LinearMap.range (gamma V_sub))
+      (fun _ _ ha hb => sup_le ha hb) bot_le (fun i _ => h_each i)
+
 theorem directSum_iff_finrank_add [Finite F V] {m : ℕ}
     (V_sub : Fin m → Submodule F V) [∀ i, Module.Finite F (V_sub i)] :
     IsDirectSum V_sub ↔
       finrank F ↥(∑ i, V_sub i : Submodule F V) =
         ∑ i, finrank F (V_sub i) := by
-  sorry
+  -- direct sum ↔ γ injective ↔ finrank ker γ = 0 ↔ finrank range = finrank dom.
+  rw [directSum_iff_gamma_injective]
+  rw [LADR.Section_3B.injective_iff_ker_eq_bot]
+  have h_FTL := LADR.Section_3B.finrank_ker_add_finrank_range (gamma V_sub)
+  rw [gamma_range_eq] at h_FTL
+  rw [finrank_prod (V := fun i => (V_sub i : Type _))] at h_FTL
+  constructor
+  · intro hker_bot
+    rw [hker_bot, finrank_bot] at h_FTL
+    omega
+  · intro hdim
+    rw [← hdim] at h_FTL
+    have : finrank F (LinearMap.ker (gamma V_sub)) = 0 := by omega
+    rw [Submodule.finrank_eq_zero] at this
+    exact this
 
 /-! Quotient Spaces. -/
 

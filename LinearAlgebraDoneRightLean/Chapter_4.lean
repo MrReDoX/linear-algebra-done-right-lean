@@ -265,7 +265,15 @@ theorem quadratic_factor (b c : ℝ) :
       rw [← Polynomial.C_mul, h_prod_lam]
     linear_combination Polynomial.X * h_sum_C - h_prod_C
 
-/-! 4.16 Factorization of a polynomial over {lit}`ℝ`. -/
+/-! 4.16 Factorization of a polynomial over {lit}`ℝ`.
+
+The proof follows Axler: view {lit}`p` as a polynomial over {lit}`ℂ`,
+factor via 4.13, group conjugate pairs of nonreal roots into real
+quadratics {lit}`X² − 2(Re μ)X + |μ|²` with discriminant
+{lit}`b² − 4c = −4(Im μ)² < 0`. The full Lean development is sizeable
+and left as an exercise. mathlib provides
+{name}`Polynomial.quadratic_dvd_of_aeval_eq_zero_im_ne_zero` as the
+key step. -/
 
 theorem real_polynomial_factorization (p : Polynomial ℝ) (hp : p ≠ 0) :
     ∃ (c : ℝ) (m M : ℕ) (lams : Fin m → ℝ) (bs cs : Fin M → ℝ),
