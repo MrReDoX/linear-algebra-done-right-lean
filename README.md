@@ -65,6 +65,7 @@ on the human-vs-AI split as we accumulate playthroughs.
 | 3B. Null Spaces and Ranges | ✓ | ✓ | — |
 | 3C. Matrices | ✓ | — | — |
 | 3D. Invertibility and Isomorphisms | ✓ | — | — |
+| 3E. Products and Quotients of Vector Spaces | ✓ | — | — |
 | 4. Polynomials | ✓ | — | — |
 
 ## Building
