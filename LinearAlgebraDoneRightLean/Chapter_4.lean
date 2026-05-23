@@ -267,13 +267,68 @@ theorem quadratic_factor (b c : ℝ) :
 
 /-! 4.16 Factorization of a polynomial over {lit}`ℝ`.
 
-The proof follows Axler: view {lit}`p` as a polynomial over {lit}`ℂ`,
-factor via 4.13, group conjugate pairs of nonreal roots into real
-quadratics {lit}`X² − 2(Re μ)X + |μ|²` with discriminant
-{lit}`b² − 4c = −4(Im μ)² < 0`. The full Lean development is sizeable
-and left as an exercise. mathlib provides
-{name}`Polynomial.quadratic_dvd_of_aeval_eq_zero_im_ne_zero` as the
-key step. -/
+Strong induction on {lit}`p.natDegree`. Base case: {lit}`natDegree 0`
+gives {lit}`p = C c`. Inductive step splits on whether {lit}`p` has a
+real root: if yes, peel off {lit}`(X − λ)` and recurse; if no, by FTA
+{lit}`p` has a nonreal complex root {lit}`z`, and the quadratic
+{lit}`X² − (2 Re z) X + |z|²` divides {lit}`p` (mathlib's
+{name}`Polynomial.quadratic_dvd_of_aeval_eq_zero_im_ne_zero`); peel that
+off and recurse. The discriminant is
+{lit}`(2 Re z)² − 4|z|² = −4(Im z)² < 0`. -/
+
+/-- Helper for 4.16: a quadratic {lit}`X² - C(2α) X + C β` has natDegree 2. -/
+private lemma natDegree_quadratic_aux (α β : ℝ) :
+    (Polynomial.X ^ 2 - Polynomial.C (2 * α) * Polynomial.X +
+      Polynomial.C β).natDegree = 2 := by
+  have hform :
+      Polynomial.X ^ 2 - Polynomial.C (2 * α) * Polynomial.X + Polynomial.C β =
+      Polynomial.C 1 * Polynomial.X ^ 2 +
+        Polynomial.C (-(2 * α)) * Polynomial.X + Polynomial.C β := by
+    rw [Polynomial.C_neg, Polynomial.C_1]; ring
+  rw [hform]
+  exact Polynomial.natDegree_quadratic one_ne_zero
+
+/-- Helper for 4.16: if {lit}`p : ℝ[X]` has no real root and {lit}`z : ℂ`
+is a root of the lift of {lit}`p` to {lit}`ℂ[X]`, then {lit}`z.im ≠ 0`. -/
+private lemma complex_root_nonreal_of_no_real_root (p : Polynomial ℝ)
+    (hreal : ∀ x : ℝ, ¬ p.IsRoot x) {z : ℂ}
+    (hz : (p.map (algebraMap ℝ ℂ)).eval z = 0) :
+    z.im ≠ 0 := by
+  intro hzim
+  -- {lit}`z = z.re` (as a complex number with zero imaginary part).
+  have hz_eq : (z.re : ℂ) = z := by apply Complex.ext <;> simp [hzim]
+  -- Evaluate the lift at {lit}`z.re`.
+  refine hreal z.re ?_
+  rw [Polynomial.IsRoot.def]
+  have hpC_eval : (p.map (algebraMap ℝ ℂ)).eval ((z.re : ℂ)) = 0 := by
+    rw [hz_eq]; exact hz
+  rw [Polynomial.eval_map] at hpC_eval
+  -- {lit}`eval₂ (algebraMap ℝ ℂ) (z.re : ℂ) p = (algebraMap ℝ ℂ) (p.eval z.re)`.
+  rw [show ((z.re : ℝ) : ℂ) = (algebraMap ℝ ℂ) z.re from rfl,
+      Polynomial.eval₂_at_apply] at hpC_eval
+  -- {lit}`algebraMap ℝ ℂ = Complex.ofReal`, which is injective.
+  have hcast : ((Polynomial.eval z.re p : ℝ) : ℂ) = 0 := hpC_eval
+  exact_mod_cast hcast
+
+/-- Helper for 4.16: the discriminant {lit}`(2 Re z)² - 4|z|²` is negative
+when {lit}`z.im ≠ 0`. -/
+private lemma discriminant_neg_of_im_ne_zero {z : ℂ} (hz : z.im ≠ 0) :
+    (-(2 * z.re)) ^ 2 < 4 * ‖z‖ ^ 2 := by
+  have hsq : ‖z‖ ^ 2 = z.re ^ 2 + z.im ^ 2 := by
+    rw [Complex.sq_norm, Complex.normSq_apply]; ring
+  rw [hsq]
+  have him_pos : 0 < z.im ^ 2 := by positivity
+  nlinarith
+
+/-! 4.16 Factorization of a polynomial over {lit}`ℝ`.
+
+Strong induction on {lit}`p.natDegree`. Base case: {lit}`natDegree 0`
+gives {lit}`p = C c`. Inductive step splits on whether {lit}`p` has a
+real root: if yes, peel off {lit}`(X − λ)` and recurse; if no, by FTA
+{lit}`p` has a nonreal complex root {lit}`z`, and the quadratic
+{lit}`X² − (2 Re z) X + |z|²` divides {lit}`p` (mathlib's
+{name}`Polynomial.quadratic_dvd_of_aeval_eq_zero_im_ne_zero`); peel that
+off and recurse. -/
 
 theorem real_polynomial_factorization (p : Polynomial ℝ) (hp : p ≠ 0) :
     ∃ (c : ℝ) (m M : ℕ) (lams : Fin m → ℝ) (bs cs : Fin M → ℝ),
@@ -282,7 +337,103 @@ theorem real_polynomial_factorization (p : Polynomial ℝ) (hp : p ≠ 0) :
         (∏ k, (Polynomial.X - Polynomial.C (lams k))) *
         (∏ k, (Polynomial.X ^ 2 + Polynomial.C (bs k) * Polynomial.X +
           Polynomial.C (cs k))) := by
-  sorry
+  induction hn : p.natDegree using Nat.strong_induction_on generalizing p with
+  | _ n ih =>
+    rcases Nat.eq_zero_or_pos n with hn_zero | hn_pos
+    · -- Base case: {lit}`natDegree p = 0`, so {lit}`p = C (p.coeff 0)`.
+      subst hn_zero
+      refine ⟨p.coeff 0, 0, 0, Fin.elim0, Fin.elim0, Fin.elim0, ?_, ?_⟩
+      · intro k; exact k.elim0
+      · simp
+        exact Polynomial.eq_C_of_natDegree_eq_zero hn
+    · classical
+      by_cases hreal : ∃ lam : ℝ, p.IsRoot lam
+      · -- Peel off a real root: {lit}`p = (X − λ) q`, recurse on q.
+        obtain ⟨lam, hlam⟩ := hreal
+        obtain ⟨q, hpq⟩ : (Polynomial.X - Polynomial.C lam) ∣ p :=
+          Polynomial.dvd_iff_isRoot.mpr hlam
+        have hxc_ne : (Polynomial.X - Polynomial.C lam : Polynomial ℝ) ≠ 0 :=
+          Polynomial.X_sub_C_ne_zero lam
+        have hq_ne : q ≠ 0 := fun hqz => by
+          rw [hqz, mul_zero] at hpq; exact hp hpq
+        have hq_deg : q.natDegree = n - 1 := by
+          have := Polynomial.natDegree_mul hxc_ne hq_ne
+          rw [← hpq, Polynomial.natDegree_X_sub_C] at this
+          omega
+        have hq_lt : q.natDegree < n := by omega
+        obtain ⟨c, m', M, lams', bs, cs, hdisc, hfact⟩ :=
+          ih q.natDegree hq_lt q hq_ne rfl
+        refine ⟨c, m' + 1, M, Fin.cons lam lams', bs, cs, hdisc, ?_⟩
+        rw [hpq, hfact]
+        have h_prod : ∏ k : Fin (m' + 1),
+            (Polynomial.X - Polynomial.C (Fin.cons lam lams' k)) =
+            (Polynomial.X - Polynomial.C lam) *
+              ∏ i : Fin m', (Polynomial.X - Polynomial.C (lams' i)) := by
+          rw [Fin.prod_univ_succ]
+          simp only [Fin.cons_zero, Fin.cons_succ]
+        rw [h_prod]
+        ring
+      · -- No real root: peel off a real quadratic from a nonreal root.
+        push Not at hreal
+        have hpC_ne : p.map (algebraMap ℝ ℂ) ≠ 0 := by
+          rw [Ne, Polynomial.map_eq_zero_iff
+            (Complex.ofReal_injective : Function.Injective (algebraMap ℝ ℂ))]
+          exact hp
+        have hpC_deg : 0 < (p.map (algebraMap ℝ ℂ)).degree := by
+          rw [← Polynomial.natDegree_pos_iff_degree_pos,
+              Polynomial.natDegree_map]
+          omega
+        obtain ⟨z, hz⟩ := Complex.exists_root hpC_deg
+        rw [Polynomial.IsRoot.def] at hz
+        have hz_im : z.im ≠ 0 :=
+          complex_root_nonreal_of_no_real_root p hreal hz
+        have h_aeval_zero : Polynomial.aeval z p = 0 := by
+          rw [Polynomial.aeval_def, ← Polynomial.eval_map]
+          exact hz
+        obtain ⟨q, hpq⟩ :=
+          Polynomial.quadratic_dvd_of_aeval_eq_zero_im_ne_zero p h_aeval_zero
+            hz_im
+        set s : Polynomial ℝ := Polynomial.X ^ 2 -
+            Polynomial.C (2 * z.re) * Polynomial.X + Polynomial.C (‖z‖ ^ 2)
+            with hs_def
+        have hs_deg : s.natDegree = 2 := natDegree_quadratic_aux z.re (‖z‖ ^ 2)
+        have hs_ne : s ≠ 0 := fun hsz => by
+          rw [hsz, Polynomial.natDegree_zero] at hs_deg; omega
+        have hq_ne : q ≠ 0 := fun hqz => by
+          rw [hqz, mul_zero] at hpq; exact hp hpq
+        have hq_deg : q.natDegree = n - 2 := by
+          have h_mul := Polynomial.natDegree_mul hs_ne hq_ne
+          rw [← hpq, hs_deg, hn] at h_mul
+          omega
+        have hq_lt : q.natDegree < n := by omega
+        obtain ⟨c, m', M', lams', bs, cs, hdisc, hfact⟩ :=
+          ih q.natDegree hq_lt q hq_ne rfl
+        refine ⟨c, m', M' + 1, lams',
+          Fin.cons (-(2 * z.re)) bs, Fin.cons (‖z‖ ^ 2) cs, ?_, ?_⟩
+        · intro k
+          induction k using Fin.cases with
+          | zero => exact discriminant_neg_of_im_ne_zero hz_im
+          | succ k => exact hdisc k
+        · rw [hpq, hfact]
+          have hs_form : s = Polynomial.X ^ 2 +
+              Polynomial.C (-(2 * z.re)) * Polynomial.X +
+              Polynomial.C (‖z‖ ^ 2) := by
+            show Polynomial.X ^ 2 - Polynomial.C (2 * z.re) * Polynomial.X +
+                  Polynomial.C (‖z‖ ^ 2) =
+                Polynomial.X ^ 2 + Polynomial.C (-(2 * z.re)) * Polynomial.X +
+                  Polynomial.C (‖z‖ ^ 2)
+            rw [Polynomial.C_neg]; ring
+          have h_prod :
+            ∏ k : Fin (M' + 1), (Polynomial.X ^ 2 +
+              Polynomial.C (Fin.cons (-(2 * z.re)) bs k) * Polynomial.X +
+              Polynomial.C (Fin.cons (‖z‖ ^ 2) cs k)) =
+            s * ∏ i : Fin M', (Polynomial.X ^ 2 +
+              Polynomial.C (bs i) * Polynomial.X + Polynomial.C (cs i)) := by
+            rw [Fin.prod_univ_succ]
+            simp only [Fin.cons_zero, Fin.cons_succ]
+            rw [hs_form]
+          rw [h_prod]
+          ring
 
 /-! # Exercises -/
 
