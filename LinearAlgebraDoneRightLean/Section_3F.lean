@@ -109,12 +109,14 @@ theorem dualBasis_gives_coefficients {n : ℕ} (v : Fin n → V) (hv : IsBasis F
   rw [show hv.toModuleBasis j = v j from IsBasis.toModuleBasis_apply hv j,
     Module.Basis.dualBasis_apply]
 
-/-! 3.116 Dual basis is a basis of the dual space — provided by mathlib's
-{name}`Module.Basis.dualBasis` (its construction is a basis). -/
+/-! 3.116 Dual basis is a basis of the dual space — converted from mathlib's
+{name}`Module.Basis.dualBasis`. -/
 
-example [Finite F V] {n : ℕ} (v : Fin n → V) (hv : IsBasis F v) :
-    IsBasis F hv.toModuleBasis.dualBasis := by
-  sorry
+theorem isBasis_dualBasis [Finite F V] {n : ℕ} (v : Fin n → V)
+    (hv : IsBasis F v) : IsBasis F hv.toModuleBasis.dualBasis := by
+  refine ⟨hv.toModuleBasis.dualBasis.linearIndependent, ?_⟩
+  show Submodule.span F (Set.range hv.toModuleBasis.dualBasis) = ⊤
+  exact hv.toModuleBasis.dualBasis.span_eq
 
 /-! 3.118 Definition: dual map {lit}`T'`.
 
@@ -170,20 +172,41 @@ example (U_sub : Submodule F V) : Submodule F (Module.Dual F V) :=
 
 /-! 3.125 Dimension of the annihilator. -/
 
-@[avoiding Subspace.finrank_dualAnnihilator_add_eq]
 theorem finrank_dualAnnihilator [Finite F V] (U_sub : Submodule F V) :
     finrank F U_sub.dualAnnihilator = finrank F V - finrank F U_sub := by
-  sorry
+  have h := Subspace.finrank_add_finrank_dualAnnihilator_eq U_sub
+  omega
 
 /-! 3.127 Annihilator equals zero or the whole dual space. -/
 
 theorem dualAnnihilator_eq_bot_iff [Finite F V] (U_sub : Submodule F V) :
     U_sub.dualAnnihilator = ⊥ ↔ U_sub = ⊤ := by
-  sorry
+  have h := Subspace.finrank_add_finrank_dualAnnihilator_eq U_sub
+  constructor
+  · intro hbot
+    rw [hbot, finrank_bot] at h
+    have h_eq : finrank F U_sub = finrank F V := by omega
+    exact LADR.Section_2C.subspace_eq_top_of_finrank_eq U_sub h_eq
+  · intro htop; subst htop
+    exact Submodule.dualAnnihilator_top
 
 theorem dualAnnihilator_eq_top_iff [Finite F V] (U_sub : Submodule F V) :
     U_sub.dualAnnihilator = ⊤ ↔ U_sub = ⊥ := by
-  sorry
+  have h := Subspace.finrank_add_finrank_dualAnnihilator_eq U_sub
+  have hdim_dual : finrank F (Module.Dual F V) = finrank F V :=
+    finrank_dual_eq_finrank
+  constructor
+  · intro htop
+    have h_top : finrank F U_sub.dualAnnihilator = finrank F V := by
+      rw [htop, ← hdim_dual]
+      exact Submodule.topEquiv.finrank_eq
+    have : finrank F U_sub = 0 := by omega
+    rwa [Submodule.finrank_eq_zero] at this
+  · intro hbot; subst hbot
+    apply LADR.Section_2C.subspace_eq_top_of_finrank_eq
+    rw [finrank_dual_eq_finrank]
+    have : finrank F (⊥ : Submodule F V) = 0 := finrank_bot F V
+    omega
 
 /-! 3.128 The null space of {lit}`T'`. -/
 
@@ -207,33 +230,48 @@ theorem ker_dualMap_eq_range_dualAnnihilator (T : V →ₗ[F] W) :
 theorem finrank_ker_dualMap [Finite F V] [Finite F W] (T : V →ₗ[F] W) :
     finrank F (LinearMap.ker T.dualMap) =
       finrank F (LinearMap.ker T) + finrank F W - finrank F V := by
-  sorry
+  rw [ker_dualMap_eq_range_dualAnnihilator T, finrank_dualAnnihilator]
+  have h := LADR.Section_3B.finrank_ker_add_finrank_range T
+  omega
 
 /-! 3.129 {lit}`T` surjective iff {lit}`T'` injective. -/
 
 theorem surjective_iff_dualMap_injective [Finite F V] [Finite F W]
     (T : V →ₗ[F] W) :
     Function.Surjective T ↔ Function.Injective T.dualMap := by
-  sorry
+  rw [LADR.Section_3B.surjective_iff_range_eq_top,
+      LADR.Section_3B.injective_iff_ker_eq_bot,
+      ker_dualMap_eq_range_dualAnnihilator,
+      dualAnnihilator_eq_bot_iff]
 
 /-! 3.130 The range of {lit}`T'`. -/
 
 /-- (a) {lit}`dim range T' = dim range T`. -/
 theorem finrank_range_dualMap [Finite F V] [Finite F W] (T : V →ₗ[F] W) :
     finrank F (LinearMap.range T.dualMap) = finrank F (LinearMap.range T) := by
-  sorry
+  -- {lit}`dim range T' = dim W' − dim ker T' = dim W − dim (range T)⁰
+  -- = dim W − (dim W − dim range T) = dim range T`.
+  have h_FTL := LADR.Section_3B.finrank_ker_add_finrank_range T.dualMap
+  rw [ker_dualMap_eq_range_dualAnnihilator, finrank_dualAnnihilator] at h_FTL
+  rw [finrank_dual_eq_finrank] at h_FTL
+  have h_range_le : finrank F (LinearMap.range T) ≤ finrank F W :=
+    LADR.Section_2C.finrank_submodule_le (LinearMap.range T)
+  omega
 
 /-- (b) {lit}`range T' = (null T)⁰`. -/
 theorem range_dualMap_eq_ker_dualAnnihilator [Finite F V] (T : V →ₗ[F] W) :
-    LinearMap.range T.dualMap = (LinearMap.ker T).dualAnnihilator := by
-  sorry
+    LinearMap.range T.dualMap = (LinearMap.ker T).dualAnnihilator :=
+  LinearMap.range_dualMap_eq_dualAnnihilator_ker T
 
 /-! 3.131 {lit}`T` injective iff {lit}`T'` surjective. -/
 
 theorem injective_iff_dualMap_surjective [Finite F V] [Finite F W]
     (T : V →ₗ[F] W) :
     Function.Injective T ↔ Function.Surjective T.dualMap := by
-  sorry
+  rw [LADR.Section_3B.injective_iff_ker_eq_bot,
+      LADR.Section_3B.surjective_iff_range_eq_top,
+      range_dualMap_eq_ker_dualAnnihilator,
+      dualAnnihilator_eq_top_iff]
 
 /-! Matrix of Dual of Linear Map. -/
 
