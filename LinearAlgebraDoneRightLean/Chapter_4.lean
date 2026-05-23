@@ -196,13 +196,17 @@ theorem fundamental_theorem_of_algebra (p : Polynomial ℂ) (hp : 0 < p.degree) 
   Complex.exists_root hp
 
 /-! 4.13 Fundamental theorem of algebra, second version: factorization into
-linear factors over {lit}`ℂ`. -/
+linear factors over {lit}`ℂ`. Stated using a {name}`Multiset` of roots
+(closer to Axler's "list of zeros λ₁, …, λₘ"). -/
 
-theorem fta_factorization (p : Polynomial ℂ) (hp : p ≠ 0) :
-    ∃ (c : ℂ) (m : ℕ) (lams : Fin m → ℂ),
-      p = Polynomial.C c *
-        ∏ k, (Polynomial.X - Polynomial.C (lams k)) := by
-  sorry
+theorem fta_factorization (p : Polynomial ℂ) :
+    Polynomial.C p.leadingCoeff *
+      (Multiset.map (fun a => Polynomial.X - Polynomial.C a) p.roots).prod
+        = p := by
+  by_cases hp : p = 0
+  · subst hp; simp
+  apply Polynomial.C_leadingCoeff_mul_prod_multiset_X_sub_C
+  exact (Polynomial.splits_iff_card_roots.mp (IsAlgClosed.splits p))
 
 /-! Factorization of Polynomials over ℝ. -/
 
@@ -232,7 +236,34 @@ theorem quadratic_factor (b c : ℝ) :
       Polynomial.X ^ 2 + Polynomial.C b * Polynomial.X + Polynomial.C c =
         (Polynomial.X - Polynomial.C lam₁) *
         (Polynomial.X - Polynomial.C lam₂)) ↔ b ^ 2 ≥ 4 * c := by
-  sorry
+  constructor
+  · rintro ⟨lam₁, lam₂, heq⟩
+    -- Evaluate at 0 and 1 to extract {lit}`c = lam₁ lam₂` and
+    -- {lit}`b = -(lam₁ + lam₂)`. Then
+    -- {lit}`b² − 4c = (lam₁ − lam₂)² ≥ 0`.
+    have h0 := congrArg (Polynomial.eval 0) heq
+    have h1 := congrArg (Polynomial.eval 1) heq
+    simp at h0 h1
+    have h_sum_lam : lam₁ + lam₂ = -b := by nlinarith
+    have h_sq_diff : (lam₁ - lam₂) ^ 2 = b ^ 2 - 4 * c := by
+      have h_id : (lam₁ - lam₂) ^ 2 =
+          (lam₁ + lam₂) ^ 2 - 4 * (lam₁ * lam₂) := by ring
+      rw [h_id, h_sum_lam, ← h0]; ring
+    linarith [sq_nonneg (lam₁ - lam₂), h_sq_diff]
+  · intro hbc
+    have hpos : 0 ≤ b ^ 2 / 4 - c := by linarith
+    set d := Real.sqrt (b ^ 2 / 4 - c)
+    refine ⟨-b / 2 + d, -b / 2 - d, ?_⟩
+    have hd_sq : d * d = b ^ 2 / 4 - c := Real.mul_self_sqrt hpos
+    have h_sum_lam : (-b / 2 + d) + (-b / 2 - d) = -b := by ring
+    have h_prod_lam : (-b / 2 + d) * (-b / 2 - d) = c := by nlinarith
+    have h_sum_C : Polynomial.C (-b / 2 + d) + Polynomial.C (-b / 2 - d) =
+        -Polynomial.C b := by
+      rw [← Polynomial.C_add, h_sum_lam, Polynomial.C_neg]
+    have h_prod_C : Polynomial.C (-b / 2 + d) * Polynomial.C (-b / 2 - d) =
+        Polynomial.C c := by
+      rw [← Polynomial.C_mul, h_prod_lam]
+    linear_combination Polynomial.X * h_sum_C - h_prod_C
 
 /-! 4.16 Factorization of a polynomial over {lit}`ℝ`. -/
 

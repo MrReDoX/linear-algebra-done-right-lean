@@ -280,8 +280,8 @@ theorem injective_iff_dualMap_surjective [Finite F V] [Finite F W]
 Given bases of V and W with their dual bases, the matrix of {lit}`T'` in
 the dual bases equals the transpose of the matrix of {lit}`T`. -/
 
-/-- Statement-level version: the matrix of {lit}`T'` (computed in the dual
-bases) equals the transpose of the matrix of {lit}`T`. Stated using mathlib's
+/-- The matrix of {lit}`T'` (computed in the dual bases) equals the
+transpose of the matrix of {lit}`T`. Stated using mathlib's
 {name}`LinearMap.toMatrix` and {name}`Module.Basis.dualBasis` directly. -/
 theorem toMatrix_dualMap_eq_transpose [Finite F V] [Finite F W] {m n : ℕ}
     (v : Fin n → V) (w : Fin m → W) (hv : IsBasis F v) (hw : IsBasis F w)
@@ -289,7 +289,12 @@ theorem toMatrix_dualMap_eq_transpose [Finite F V] [Finite F W] {m n : ℕ}
     LinearMap.toMatrix hw.toModuleBasis.dualBasis hv.toModuleBasis.dualBasis
       T.dualMap =
         (LinearMap.toMatrix hv.toModuleBasis hw.toModuleBasis T).transpose := by
-  sorry
+  ext k j
+  rw [Matrix.transpose_apply, LinearMap.toMatrix_apply, LinearMap.toMatrix_apply]
+  -- LHS: (hv.dualBasis.repr (T'(hw.dualBasis j))) k = (T'(hw.dualBasis j))(hv k)
+  --    = (hw.dualBasis j)(T(hv k)) = (hw.repr (T(hv k))) j = RHS.
+  rw [← Module.Basis.equivFun_apply, Module.Basis.dualBasis_equivFun,
+      LinearMap.dualMap_apply, Module.Basis.dualBasis_apply]
 
 /-! 3.133 Column rank equals row rank — re-proved using duality. We proved
 this directly in {name}`LADR.Section_3C.columnRank_eq_rowRank`. -/
