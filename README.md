@@ -53,6 +53,12 @@ on the human-vs-AI split as we accumulate playthroughs.
 
 ## Status
 
+A row is *drafted* once the section's `.lean` file exists with all numbered
+Axler results stated and proved and all exercises stated as `sorry`. It is
+*reviewed* once a human has read it line-by-line and revised problems they
+found. *Playtested* means someone (other than the author) has worked through
+the section's exercises.
+
 | Section | Drafted | Reviewed | Playtested |
 |---|---|---|---|
 | 1A. ℝⁿ and ℂⁿ | ✓ | ✓ | — |
