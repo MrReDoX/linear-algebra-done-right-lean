@@ -8,6 +8,7 @@ import LinearAlgebraDoneRightLean.Section_3A
 import LinearAlgebraDoneRightLean.Section_3B
 import LinearAlgebraDoneRightLean.Section_3C
 import LinearAlgebraDoneRightLean.Section_3D
+import LinearAlgebraDoneRightLean.Chapter_4
 
 /-!
 # Lean Companion to Axler's *Linear Algebra Done Right* (4e)
@@ -34,4 +35,5 @@ point of an exercise, the exercise is marked with {lit}`@[avoiding …]` from
 - {module}`LinearAlgebraDoneRightLean.Section_3B` — Null Spaces and Ranges
 - {module}`LinearAlgebraDoneRightLean.Section_3C` — Matrices
 - {module}`LinearAlgebraDoneRightLean.Section_3D` — Invertibility and Isomorphisms
+- {module}`LinearAlgebraDoneRightLean.Chapter_4` — Polynomials
 -/
