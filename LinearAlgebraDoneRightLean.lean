@@ -9,6 +9,7 @@ import LinearAlgebraDoneRightLean.Section_3B
 import LinearAlgebraDoneRightLean.Section_3C
 import LinearAlgebraDoneRightLean.Section_3D
 import LinearAlgebraDoneRightLean.Section_3E
+import LinearAlgebraDoneRightLean.Section_3F
 import LinearAlgebraDoneRightLean.Chapter_4
 
 /-!
@@ -37,5 +38,6 @@ point of an exercise, the exercise is marked with {lit}`@[avoiding …]` from
 - {module}`LinearAlgebraDoneRightLean.Section_3C` — Matrices
 - {module}`LinearAlgebraDoneRightLean.Section_3D` — Invertibility and Isomorphisms
 - {module}`LinearAlgebraDoneRightLean.Section_3E` — Products and Quotients of Vector Spaces
+- {module}`LinearAlgebraDoneRightLean.Section_3F` — Duality
 - {module}`LinearAlgebraDoneRightLean.Chapter_4` — Polynomials
 -/
