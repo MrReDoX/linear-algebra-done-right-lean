@@ -38,8 +38,8 @@ namespace LADR.Section_3D
 
 open LADR.Section_2A (Spans)
 open LADR.Section_2B (IsBasis)
-open LADR.Section_3C (matrixOf matrixOf_apply matrixOf_spec matrixOf_add
-  matrixOf_smul matrixOf_comp columnRank rank)
+open LADR.Section_3C (matrixOf matrixOf_apply matrixOf_spec matrixOf_comp
+  columnRank column row)
 open Module (Finite finrank)
 
 variable {F : Type*} [Field F]
@@ -364,7 +364,7 @@ mathlib provides this directly as {name}`LinearMap.toMatrix`, which is the
 {name}`LinearEquiv` underlying our {name}`matrixOf`. -/
 
 noncomputable def matrixOfEquiv {m n : ℕ}
-    (v : Fin n → V) (w : Fin m → W)
+    {v : Fin n → V} {w : Fin m → W}
     (hv : IsBasis F v) (hw : IsBasis F w) :
     (V →ₗ[F] W) ≃ₗ[F] Matrix (Fin m) (Fin n) F :=
   LinearMap.toMatrix hv.toModuleBasis hw.toModuleBasis
@@ -380,7 +380,7 @@ theorem finrank_linearMap [Finite F V] [Finite F W] :
     LADR.Section_2C.isBasis_card_eq_finrank v hv
   have hm : m = finrank F W :=
     LADR.Section_2C.isBasis_card_eq_finrank w hw
-  have h := (matrixOfEquiv v w hv hw).finrank_eq
+  have h := (matrixOfEquiv hv hw).finrank_eq
   rw [LADR.Section_3C.finrank_matrix] at h
   rw [h, hn, hm, mul_comm]
 
@@ -388,7 +388,7 @@ theorem finrank_linearMap [Finite F V] [Finite F W] :
 
 /-- The column vector of coordinates of {lit}`x ∈ V` in basis {lit}`v`. -/
 noncomputable def vectorMatrixOf {n : ℕ}
-    (v : Fin n → V) (hv : IsBasis F v) (x : V) :
+    {v : Fin n → V} (hv : IsBasis F v) (x : V) :
     Matrix (Fin n) (Fin 1) F :=
   fun i _ => hv.toModuleBasis.repr x i
 
@@ -402,14 +402,13 @@ expressing {lit}`x` in the basis and applying {lit}`b.repr` to both sides. -/
 
 example {n : ℕ} (x : Fin n → F) :
     vectorMatrixOf (F := F) (V := Fin n → F)
-      (fun k : Fin n => (Pi.single k 1 : Fin n → F))
-      (LADR.Section_3C.isBasis_stdBasis n) x = fun i _ => x i := by
+      (LADR.Section_2B.isBasis_stdBasis n) x = fun i _ => x i := by
   classical
   ext i _
-  show (LADR.Section_3C.isBasis_stdBasis (F := F) n).toModuleBasis.repr x i =
+  show (LADR.Section_2B.isBasis_stdBasis (F := F) n).toModuleBasis.repr x i =
     x i
   set hu : IsBasis F (fun k : Fin n => (Pi.single k 1 : Fin n → F)) :=
-    LADR.Section_3C.isBasis_stdBasis n with hu_def
+    LADR.Section_2B.isBasis_stdBasis n with hu_def
   set b := hu.toModuleBasis with b_def
   have hb_apply : ∀ k, b k = Pi.single k (1 : F) :=
     IsBasis.toModuleBasis_apply hu
@@ -444,25 +443,25 @@ example {n : ℕ} (x : Fin n → F) :
 /-! 3.75 Column {lit}`k` of {lit}`ℳ(T)` equals {lit}`ℳ(T v_k)` -/
 
 theorem matrixOf_column_eq_vectorMatrixOf {m n : ℕ}
-    (v : Fin n → V) (w : Fin m → W)
+    {v : Fin n → V} {w : Fin m → W}
     (hv : IsBasis F v) (hw : IsBasis F w)
     (T : V →ₗ[F] W) (k : Fin n) :
-    (fun j => matrixOf v w hv hw T j k) =
-      fun j => vectorMatrixOf w hw (T (v k)) j 0 := by
+    (fun j => matrixOf hv hw T j k) =
+      fun j => vectorMatrixOf hw (T (v k)) j 0 := by
   funext j
   rw [matrixOf_apply, vectorMatrixOf]
 
 /-! 3.76 Linear maps act like matrix multiplication -/
 
 theorem matrixOf_apply_vectorMatrixOf {m n : ℕ}
-    (v : Fin n → V) (w : Fin m → W)
+    {v : Fin n → V} {w : Fin m → W}
     (hv : IsBasis F v) (hw : IsBasis F w)
     (T : V →ₗ[F] W) (x : V) :
-    vectorMatrixOf w hw (T x) =
-      matrixOf v w hv hw T * vectorMatrixOf v hv x := by
+    vectorMatrixOf hw (T x) =
+      matrixOf hv hw T * vectorMatrixOf hv x := by
   ext j k
   show hw.toModuleBasis.repr (T x) j =
-    ∑ r, matrixOf v w hv hw T j r * hv.toModuleBasis.repr x r
+    ∑ r, matrixOf hv hw T j r * hv.toModuleBasis.repr x r
   -- Expand {lit}`x = ∑ r b_V.repr(x) r • v_r`, push T through.
   have hx : x = ∑ r, hv.toModuleBasis.repr x r • v r := by
     have hb := hv.toModuleBasis.sum_repr x
@@ -485,13 +484,23 @@ theorem matrixOf_apply_vectorMatrixOf {m n : ℕ}
 /-! 3.78 Dimension of {lit}`range T` equals column rank of {lit}`ℳ(T)` -/
 
 theorem finrank_range_eq_columnRank_matrixOf [Finite F V] [Finite F W] {m n : ℕ}
-    (v : Fin n → V) (w : Fin m → W)
+    {v : Fin n → V} {w : Fin m → W}
     (hv : IsBasis F v) (hw : IsBasis F w)
     (T : V →ₗ[F] W) :
-    finrank F (LinearMap.range T) = columnRank (matrixOf v w hv hw T) := by
+    finrank F (LinearMap.range T) = columnRank (matrixOf hv hw T) := by
   classical
-  -- The iso {lit}`ψ : W ≃ₗ Fin m → F` via the basis {lit}`w`.
+  -- The iso {lit}`ψ : W ≃ₗ Fin m → F` via basis {lit}`w`, composed with the
+  -- trivial iso to {lit}`Matrix (Fin m) (Fin 1) F`.
   let ψ : W ≃ₗ[F] (Fin m → F) := hw.toModuleBasis.equivFun
+  let φ : (Fin m → F) ≃ₗ[F] Matrix (Fin m) (Fin 1) F :=
+    { toFun := fun v j _ => v j
+      invFun := fun M j => M j 0
+      map_add' := fun _ _ => rfl
+      map_smul' := fun _ _ => rfl
+      left_inv := fun _ => rfl
+      right_inv := fun _ => by
+        ext j i; obtain rfl : i = 0 := Subsingleton.elim _ _; rfl }
+  let η : W ≃ₗ[F] Matrix (Fin m) (Fin 1) F := ψ.trans φ
   -- {lit}`range T = span (range (T ∘ v))` (3B.10).
   have hrange : LinearMap.range T =
       Submodule.span F (Set.range (fun k => T (v k))) := by
@@ -501,32 +510,33 @@ theorem finrank_range_eq_columnRank_matrixOf [Finite F V] [Finite F W] {m n : �
     congr 1
     exact (Set.range_comp T v).symm
   rw [hrange]
-  -- Apply {lit}`ψ`: finrank is preserved.
-  have hψ_eq :
+  -- Apply {lit}`η`: finrank is preserved.
+  have hη_eq :
       finrank F ↥(Submodule.span F (Set.range (fun k => T (v k)))) =
-      finrank F ↥(Submodule.map ψ.toLinearMap
+      finrank F ↥(Submodule.map η.toLinearMap
         (Submodule.span F (Set.range (fun k => T (v k))))) :=
-    (Submodule.equivMapOfInjective ψ.toLinearMap ψ.injective _).finrank_eq
-  rw [hψ_eq, Submodule.map_span]
+    (Submodule.equivMapOfInjective η.toLinearMap η.injective _).finrank_eq
+  rw [hη_eq, Submodule.map_span]
   -- Identify the resulting set of images with the set of columns of ℳ(T).
   have hsetrange :
-      ψ.toLinearMap '' Set.range (fun k => T (v k)) =
-        Set.range (fun k : Fin n => fun j : Fin m =>
-          matrixOf v w hv hw T j k) := by
+      η.toLinearMap '' Set.range (fun k => T (v k)) =
+        Set.range (column (matrixOf hv hw T)) := by
     ext y
     constructor
     · rintro ⟨_, ⟨k, rfl⟩, rfl⟩
       refine ⟨k, ?_⟩
-      funext j
-      show matrixOf v w hv hw T j k = ψ (T (v k)) j
-      rw [matrixOf_apply]
-      rfl
+      ext j i
+      obtain rfl : i = 0 := Subsingleton.elim _ _
+      change column (matrixOf hv hw T) k j 0 = ψ (T (v k)) j
+      change matrixOf hv hw T j k = ψ (T (v k)) j
+      rw [matrixOf_apply]; rfl
     · rintro ⟨k, rfl⟩
       refine ⟨T (v k), ⟨k, rfl⟩, ?_⟩
-      funext j
-      show ψ (T (v k)) j = matrixOf v w hv hw T j k
-      rw [matrixOf_apply]
-      rfl
+      ext j i
+      obtain rfl : i = 0 := Subsingleton.elim _ _
+      change ψ (T (v k)) j = column (matrixOf hv hw T) k j 0
+      change ψ (T (v k)) j = matrixOf hv hw T j k
+      rw [matrixOf_apply]; rfl
   rw [hsetrange]
   rfl
 
@@ -548,19 +558,19 @@ example (n : ℕ) (A : Matrix (Fin n) (Fin n) F) : Prop := IsUnit A
 /-! 3.81 Matrix of product of linear maps (re-statement of 3.43). -/
 
 example {p m n : ℕ}
-    (u : Fin p → U) (v : Fin n → V) (w : Fin m → W)
+    {u : Fin p → U} {v : Fin n → V} {w : Fin m → W}
     (hu : IsBasis F u) (hv : IsBasis F v) (hw : IsBasis F w)
     (S : V →ₗ[F] W) (T : U →ₗ[F] V) :
-    matrixOf u w hu hw (S ∘ₗ T) = matrixOf v w hv hw S * matrixOf u v hu hv T :=
-  matrixOf_comp u v w hu hv hw S T
+    matrixOf hu hw (S ∘ₗ T) = matrixOf hv hw S * matrixOf hu hv T :=
+  matrixOf_comp hu hv hw S T
 
 /-! 3.82 The matrices {lit}`ℳ(I, u, v)` and {lit}`ℳ(I, v, u)` are mutual
 inverses. -/
 
 /-- Helper: the matrix of {lit}`LinearMap.id` with respect to a single
 basis is the identity matrix. -/
-theorem matrixOf_id_self {n : ℕ} (v : Fin n → V) (hv : IsBasis F v) :
-    matrixOf v v hv hv LinearMap.id = 1 := by
+theorem matrixOf_id_self {n : ℕ} {v : Fin n → V} (hv : IsBasis F v) :
+    matrixOf hv hv LinearMap.id = 1 := by
   ext j k
   rw [matrixOf_apply]
   show hv.toModuleBasis.repr ((LinearMap.id : V →ₗ[F] V) (v k)) j =
@@ -574,32 +584,32 @@ theorem matrixOf_id_self {n : ℕ} (v : Fin n → V) (hv : IsBasis F v) :
   · rw [if_neg hjk, if_neg (fun heq => hjk heq.symm)]
 
 theorem matrixOf_id_mul_matrixOf_id {n : ℕ}
-    (u v : Fin n → V) (hu : IsBasis F u) (hv : IsBasis F v) :
-    matrixOf v u hv hu LinearMap.id * matrixOf u v hu hv LinearMap.id = 1 := by
+    {u v : Fin n → V} (hu : IsBasis F u) (hv : IsBasis F v) :
+    matrixOf hv hu LinearMap.id * matrixOf hu hv LinearMap.id = 1 := by
   -- By 3.43 applied to {lit}`I ∘ I` going {lit}`u → v → u`.
-  have h := matrixOf_comp u v u hu hv hu LinearMap.id LinearMap.id
+  have h := matrixOf_comp hu hv hu LinearMap.id LinearMap.id
   have hid_comp : (LinearMap.id : V →ₗ[F] V) ∘ₗ LinearMap.id = LinearMap.id := by
     ext; rfl
-  rw [hid_comp, matrixOf_id_self u hu] at h
+  rw [hid_comp, matrixOf_id_self hu] at h
   exact h.symm
 
 /-! 3.84 Change-of-basis formula -/
 
 theorem change_of_basis {n : ℕ}
-    (u v : Fin n → V) (hu : IsBasis F u) (hv : IsBasis F v) (T : V →ₗ[F] V) :
-    matrixOf u u hu hu T =
-      matrixOf v u hv hu LinearMap.id *
-        matrixOf v v hv hv T * matrixOf u v hu hv LinearMap.id := by
+    {u v : Fin n → V} (hu : IsBasis F u) (hv : IsBasis F v) (T : V →ₗ[F] V) :
+    matrixOf hu hu T =
+      matrixOf hv hu LinearMap.id *
+        matrixOf hv hv T * matrixOf hu hv LinearMap.id := by
   -- Two applications of 3.43: ℳ(T) = ℳ(I ∘ T) and ℳ(T) = ℳ(T ∘ I).
-  have h1 : matrixOf u v hu hv T =
-      matrixOf v v hv hv T * matrixOf u v hu hv LinearMap.id := by
-    have h := matrixOf_comp u v v hu hv hv T LinearMap.id
+  have h1 : matrixOf hu hv T =
+      matrixOf hv hv T * matrixOf hu hv LinearMap.id := by
+    have h := matrixOf_comp hu hv hv T LinearMap.id
     have hcomp : T ∘ₗ LinearMap.id = T := by ext; rfl
     rw [hcomp] at h
     exact h
-  have h2 : matrixOf u u hu hu T =
-      matrixOf v u hv hu LinearMap.id * matrixOf u v hu hv T := by
-    have h := matrixOf_comp u v u hu hv hu LinearMap.id T
+  have h2 : matrixOf hu hu T =
+      matrixOf hv hu LinearMap.id * matrixOf hu hv T := by
+    have h := matrixOf_comp hu hv hu LinearMap.id T
     have hcomp : (LinearMap.id : V →ₗ[F] V) ∘ₗ T = T := by ext; rfl
     rw [hcomp] at h
     exact h
@@ -608,16 +618,16 @@ theorem change_of_basis {n : ℕ}
 /-! 3.86 {lit}`ℳ(T⁻¹) = ℳ(T)⁻¹` -/
 
 theorem matrixOf_inv_mul_matrixOf {n : ℕ}
-    (v : Fin n → V) (hv : IsBasis F v) (T : V →ₗ[F] V)
+    {v : Fin n → V} (hv : IsBasis F v) (T : V →ₗ[F] V)
     (hT : IsInvertible T) :
-    matrixOf v v hv hv hT.inv * matrixOf v v hv hv T = 1 := by
-  rw [← matrixOf_comp v v v hv hv hv hT.inv T, hT.inv_comp, matrixOf_id_self]
+    matrixOf hv hv hT.inv * matrixOf hv hv T = 1 := by
+  rw [← matrixOf_comp hv hv hv hT.inv T, hT.inv_comp, matrixOf_id_self]
 
 theorem matrixOf_mul_matrixOf_inv {n : ℕ}
-    (v : Fin n → V) (hv : IsBasis F v) (T : V →ₗ[F] V)
+    {v : Fin n → V} (hv : IsBasis F v) (T : V →ₗ[F] V)
     (hT : IsInvertible T) :
-    matrixOf v v hv hv T * matrixOf v v hv hv hT.inv = 1 := by
-  rw [← matrixOf_comp v v v hv hv hv T hT.inv, hT.comp_inv, matrixOf_id_self]
+    matrixOf hv hv T * matrixOf hv hv hT.inv = 1 := by
+  rw [← matrixOf_comp hv hv hv T hT.inv, hT.comp_inv, matrixOf_id_self]
 
 /-! # Exercises -/
 
@@ -762,7 +772,7 @@ theorem exercise_3D_18 : Nonempty (V ≃ₗ[F] (F →ₗ[F] V)) := by
 /-- 3D.19 -/
 theorem exercise_3D_19 [Finite F V] (T : V →ₗ[F] V) :
     (∀ {n : ℕ} (u v : Fin n → V) (hu : IsBasis F u) (hv : IsBasis F v),
-      matrixOf u u hu hu T = matrixOf v v hv hv T) ↔
+      matrixOf hu hu T = matrixOf hv hv T) ↔
       ∃ lam : F, T = lam • LinearMap.id := by
   sorry
 
@@ -781,15 +791,15 @@ theorem exercise_3D_21 {n : ℕ} (A : Fin n → Fin n → F) :
 
 /-- 3D.22 -/
 theorem exercise_3D_22 [Finite F V] {n : ℕ}
-    (v : Fin n → V) (hv : IsBasis F v) (T : V →ₗ[F] V) :
-    IsUnit (matrixOf v v hv hv T) ↔ IsInvertible T := by
+    {v : Fin n → V} (hv : IsBasis F v) (T : V →ₗ[F] V) :
+    IsUnit (matrixOf hv hv T) ↔ IsInvertible T := by
   sorry
 
 /-- 3D.23 -/
 theorem exercise_3D_23 {n : ℕ}
-    (u v : Fin n → V) (hu : IsBasis F u) (hv : IsBasis F v)
+    {u v : Fin n → V} (hu : IsBasis F u) (hv : IsBasis F v)
     (T : V →ₗ[F] V) (hT : ∀ k, T (v k) = u k) :
-    matrixOf v v hv hv T = matrixOf u v hu hv LinearMap.id := by
+    matrixOf hv hv T = matrixOf hu hv LinearMap.id := by
   sorry
 
 /-- 3D.24 — {lit}`A * B = 1 ⟹ B * A = 1` -/

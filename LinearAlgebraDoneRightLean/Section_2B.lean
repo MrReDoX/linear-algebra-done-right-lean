@@ -13,6 +13,7 @@ import Mathlib.LinearAlgebra.Span.Basic
 import Mathlib.LinearAlgebra.Span.Defs
 import Mathlib.RingTheory.Finiteness.Defs
 import Mathlib.RingTheory.Polynomial.Basic
+import Mathlib.RingTheory.Polynomial.DegreeLT
 import Mathlib.LinearAlgebra.Basis.VectorSpace
 import Mathlib.Tactic.Linarith
 import Mathlib.Tactic.LinearCombination
@@ -60,7 +61,7 @@ noncomputable def IsBasis.toModuleBasis {m : ℕ} {v : Fin m → V}
 /-! (a) The standard basis of {lit}`Fⁿ`:
 {lit}`(1, 0, …, 0), (0, 1, …, 0), …, (0, …, 0, 1)`. -/
 
-example (n : ℕ) :
+theorem isBasis_stdBasis (n : ℕ) :
     IsBasis F (fun k : Fin n => (Pi.single k 1 : Fin n → F)) := by
   constructor
   · rw [Fintype.linearIndependent_iff]
@@ -84,6 +85,59 @@ example (n : ℕ) :
       show v i • (Pi.single i (1 : F) : Fin n → F) j = 0
       simp [hij.symm]
     · intro h; exact absurd (Finset.mem_univ j) h
+
+/-- For the standard basis of {lit}`Fⁿ`, the coordinate of a vector in row
+{lit}`i` is just the {lit}`i`-th component. -/
+@[simp] theorem isBasis_stdBasis_repr {n : ℕ} (x : Fin n → F) (i : Fin n) :
+    (isBasis_stdBasis (F := F) n).toModuleBasis.repr x i = x i := by
+  classical
+  set b := (isBasis_stdBasis (F := F) n).toModuleBasis
+  have hb_apply : ∀ k, b k = Pi.single k (1 : F) :=
+    IsBasis.toModuleBasis_apply _
+  have hxsum : x = ∑ k, x k • b k := by
+    funext j
+    simp_rw [hb_apply]
+    rw [Finset.sum_apply]
+    simp_rw [Pi.smul_apply, smul_eq_mul]
+    rw [Finset.sum_eq_single j]
+    · rw [Pi.single_eq_same, mul_one]
+    · intros k _ hkj; rw [Pi.single_eq_of_ne (Ne.symm hkj), mul_zero]
+    · intro h; exact absurd (Finset.mem_univ j) h
+  have hreprx : b.repr x = ∑ k, x k • Finsupp.single k (1 : F) := by
+    conv_lhs => rw [hxsum]
+    rw [map_sum]
+    refine Finset.sum_congr rfl (fun k _ => ?_)
+    rw [show b.repr (x k • b k) = x k • b.repr (b k) from
+      b.repr.map_smul _ _, b.repr_self]
+  rw [hreprx, Finsupp.coe_finset_sum, Finset.sum_apply, Finset.sum_eq_single i]
+  · rw [Finsupp.coe_smul, Pi.smul_apply, smul_eq_mul,
+        Finsupp.single_apply, if_pos rfl, mul_one]
+  · intros k _ hki
+    rw [Finsupp.coe_smul, Pi.smul_apply, smul_eq_mul,
+        Finsupp.single_apply, if_neg hki, mul_zero]
+  · intro h; exact absurd (Finset.mem_univ i) h
+
+/-- The monomial basis {lit}`1, x, …, x^{n-1}` of {lit}`Polynomial.degreeLT F n`
+packaged as an {name}`IsBasis`. -/
+theorem isBasis_polyMono (n : ℕ) :
+    IsBasis F (⇑(Polynomial.degreeLT.basis F n)) :=
+  ⟨(Polynomial.degreeLT.basis F n).linearIndependent,
+   (Polynomial.degreeLT.basis F n).span_eq⟩
+
+/-- Coordinates in the monomial basis are just polynomial coefficients. -/
+theorem isBasis_polyMono_repr (n : ℕ) (P : Polynomial.degreeLT F n) (i : Fin n) :
+    (isBasis_polyMono (F := F) n).toModuleBasis.repr P i =
+      (P : Polynomial F).coeff i := by
+  rw [← Polynomial.degreeLT.basis_repr]
+  refine Module.Basis.repr_apply_eq (isBasis_polyMono (F := F) n).toModuleBasis
+    (fun P i => (Polynomial.degreeLT.basis F n).repr P i) ?_ ?_ ?_ P i
+  · intros x y; ext i; simp
+  · intros c x; ext i; simp
+  · intro j
+    have h : (isBasis_polyMono (F := F) n).toModuleBasis j =
+        Polynomial.degreeLT.basis F n j :=
+      IsBasis.toModuleBasis_apply _ j
+    simp [h, (Polynomial.degreeLT.basis F n).repr_self]
 
 /-! These examples (b)–(g) and the note below are the content of exercise
 {lit}`2B.2`; they are stated here and left as {lit}`sorry`, to be filled in
