@@ -71,7 +71,7 @@ the section's exercises.
 | 3B. Null Spaces and Ranges | ✓ | ✓ | — |
 | 3C. Matrices | ✓ | ✓ | — |
 | 3D. Invertibility and Isomorphisms | ✓ | ✓ | — |
-| 3E. Products and Quotients of Vector Spaces | ✓ | — | — |
+| 3E. Products and Quotients of Vector Spaces | ✓ | ✓ | — |
 | 3F. Duality | ✓ | — | — |
 | 4. Polynomials | ✓ | — | — |
 
