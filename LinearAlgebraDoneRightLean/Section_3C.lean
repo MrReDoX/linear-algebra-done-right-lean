@@ -619,7 +619,7 @@ private theorem rowRank_transpose {m n : ℕ} (A : Matrix (Fin m) (Fin n) F) :
   rw [h_row_eq, Set.range_comp, ← Submodule.map_span]
   exact τ.finrank_map_eq _
 
-private theorem columnRank_transpose {m n : ℕ}
+theorem columnRank_transpose {m n : ℕ}
     (A : Matrix (Fin m) (Fin n) F) :
     columnRank A.transpose = rowRank A := by
   let τ : Matrix (Fin 1) (Fin n) F ≃ₗ[F] Matrix (Fin n) (Fin 1) F :=
