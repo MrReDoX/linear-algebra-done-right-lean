@@ -1,0 +1,94 @@
+# formalization.yaml (v0.3): repo-root metadata for formalization projects.
+# See https://github.com/mathlib-initiative/formalization.yaml
+
+version: "v0.3"
+
+project:
+  name: "Lean Companion to Axler's Linear Algebra Done Right (4e)"
+  authors:
+    - "Rado Kirov"
+    - "Greg Shuflin"
+    - "Xuanji Li"
+    - "Pablo Villalobos"
+  license: "Apache-2.0"
+
+sources:
+  - title: "Linear Algebra Done Right"
+    authors:
+      - "Sheldon Axler"
+    id: "https://linear.axler.net/LADR4e.pdf"   # 4th edition, freely available PDF
+    type: "textbook"
+    license: "Open access (free PDF; see https://linear.axler.net/)"
+    author_contacted: "no"
+    prior_work: "https://github.com/teorth/analysis"   # Tao's Analysis I companion, the model for this project
+
+status:
+  scope: >-
+    A section-by-section companion mirroring the textbook: definitions and
+    proven theorems translated into Lean (using mathlib directly where Axler's
+    concept already exists), and exercises stated as theorems with `sorry` for
+    the reader to fill in. Mathematical narrative is not copied over from the
+    text to the companion, but some additional narrative is added to explain
+    the mathlib conversions. 
+
+    Currently covers Chapters 1-3 (drafted and human-reviewed) and Chapter 4
+    (drafted). The `sorry`s are intentional exercises, not gaps in the
+    formalization of the textbook's own results.
+  sorry_count: 383              # intentional exercise placeholders (warn.sorry disabled)
+  sorry_in_definitions: 0
+  axioms:
+    - "propext"
+    - "Classical.choice"
+    - "Quot.sound"
+  main_results: [] # not applicable, a large number of key linear algebra results from each chapter.
+
+automation:
+  methods:
+    - method: "agent"
+      models: ["claude-opus-4-7", "claude-opus-4-8"]
+      framework: "Claude Code"
+      tool_setup: >-
+        Drafts generated from the freely available PDF, then reviewed and
+        revised line-by-line by a human. Authored under the conventions in
+        companion-helper (https://github.com/rkirov/companion-helper).
+      cost:
+        wall_time: "various, but roughly up to 1 hour per subchapter"
+        spend_usd: "not applicable, using a single personal $100/month Claude subscription"
+        hardware: "API-only"
+      prompting_notes: >-
+        No fixed prompt, but roughly "read the pdf and create a lean
+        companion". Most of the design decisions for companions are captured in
+        the https://github.com/rkirov/companion-helper repo .mds.
+  spend_usd: "not applicable, single personal $100/month Claude subscription"
+  notes: >-
+    AI generates the initial draft of each chapter from the PDF; every draft is
+    then reviewed and revised line-by-line by a human before marked reviewed in
+    the README.md.
+
+# fidelity
+fidelity:
+  divergences: >-
+    Where Axler introduces a concept already in mathlib (Field, Module,
+    Submodule, ...), the companion uses the mathlib definition rather than
+    redefining it, bridging Axler's stated axioms to mathlib's definitions. Some
+    exercises are restated to suit Lean/mathlib idioms.
+
+# review status
+review:
+  status: "author-verified"
+  reviewers:
+    - "Rado Kirov"
+  notes: >-
+    Per-section status tracked in README.md. As of this draft, Sections 1A-3F
+    are drafted and human-reviewed; Chapter 4 is drafted but not yet reviewed.
+    No section has been fully playtested (exercises worked through by someone
+    other than the author) yet.
+
+alignment:
+  namespace: "LinearAlgebraDoneRightLean"
+  statements: [] # too many to state, one in each chapter.
+
+acknowledgements: >-
+  Built on Lean 4 and mathlib (leanprover-community), pinned at v4.30.0-rc2.
+  Uses companion-helper (https://github.com/rkirov/companion-helper) and Verso.
+  Modeled on Terence Tao's Lean companion to Analysis I.
