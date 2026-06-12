@@ -11,6 +11,11 @@ import LinearAlgebraDoneRightLean.Section_3D
 import LinearAlgebraDoneRightLean.Section_3E
 import LinearAlgebraDoneRightLean.Section_3F
 import LinearAlgebraDoneRightLean.Chapter_4
+import LinearAlgebraDoneRightLean.Section_5A
+import LinearAlgebraDoneRightLean.Section_5B
+import LinearAlgebraDoneRightLean.Section_5C
+import LinearAlgebraDoneRightLean.Section_5D
+import LinearAlgebraDoneRightLean.Section_5E
 
 /-!
 # Lean Companion to Axler's *Linear Algebra Done Right* (4e)
@@ -40,4 +45,9 @@ point of an exercise, the exercise is marked with {lit}`@[avoiding …]` from
 - {module}`LinearAlgebraDoneRightLean.Section_3E` — Products and Quotients of Vector Spaces
 - {module}`LinearAlgebraDoneRightLean.Section_3F` — Duality
 - {module}`LinearAlgebraDoneRightLean.Chapter_4` — Polynomials
+- {module}`LinearAlgebraDoneRightLean.Section_5A` — Invariant Subspaces
+- {module}`LinearAlgebraDoneRightLean.Section_5B` — The Minimal Polynomial
+- {module}`LinearAlgebraDoneRightLean.Section_5C` — Upper-Triangular Matrices
+- {module}`LinearAlgebraDoneRightLean.Section_5D` — Diagonalizable Operators
+- {module}`LinearAlgebraDoneRightLean.Section_5E` — Commuting Operators
 -/

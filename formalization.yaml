@@ -31,10 +31,10 @@ status:
     text to the companion, but some additional narrative is added to explain
     the mathlib conversions. 
 
-    Currently covers Chapters 1-3 (drafted and human-reviewed) and Chapter 4
-    (drafted). The `sorry`s are intentional exercises, not gaps in the
+    Currently covers Chapters 1-3 (drafted and human-reviewed) and Chapters 4
+    and 5 (drafted). The `sorry`s are intentional exercises, not gaps in the
     formalization of the textbook's own results.
-  sorry_count: 383              # intentional exercise placeholders (warn.sorry disabled)
+  sorry_count: 532              # intentional exercise placeholders (warn.sorry disabled)
   sorry_in_definitions: 0
   axioms:
     - "propext"
@@ -80,9 +80,9 @@ review:
     - "Rado Kirov"
   notes: >-
     Per-section status tracked in README.md. As of this draft, Sections 1A-3F
-    are drafted and human-reviewed; Chapter 4 is drafted but not yet reviewed.
-    No section has been fully playtested (exercises worked through by someone
-    other than the author) yet.
+    are drafted and human-reviewed; Chapter 4 and Sections 5A-5E are drafted
+    but not yet reviewed. No section has been fully playtested (exercises
+    worked through by someone other than the author) yet.
 
 alignment:
   namespace: "LinearAlgebraDoneRightLean"
