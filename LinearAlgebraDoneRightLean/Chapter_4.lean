@@ -903,70 +903,76 @@ end RealFactorizationUniqueness
 /-! # Exercises -/
 
 /-- 4.1 (a) -/
+@[avoiding Complex.add_conj]
 theorem exercise_4_1a (z : ℂ) : z + conj z = 2 * z.re := by
   sorry
 
 /-- 4.1 (b) -/
+@[avoiding Complex.sub_conj]
 theorem exercise_4_1b (z : ℂ) :
     z - conj z = 2 * z.im * Complex.I := by
   sorry
 
 /-- 4.1 (c) -/
+@[avoiding Complex.mul_conj, Complex.sq_norm]
 theorem exercise_4_1c (z : ℂ) : z * conj z = (‖z‖ : ℂ) ^ 2 := by
   sorry
 
 /-- 4.1 (d) -/
+@[avoiding map_add, map_mul]
 theorem exercise_4_1d (w z : ℂ) :
     conj (w + z) = conj w + conj z ∧
     conj (w * z) = conj w * conj z := by
   sorry
 
 /-- 4.1 (e) -/
+@[avoiding Complex.conj_conj]
 theorem exercise_4_1e (z : ℂ) : conj (conj z) = z := by
   sorry
 
 /-- 4.1 (f) -/
+@[avoiding Complex.abs_re_le_norm, Complex.abs_im_le_norm]
 theorem exercise_4_1f (z : ℂ) : |z.re| ≤ ‖z‖ ∧ |z.im| ≤ ‖z‖ := by
   sorry
 
 /-- 4.1 (g) -/
+@[avoiding Complex.norm_conj]
 theorem exercise_4_1g (z : ℂ) : ‖conj z‖ = ‖z‖ := by
   sorry
 
 /-- 4.1 (h) -/
+@[avoiding norm_mul]
 theorem exercise_4_1h (w z : ℂ) : ‖w * z‖ = ‖w‖ * ‖z‖ := by
   sorry
 
 /-- 4.2 Reverse triangle inequality. -/
+@[avoiding abs_norm_sub_norm_le]
 theorem exercise_4_2 (w z : ℂ) : |‖w‖ - ‖z‖| ≤ ‖w - z‖ := by
   sorry
 
-/-- 4.3 Suppose {lit}`V` is a complex vector space and {lit}`φ ∈ V'`. Define
-{lit}`σ(v) = Re φ(v)`. Show {lit}`φ(v) = σ(v) − i σ(iv)`. -/
+/-- 4.3 -/
 theorem exercise_4_3 {V : Type*} [AddCommGroup V] [Module ℂ V]
-    (phi : V →ₗ[ℂ] ℂ) (v : V) :
-    phi v = (phi v).re - Complex.I * (phi (Complex.I • v)).re := by
+    (φ : V →ₗ[ℂ] ℂ) (v : V) :
+    φ v = (φ v).re - Complex.I * (φ (Complex.I • v)).re := by
   sorry
 
-/-- 4.4 Is {lit}`{0} ∪ {p : deg p = m}` a subspace of {lit}`𝒫(F)`? -/
-def exercise_4_4 (m : ℕ) (_hm : 1 ≤ m) :
+/-- 4.4 -/
+def exercise_4_4 (m : ℕ) (hm : 1 ≤ m) :
     Decidable (∃ (U : Submodule F (Polynomial F)),
       ∀ p : Polynomial F, p ∈ U ↔ p = 0 ∨ p.natDegree = m) := by
   -- first line should be `apply isTrue` or `apply isFalse`
   sorry
 
-/-- 4.5 Is {lit}`{0} ∪ {p : deg p is even}` a subspace of {lit}`𝒫(F)`? -/
+/-- 4.5 -/
 def exercise_4_5 :
     Decidable (∃ (U : Submodule F (Polynomial F)),
       ∀ p : Polynomial F, p ∈ U ↔ p = 0 ∨ Even p.natDegree) := by
   -- first line should be `apply isTrue` or `apply isFalse`
   sorry
 
-/-- 4.6 -/
-theorem exercise_4_6 (m n : ℕ) (_hmn : m ≤ n) (lams : Fin m → F) :
-    ∃ p : Polynomial F, p.natDegree = n ∧
-      (∀ k, p.IsRoot (lams k)) ∧
-      (∀ x : F, p.IsRoot x → ∃ k, x = lams k) := by
+/-- 4.6 The zeros of {lit}`p` are exactly {lit}`Set.range lams`, with {lit}`deg p = n`. -/
+theorem exercise_4_6 (m n : ℕ) (hm : 1 ≤ m) (hmn : m ≤ n) (lams : Fin m → F) :
+    ∃ p : Polynomial F, p.natDegree = n ∧ {x | p.IsRoot x} = Set.range lams := by
   sorry
 
 /-- 4.7 Lagrange interpolation. -/
@@ -977,13 +983,13 @@ theorem exercise_4_7 {m : ℕ} (z : Fin (m + 1) → F) (_hz : Function.Injective
   sorry
 
 /-- 4.8 -/
-theorem exercise_4_8 (p : Polynomial ℂ) (_hp : 0 < p.natDegree) :
+theorem exercise_4_8 (p : Polynomial ℂ) (hp : 0 < p.natDegree) :
     p.roots.card = p.natDegree ↔
       ∀ z : ℂ, p.IsRoot z → ¬ p.derivative.IsRoot z := by
   sorry
 
 /-- 4.9 Every odd-degree real polynomial has a real zero. -/
-theorem exercise_4_9 (p : Polynomial ℝ) (_hp : Odd p.natDegree) :
+theorem exercise_4_9 (p : Polynomial ℝ) (hp : Odd p.natDegree) :
     ∃ x : ℝ, p.IsRoot x := by
   sorry
 
@@ -996,55 +1002,67 @@ theorem exercise_4_10 (p : Polynomial ℝ) (x : ℝ) (hx : x ≠ 3) :
     (exercise_4_10_T p).eval x = (p.eval x - p.eval 3) / (x - 3) := by
   sorry
 
-/-- 4.11 If {lit}`p ∈ 𝒫(ℂ)`, define {lit}`q(z) = p(z) · p̄(z̄)`. Then
-{lit}`q` is a polynomial with real coefficients. -/
+/-- 4.11 (setup) The candidate polynomial {lit}`q = p · p̄`, where
+{lit}`p̄ = p.map conj` conjugates the coefficients, satisfies
+{lit}`q.eval x = p(x) · conj (p(x))` for real {lit}`x` — i.e. it realizes Axler's
+{lit}`q(z) = p(z) · conj (p(z))` as an honest polynomial. -/
+lemma exercise_4_11_eval (p : Polynomial ℂ) (x : ℝ) :
+    (p * p.map conj).eval (x : ℂ) = p.eval (x : ℂ) * conj (p.eval (x : ℂ)) := by
+  sorry
+
+/-- 4.11 That polynomial {lit}`q` has real coefficients: every coefficient has
+zero imaginary part. -/
 theorem exercise_4_11 (p : Polynomial ℂ) :
-    ∃ q : Polynomial ℝ, ∀ z : ℂ,
-      p.eval z * conj (p.eval z) = (q.eval z.re : ℝ) := by
+    ∀ k, ((p * p.map conj).coeff k).im = 0 := by
   sorry
 
 /-- 4.12 -/
 theorem exercise_4_12 {m : ℕ} (p : Polynomial.degreeLT ℂ (m + 1))
-    (x : Fin (m + 1) → ℝ) (_hx : Function.Injective x)
-    (_hpx : ∀ k, ((p : Polynomial ℂ).eval ((x k : ℝ) : ℂ)).im = 0) :
+    (x : Fin (m + 1) → ℝ) (hx : Function.Injective x)
+    (hpx : ∀ k, ((p : Polynomial ℂ).eval ((x k : ℝ) : ℂ)).im = 0) :
     ∀ k : ℕ, ((p : Polynomial ℂ).coeff k).im = 0 := by
   sorry
 
-/-- 4.13 Let {lit}`U = {p · q : q ∈ 𝒫(F)}`. (a) {lit}`dim 𝒫(F)/U = deg p`.
-(b) Find a basis. We state (a). -/
-theorem exercise_4_13a (p : Polynomial F) (_hp : p ≠ 0) :
-    finrank F (Polynomial F ⧸
-      Submodule.span F (Set.range (fun q : Polynomial F => p * q))) =
-      p.natDegree := by
+/-- 4.13 The subspace {lit}`U = {p · q : q ∈ 𝒫(F)}`. Mathlib knows that is
+  a subspace of {lit}`Polynomial F`. -/
+noncomputable def exercise_4_13_U (p : Polynomial F) : Submodule F (Polynomial F) :=
+  LinearMap.range (LinearMap.mulLeft F p)
+
+/-- 4.13 (a) {lit}`dim 𝒫(F)/U = deg p`. -/
+theorem exercise_4_13a (p : Polynomial F) (hp : p ≠ 0) :
+    finrank F (Polynomial F ⧸ exercise_4_13_U p) = p.natDegree := by
   sorry
 
-/-- 4.14 (a) The map {lit}`T(r, s) = rp + sq` from
-{lit}`𝒫_{n−1}(ℂ) × 𝒫_{m−1}(ℂ) → 𝒫_{m+n−1}(ℂ)` is injective. -/
+/-- 4.13 (b) -/
+noncomputable def exercise_4_13b (p : Polynomial F) (hp : p ≠ 0) :
+    Module.Basis (Fin p.natDegree) F (Polynomial F ⧸ exercise_4_13_U p) := sorry
+
+/-- 4.14 (a) The map {lit}`T(r, s) = r·p + s·q` from
+{lit}`𝒫_{n−1}(ℂ) × 𝒫_{m−1}(ℂ)` to {lit}`𝒫_{m+n−1}(ℂ)`.) -/
 noncomputable def exercise_4_14_T (m n : ℕ) (p q : Polynomial ℂ) :
     Polynomial.degreeLT ℂ n × Polynomial.degreeLT ℂ m →ₗ[ℂ]
-      Polynomial.degreeLT ℂ (m + n) := sorry
+      Polynomial.degreeLT ℂ (m + n) where
+  toFun := fun ⟨r, s⟩ => ⟨r.val * p + s.val * q, by sorry⟩
+  map_add' := by sorry
+  map_smul' := by sorry
 
-theorem exercise_4_14a (p q : Polynomial ℂ) (_hp : ¬ p.IsRoot 0)
-    (_hq : ¬ q.IsRoot 0) (_hpq : ∀ z, ¬ (p.IsRoot z ∧ q.IsRoot z))
-    (m n : ℕ) (_hm : 0 < m) (_hn : 0 < n)
-    (_hpdeg : p.natDegree = m) (_hqdeg : q.natDegree = n) :
+theorem exercise_4_14a (p q : Polynomial ℂ) (hpq : ∀ z, ¬ (p.IsRoot z ∧ q.IsRoot z))
+    (m n : PNat) (hpdeg : p.natDegree = m) (hqdeg : q.natDegree = n) :
     Function.Injective (exercise_4_14_T m n p q) := by
   sorry
 
 /-- 4.14 (b) The same map is surjective. -/
-theorem exercise_4_14b (p q : Polynomial ℂ) (_hp : ¬ p.IsRoot 0)
-    (_hq : ¬ q.IsRoot 0) (_hpq : ∀ z, ¬ (p.IsRoot z ∧ q.IsRoot z))
-    (m n : ℕ) (_hm : 0 < m) (_hn : 0 < n)
-    (_hpdeg : p.natDegree = m) (_hqdeg : q.natDegree = n) :
+theorem exercise_4_14b (p q : Polynomial ℂ) (hpq : ∀ z, ¬ (p.IsRoot z ∧ q.IsRoot z))
+    (m n : PNat) (hpdeg : p.natDegree = m) (hqdeg : q.natDegree = n) :
     Function.Surjective (exercise_4_14_T m n p q) := by
   sorry
 
 /-- 4.14 (c) Bezout: there exist {lit}`r ∈ 𝒫_{n−1}(ℂ)`, {lit}`s ∈ 𝒫_{m−1}(ℂ)`
 with {lit}`rp + sq = 1`. -/
-theorem exercise_4_14c (p q : Polynomial ℂ) (_hp : p.natDegree ≠ 0)
-    (_hq : q.natDegree ≠ 0) (_hpq : ∀ z, ¬ (p.IsRoot z ∧ q.IsRoot z)) :
-    ∃ r s : Polynomial ℂ, r.natDegree < q.natDegree ∧
-      s.natDegree < p.natDegree ∧ r * p + s * q = 1 := by
+theorem exercise_4_14c (p q : Polynomial ℂ) (hp : p.natDegree ≠ 0)
+    (hq : q.natDegree ≠ 0) (hpq : ∀ z, ¬ (p.IsRoot z ∧ q.IsRoot z)) :
+    ∃ (r : Polynomial.degreeLT ℂ q.natDegree) (s : Polynomial.degreeLT ℂ p.natDegree),
+      r.val * p + s.val * q = 1 := by
   sorry
 
 end LADR.Chapter_4
