@@ -44,8 +44,8 @@ namespace LADR.Section_5B
 
 open LADR.Section_2B (IsBasis)
 open LADR.Section_3D (IsInvertible)
-open LADR.Section_5A (InvariantUnder IsEigenvalue IsEigenvector
-  isEigenvalue_iff_hasEigenvalue isEigenvector_iff_hasEigenvector
+open Module.End (HasEigenvalue HasEigenvector)
+open LADR.Section_5A (InvariantUnder
   tfae_isEigenvalue aeval_mul_eq_comp aeval_comp_comm aeval_comm_self
   ker_aeval_invariant range_aeval_invariant)
 open LinearMap (ker range)
@@ -76,7 +76,7 @@ root at a time. -/
 private lemma exists_eigenvalue_aux {V : Type*} [AddCommGroup V] [Module ℂ V]
     (T : V →ₗ[ℂ] V) :
     ∀ (n : ℕ) (p : Polynomial ℂ), p.natDegree = n → p ≠ 0 →
-      ∀ v : V, v ≠ 0 → aeval T p v = 0 → ∃ lam : ℂ, IsEigenvalue T lam := by
+      ∀ v : V, v ≠ 0 → aeval T p v = 0 → ∃ lam : ℂ, HasEigenvalue T lam := by
   intro n
   induction n using Nat.strong_induction_on with
   | _ n ih =>
@@ -108,7 +108,8 @@ private lemma exists_eigenvalue_aux {V : Type*} [AddCommGroup V] [Module ℂ V]
       · exact ih (n - 1) (by omega) q hqdeg hq v hv hqv
       · -- {lit}`(T − λI)(q(T)v) = p(T)v = 0`, so {lit}`q(T)v` is an
         -- eigenvector for {lit}`λ`.
-        refine ⟨lam, aeval T q v, hqv, ?_⟩
+        refine ⟨lam, Module.End.hasEigenvalue_iff_exists.mpr
+          ⟨aeval T q v, hqv, ?_⟩⟩
         rw [hpq, aeval_mul_eq_comp] at hpv
         have h2 : T (aeval T q v) - lam • aeval T q v = 0 := by
           have h3 : aeval T (Polynomial.X - Polynomial.C lam)
@@ -120,7 +121,7 @@ private lemma exists_eigenvalue_aux {V : Type*} [AddCommGroup V] [Module ℂ V]
 
 theorem exists_eigenvalue {V : Type*} [AddCommGroup V] [Module ℂ V]
     [Finite ℂ V] [Nontrivial V] (T : V →ₗ[ℂ] V) :
-    ∃ lam : ℂ, IsEigenvalue T lam := by
+    ∃ lam : ℂ, HasEigenvalue T lam := by
   obtain ⟨v, hv⟩ := exists_ne (0 : V)
   set n := finrank ℂ V with hn
   -- {lit}`v, Tv, …, Tⁿv` has length {lit}`n + 1`, hence is linearly
@@ -164,8 +165,9 @@ noncomputable def T_5_20 : Polynomial ℂ →ₗ[ℂ] Polynomial ℂ where
     simp only [RingHom.id_apply]
     exact mul_smul_comm a _ p
 
-example : ∀ lam : ℂ, ¬ IsEigenvalue T_5_20 lam := by
-  rintro lam ⟨p, hp, hXp⟩
+example : ∀ lam : ℂ, ¬ HasEigenvalue T_5_20 lam := by
+  intro lam hev
+  obtain ⟨p, hp, hXp⟩ := Module.End.hasEigenvalue_iff_exists.mp hev
   have hXp' : Polynomial.X * p = lam • p := by
     simpa [T_5_20] using hXp
   rcases eq_or_ne lam 0 with rfl | hlam
@@ -241,13 +243,14 @@ example [Finite F V] (T : V →ₗ[F] V) (q : Polynomial F) (hq : q.Monic)
 proof. -/
 
 theorem isEigenvalue_iff_isRoot [Finite F V] (T : V →ₗ[F] V) (lam : F) :
-    IsEigenvalue T lam ↔ (minpoly F T).IsRoot lam := by
+    HasEigenvalue T lam ↔ (minpoly F T).IsRoot lam := by
+  rw [Module.End.hasEigenvalue_iff_exists]
   constructor
   · -- An eigenvalue is a zero: {lit}`0 = p(T)v = p(λ)v` and {lit}`v ≠ 0`.
     rintro ⟨v, hv, hTv⟩
     have hkey : aeval T (minpoly F T) v = (minpoly F T).eval lam • v :=
       Module.End.aeval_apply_of_hasEigenvector
-        ((isEigenvector_iff_hasEigenvector T lam v).mp ⟨hv, hTv⟩)
+        (Module.End.hasEigenvector_iff_and.mpr ⟨hv, hTv⟩)
     rw [minpoly.aeval, LinearMap.zero_apply] at hkey
     rcases smul_eq_zero.mp hkey.symm with h | h
     · exact h
@@ -291,7 +294,7 @@ theorem minpoly_eq_prod_roots {V : Type*} [AddCommGroup V] [Module ℂ V]
     [Finite ℂ V] (T : V →ₗ[ℂ] V) :
     minpoly ℂ T = (Multiset.map (fun a => Polynomial.X - Polynomial.C a)
         (minpoly ℂ T).roots).prod ∧
-      ∀ lam : ℂ, lam ∈ (minpoly ℂ T).roots ↔ IsEigenvalue T lam := by
+      ∀ lam : ℂ, lam ∈ (minpoly ℂ T).roots ↔ HasEigenvalue T lam := by
   have hmonic : (minpoly ℂ T).Monic :=
     minpoly.monic (Algebra.IsIntegral.isIntegral T)
   constructor
@@ -589,7 +592,7 @@ the assumption that {lit}`p` has no real zero. -/
 private lemma exists_eigenvalue_of_odd_aux :
     ∀ (n : ℕ), Odd n → ∀ (W : Type u) (_ : AddCommGroup W),
       ∀ (_ : Module ℝ W) (_ : Module.Finite ℝ W), finrank ℝ W = n →
-      ∀ T : W →ₗ[ℝ] W, ∃ lam : ℝ, IsEigenvalue T lam := by
+      ∀ T : W →ₗ[ℝ] W, ∃ lam : ℝ, HasEigenvalue T lam := by
   intro n
   induction n using Nat.strong_induction_on with
   | _ n ih =>
@@ -690,17 +693,19 @@ private lemma exists_eigenvalue_of_odd_aux :
         exact ⟨i - j, by omega⟩
       -- Induction: {lit}`T|_U` has an eigenvalue, which lifts to {lit}`T`
       -- and is then a real zero of {lit}`p` — contradiction.
-      obtain ⟨lam, u, hu_ne, hu_eq⟩ := ih (finrank ℝ U) hU_lt hU_odd U
+      obtain ⟨lam, hlam⟩ := ih (finrank ℝ U) hU_lt hU_odd U
         inferInstance inferInstance inferInstance rfl hU_inv.restrict
-      have hTlam : IsEigenvalue T lam := by
-        refine ⟨(u : W), fun h => hu_ne (Subtype.ext h), ?_⟩
+      obtain ⟨u, hu_ne, hu_eq⟩ := Module.End.hasEigenvalue_iff_exists.mp hlam
+      have hTlam : HasEigenvalue T lam := by
+        refine Module.End.hasEigenvalue_iff_exists.mpr
+          ⟨(u : W), fun h => hu_ne (Subtype.ext h), ?_⟩
         have := congrArg (Subtype.val) hu_eq
         rwa [Submodule.coe_smul] at this
       exact hroot lam ((isEigenvalue_iff_isRoot T lam).mp hTlam)
 
 theorem exists_eigenvalue_of_odd_finrank {V : Type u} [AddCommGroup V]
     [Module ℝ V] [Finite ℝ V] (hodd : Odd (finrank ℝ V)) (T : V →ₗ[ℝ] V) :
-    ∃ lam : ℝ, IsEigenvalue T lam :=
+    ∃ lam : ℝ, HasEigenvalue T lam :=
   exists_eigenvalue_of_odd_aux (finrank ℝ V) hodd V inferInstance
     inferInstance inferInstance rfl T
 
@@ -708,12 +713,12 @@ theorem exists_eigenvalue_of_odd_finrank {V : Type u} [AddCommGroup V]
 
 /-- 5B.1 -/
 theorem exercise_5B_1 (T : V →ₗ[F] V) :
-    IsEigenvalue (T ^ 2) 9 ↔ IsEigenvalue T 3 ∨ IsEigenvalue T (-3) := by
+    HasEigenvalue (T ^ 2) 9 ↔ HasEigenvalue T 3 ∨ HasEigenvalue T (-3) := by
   sorry
 
 /-- 5B.2 -/
 theorem exercise_5B_2 {V : Type*} [AddCommGroup V] [Module ℂ V]
-    (T : V →ₗ[ℂ] V) (h : ∀ lam : ℂ, ¬ IsEigenvalue T lam)
+    (T : V →ₗ[ℂ] V) (h : ∀ lam : ℂ, ¬ HasEigenvalue T lam)
     (U : Submodule ℂ V) (hU : InvariantUnder T U) :
     U = ⊥ ∨ ¬ Module.Finite ℂ U := by
   sorry
@@ -729,7 +734,7 @@ def T_ex_5B_3 (n : ℕ) : (Fin n → F) →ₗ[F] (Fin n → F) where
     simp [Finset.mul_sum]
 
 theorem exercise_5B_3a (n : ℕ) (hn : 1 < n) :
-    ∀ lam : F, IsEigenvalue (T_ex_5B_3 (F := F) n) lam ↔
+    ∀ lam : F, HasEigenvalue (T_ex_5B_3 (F := F) n) lam ↔
       lam = 0 ∨ lam = (n : F) := by
   sorry
 
@@ -744,15 +749,15 @@ of {lit}`T`. -/
 theorem exercise_5B_4 {V : Type*} [AddCommGroup V] [Module ℂ V]
     [Finite ℂ V] (T : V →ₗ[ℂ] V) (p : Polynomial ℂ)
     (hp : 0 < p.natDegree) (alpha : ℂ) :
-    IsEigenvalue (aeval T p) alpha ↔
-      ∃ lam : ℂ, IsEigenvalue T lam ∧ alpha = p.eval lam := by
+    HasEigenvalue (aeval T p) alpha ↔
+      ∃ lam : ℂ, HasEigenvalue T lam ∧ alpha = p.eval lam := by
   sorry
 
 /-- 5B.5 The previous exercise fails over {lit}`ℝ`. -/
 theorem exercise_5B_5 :
     ∃ (T : (Fin 2 → ℝ) →ₗ[ℝ] (Fin 2 → ℝ)) (p : Polynomial ℝ) (alpha : ℝ),
-      IsEigenvalue (aeval T p) alpha ∧
-        ¬ ∃ lam : ℝ, IsEigenvalue T lam ∧ alpha = p.eval lam := by
+      HasEigenvalue (aeval T p) alpha ∧
+        ¬ ∃ lam : ℝ, HasEigenvalue T lam ∧ alpha = p.eval lam := by
   sorry
 
 open LADR.Section_5A (T_5_9) in
@@ -924,7 +929,7 @@ theorem exercise_5B_19 [Finite F V] (T : V →ₗ[F] V) :
 
 /-- 5B.20 -/
 theorem exercise_5B_20 (T : (Fin 4 → ℝ) →ₗ[ℝ] (Fin 4 → ℝ))
-    (hev : ∀ lam : ℝ, IsEigenvalue T lam ↔ lam = 3 ∨ lam = 5 ∨ lam = 8) :
+    (hev : ∀ lam : ℝ, HasEigenvalue T lam ↔ lam = 3 ∨ lam = 5 ∨ lam = 8) :
     ((T - 3 • LinearMap.id) ^ 2) ∘ₗ ((T - 5 • LinearMap.id) ^ 2) ∘ₗ
       ((T - 8 • LinearMap.id) ^ 2) = 0 := by
   sorry
@@ -949,7 +954,7 @@ theorem exercise_5B_23 [Finite F V] (T : V →ₗ[F] V) (v : V) :
 /-- 5B.24 -/
 theorem exercise_5B_24 {V : Type*} [AddCommGroup V] [Module ℂ V]
     [Finite ℂ V] (T : V →ₗ[ℂ] V)
-    (hev : ∀ lam : ℂ, IsEigenvalue T lam ↔ lam = 5 ∨ lam = 6) :
+    (hev : ∀ lam : ℂ, HasEigenvalue T lam ↔ lam = 5 ∨ lam = 6) :
     ((T - 5 • LinearMap.id) ^ (finrank ℂ V - 1)) ∘ₗ
       ((T - 6 • LinearMap.id) ^ (finrank ℂ V - 1)) = 0 := by
   sorry
@@ -976,8 +981,8 @@ open LADR.Section_5A (exercise_5A_38_quotient_op) in
 {lit}`T|_U` together with those of {lit}`T/U`. -/
 theorem exercise_5B_26 [Finite F V] (T : V →ₗ[F] V) (U : Submodule F V)
     (hU : InvariantUnder T U) (lam : F) :
-    IsEigenvalue T lam ↔ IsEigenvalue hU.restrict lam ∨
-      IsEigenvalue (exercise_5A_38_quotient_op T U hU) lam := by
+    HasEigenvalue T lam ↔ HasEigenvalue hU.restrict lam ∨
+      HasEigenvalue (exercise_5A_38_quotient_op T U hU) lam := by
   sorry
 
 open LADR.Section_1B (Complexification exercise_1B_8) in

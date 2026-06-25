@@ -39,7 +39,8 @@ open LADR.Section_2C (isBasis_of_linearIndependent_of_card_eq
   isBasis_card_eq_finrank)
 open LADR.Section_3C (matrixOf matrixOf_apply matrixOf_spec matrixOf_comp)
 open LADR.Section_3D (IsInvertible)
-open LADR.Section_5A (InvariantUnder IsEigenvalue IsEigenvector
+open Module.End (HasEigenvalue HasEigenvector)
+open LADR.Section_5A (InvariantUnder
   exercise_5A_38_quotient_op)
 open LADR.Section_5B (quotOp quotOp_mkQ)
 open LADR.Section_5C (IsUpperTriangular tfae_upperTriangular
@@ -233,13 +234,13 @@ theorem exists_common_eigenvector {V : Type*} [AddCommGroup V] [Module ℂ V]
   -- restricted to it has an eigenvector (5.19 again).
   obtain ⟨lam, hlam⟩ := LADR.Section_5B.exists_eigenvalue S
   have hE_ne : Nontrivial (Module.End.eigenspace S lam) := by
-    obtain ⟨x, hx_ne, hx_eq⟩ := hlam
+    obtain ⟨x, hx_ne, hx_eq⟩ := Module.End.hasEigenvalue_iff_exists.mp hlam
     exact ⟨⟨x, Module.End.mem_eigenspace_iff.mpr hx_eq⟩, 0,
       fun h => hx_ne (by simpa using congrArg Subtype.val h)⟩
   have hinv : InvariantUnder T (Module.End.eigenspace S lam) :=
     eigenspace_invariant_of_commute S T hcomm lam
-  obtain ⟨nu, u, hu_ne, hu_eq⟩ :=
-    LADR.Section_5B.exists_eigenvalue hinv.restrict
+  obtain ⟨nu, hnu⟩ := LADR.Section_5B.exists_eigenvalue hinv.restrict
+  obtain ⟨u, hu_ne, hu_eq⟩ := Module.End.hasEigenvalue_iff_exists.mp hnu
   refine ⟨(u : V), fun h => hu_ne (Subtype.ext h),
     ⟨lam, Module.End.mem_eigenspace_iff.mp u.2⟩, ⟨nu, ?_⟩⟩
   have h := congrArg Subtype.val hu_eq
@@ -453,8 +454,8 @@ private lemma matrixOf_add {n : ℕ} {v : Fin n → V} (hv : IsBasis F v)
 theorem eigenvalue_add_of_commute {V : Type u} [AddCommGroup V]
     [Module ℂ V] [Finite ℂ V] (S T : V →ₗ[ℂ] V)
     (hcomm : S ∘ₗ T = T ∘ₗ S) (alpha : ℂ)
-    (h : IsEigenvalue (S + T) alpha) :
-    ∃ lam mu : ℂ, IsEigenvalue S lam ∧ IsEigenvalue T mu ∧
+    (h : HasEigenvalue (S + T) alpha) :
+    ∃ lam mu : ℂ, HasEigenvalue S lam ∧ HasEigenvalue T mu ∧
       alpha = lam + mu := by
   obtain ⟨n, v, hv, hAS, hAT⟩ := exists_simultaneous_upperTriangular S T hcomm
   have hsum : IsUpperTriangular (matrixOf hv hv (S + T)) := by
@@ -469,8 +470,8 @@ theorem eigenvalue_add_of_commute {V : Type u} [AddCommGroup V]
 theorem eigenvalue_mul_of_commute {V : Type u} [AddCommGroup V]
     [Module ℂ V] [Finite ℂ V] (S T : V →ₗ[ℂ] V)
     (hcomm : S ∘ₗ T = T ∘ₗ S) (alpha : ℂ)
-    (h : IsEigenvalue (S ∘ₗ T) alpha) :
-    ∃ lam mu : ℂ, IsEigenvalue S lam ∧ IsEigenvalue T mu ∧
+    (h : HasEigenvalue (S ∘ₗ T) alpha) :
+    ∃ lam mu : ℂ, HasEigenvalue S lam ∧ HasEigenvalue T mu ∧
       alpha = lam * mu := by
   obtain ⟨n, v, hv, hAS, hAT⟩ := exists_simultaneous_upperTriangular S T hcomm
   have hprod_eq : matrixOf hv hv (S ∘ₗ T) =
@@ -583,11 +584,11 @@ theorem exercise_5E_9b {V : Type*} [AddCommGroup V] [Module ℂ V]
 /-- 5E.10 5.81 fails on real vector spaces. -/
 theorem exercise_5E_10 :
     ∃ S T : (Fin 2 → ℝ) →ₗ[ℝ] (Fin 2 → ℝ), S ∘ₗ T = T ∘ₗ S ∧
-      (∃ alpha : ℝ, IsEigenvalue (S + T) alpha ∧
-        ¬ ∃ lam mu : ℝ, IsEigenvalue S lam ∧ IsEigenvalue T mu ∧
+      (∃ alpha : ℝ, HasEigenvalue (S + T) alpha ∧
+        ¬ ∃ lam mu : ℝ, HasEigenvalue S lam ∧ HasEigenvalue T mu ∧
           alpha = lam + mu) ∧
-      (∃ beta : ℝ, IsEigenvalue (S ∘ₗ T) beta ∧
-        ¬ ∃ lam mu : ℝ, IsEigenvalue S lam ∧ IsEigenvalue T mu ∧
+      (∃ beta : ℝ, HasEigenvalue (S ∘ₗ T) beta ∧
+        ¬ ∃ lam mu : ℝ, HasEigenvalue S lam ∧ HasEigenvalue T mu ∧
           beta = lam * mu) := by
   sorry
 

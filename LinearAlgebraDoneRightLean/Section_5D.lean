@@ -48,8 +48,8 @@ open LADR.Section_2B (IsBasis isBasis_stdBasis exists_basis
 open LADR.Section_2C (isBasis_of_linearIndependent_of_card_eq)
 open LADR.Section_3C (matrixOf matrixOf_apply matrixOf_spec)
 open LADR.Section_3D (IsInvertible)
-open LADR.Section_5A (InvariantUnder IsEigenvalue IsEigenvector
-  isEigenvalue_iff_hasEigenvalue isEigenvector_iff_hasEigenvector
+open Module.End (HasEigenvalue HasEigenvector)
+open LADR.Section_5A (InvariantUnder
   eigenvectors_linearIndependent aeval_mul_eq_comp
   exercise_5A_38_quotient_op)
 open LADR.Section_5B (aeval_eq_zero_iff_minpoly_dvd isEigenvalue_iff_isRoot
@@ -160,9 +160,8 @@ example (T : V →ₗ[F] V) (lam : F) (v : V) :
 
 -- {lit}`λ` is an eigenvalue of {lit}`T` iff {lit}`E(λ, T) ≠ {0}`.
 example (T : V →ₗ[F] V) (lam : F) :
-    IsEigenvalue T lam ↔ Module.End.eigenspace T lam ≠ ⊥ := by
-  rw [isEigenvalue_iff_hasEigenvalue]
-  exact Iff.rfl
+    HasEigenvalue T lam ↔ Module.End.eigenspace T lam ≠ ⊥ :=
+  Iff.rfl
 
 /-! 5.53 Example: for the operator with diagonal matrix
 {lit}`[[8,0,0],[0,5,0],[0,0,5]]` on {lit}`ℝ³`, the eigenspace {lit}`E(8)`
@@ -344,16 +343,17 @@ eigenvectors; (c) {lit}`V = E(λ₁, T) ⊕ ⋯ ⊕ E(λₘ, T)`;
 
 theorem tfae_isDiagonalizable [Finite F V] (T : V →ₗ[F] V) {m : ℕ}
     (lam : Fin m → F) (hlam : Function.Injective lam)
-    (hall : ∀ mu : F, IsEigenvalue T mu ↔ ∃ k, lam k = mu) :
+    (hall : ∀ mu : F, HasEigenvalue T mu ↔ ∃ k, lam k = mu) :
     [IsDiagonalizable T,
       ∃ (n : ℕ) (v : Fin n → V) (_ : IsBasis F v),
-        ∀ j, ∃ mu : F, IsEigenvector T mu (v j),
+        ∀ j, ∃ mu : F, HasEigenvector T mu (v j),
       (⨆ k, Module.End.eigenspace T (lam k)) = ⊤,
       finrank F V =
         ∑ k, finrank F (Module.End.eigenspace T (lam k))].TFAE := by
   tfae_have 1 → 2 := by
     rintro ⟨n, v, hv, hA⟩
-    refine ⟨n, v, hv, fun j => ⟨matrixOf hv hv T j j, ?_, ?_⟩⟩
+    refine ⟨n, v, hv, fun j => ⟨matrixOf hv hv T j j,
+      Module.End.hasEigenvector_iff_and.mpr ⟨?_, ?_⟩⟩⟩
     · exact hv.1.ne_zero j
     · exact apply_eq_smul_of_isDiag hv T hA j
   tfae_have 2 → 3 := by
@@ -363,8 +363,10 @@ theorem tfae_isDiagonalizable [Finite F V] (T : V →ₗ[F] V) {m : ℕ}
     rw [← hspan]
     rw [Submodule.span_le]
     rintro x ⟨j, rfl⟩
-    obtain ⟨mu, hmu_ne, hmu_eq⟩ := hev j
-    have hmu_ev : IsEigenvalue T mu := ⟨v j, hmu_ne, hmu_eq⟩
+    obtain ⟨mu, hmu⟩ := hev j
+    obtain ⟨hmu_ne, hmu_eq⟩ := Module.End.hasEigenvector_iff_and.mp hmu
+    have hmu_ev : HasEigenvalue T mu :=
+      Module.End.hasEigenvalue_iff_exists.mpr ⟨v j, hmu_ne, hmu_eq⟩
     obtain ⟨k, rfl⟩ := (hall mu).mp hmu_ev
     exact Submodule.mem_iSup_of_mem k
       (Module.End.mem_eigenspace_iff.mpr hmu_eq)
@@ -395,14 +397,16 @@ theorem tfae_isDiagonalizable [Finite F V] (T : V →ₗ[F] V) {m : ℕ}
 
 theorem isDiagonalizable_of_card_eigenvalues [Finite F V] (T : V →ₗ[F] V)
     (lam : Fin (finrank F V) → F) (hlam : Function.Injective lam)
-    (hev : ∀ k, IsEigenvalue T (lam k)) :
+    (hev : ∀ k, HasEigenvalue T (lam k)) :
     IsDiagonalizable T := by
   -- Choose an eigenvector for each eigenvalue; the resulting list is
   -- linearly independent (5.11) of length {lit}`dim V`, hence a basis
   -- (2.38), and it consists of eigenvectors.
+  simp only [Module.End.hasEigenvalue_iff_exists] at hev
   choose v hv_ne hv_eq using hev
   have hli : LinearIndependent F v :=
-    eigenvectors_linearIndependent T lam hlam v fun k => ⟨hv_ne k, hv_eq k⟩
+    eigenvectors_linearIndependent T lam hlam v
+      fun k => Module.End.hasEigenvector_iff_and.mpr ⟨hv_ne k, hv_eq k⟩
   have hv : IsBasis F v :=
     isBasis_of_linearIndependent_of_card_eq v hli rfl
   exact ⟨_, v, hv, isDiag_matrixOf_of_eigenvectors hv T
@@ -495,8 +499,9 @@ theorem isDiagonalizable_iff_minpoly_eq_prod_distinct [Finite F V]
         exact Polynomial.pairwise_coprime_X_sub_C Function.injective_id hab
       · intro a ha
         obtain ⟨j, -, hj⟩ := Finset.mem_image.mp ha
-        have hev : IsEigenvalue T a := by
-          refine ⟨v j, hv.1.ne_zero j, ?_⟩
+        have hev : HasEigenvalue T a := by
+          refine Module.End.hasEigenvalue_iff_exists.mpr
+            ⟨v j, hv.1.ne_zero j, ?_⟩
           rw [← hj]
           exact apply_eq_smul_of_isDiag hv T hA j
         exact Polynomial.dvd_iff_isRoot.mpr
@@ -573,10 +578,10 @@ Gershgorin disk. (mathlib's matrix version is
 
 theorem gershgorin {V : Type*} [AddCommGroup V] [Module ℂ V] [Finite ℂ V]
     {n : ℕ} {v : Fin n → V} (hv : IsBasis ℂ v) (T : V →ₗ[ℂ] V) {lam : ℂ}
-    (hlam : IsEigenvalue T lam) :
+    (hlam : HasEigenvalue T lam) :
     ∃ j, lam ∈ gershgorinDisk hv T j := by
   classical
-  obtain ⟨w, hw_ne, hw_eq⟩ := hlam
+  obtain ⟨w, hw_ne, hw_eq⟩ := Module.End.hasEigenvalue_iff_exists.mp hlam
   -- Write {lit}`c k` for the coefficients of the eigenvector {lit}`w` in
   -- the basis (5.68). Comparing coefficients in {lit}`λw = Tw` (5.69/5.70)
   -- gives {lit}`λ cⱼ = ∑ₖ A_{j,k} cₖ` for every {lit}`j`.
@@ -718,8 +723,8 @@ theorem exercise_5D_8 [Finite F V] (T : V →ₗ[F] V) {m : ℕ}
 
 /-- 5D.9 -/
 theorem exercise_5D_9 (R T : (Fin 3 → ℂ) →ₗ[ℂ] (Fin 3 → ℂ))
-    (hR : ∀ lam : ℂ, IsEigenvalue R lam ↔ lam = 2 ∨ lam = 6 ∨ lam = 7)
-    (hT : ∀ lam : ℂ, IsEigenvalue T lam ↔ lam = 2 ∨ lam = 6 ∨ lam = 7) :
+    (hR : ∀ lam : ℂ, HasEigenvalue R lam ↔ lam = 2 ∨ lam = 6 ∨ lam = 7)
+    (hT : ∀ lam : ℂ, HasEigenvalue T lam ↔ lam = 2 ∨ lam = 6 ∨ lam = 7) :
     ∃ (S : (Fin 3 → ℂ) →ₗ[ℂ] (Fin 3 → ℂ)) (hS : IsInvertible S),
       R = hS.inv ∘ₗ T ∘ₗ S := by
   sorry
@@ -727,8 +732,8 @@ theorem exercise_5D_9 (R T : (Fin 3 → ℂ) →ₗ[ℂ] (Fin 3 → ℂ))
 /-- 5D.10 -/
 theorem exercise_5D_10 :
     ∃ R T : (Fin 4 → ℂ) →ₗ[ℂ] (Fin 4 → ℂ),
-      (∀ lam : ℂ, IsEigenvalue R lam ↔ lam = 2 ∨ lam = 6 ∨ lam = 7) ∧
-      (∀ lam : ℂ, IsEigenvalue T lam ↔ lam = 2 ∨ lam = 6 ∨ lam = 7) ∧
+      (∀ lam : ℂ, HasEigenvalue R lam ↔ lam = 2 ∨ lam = 6 ∨ lam = 7) ∧
+      (∀ lam : ℂ, HasEigenvalue T lam ↔ lam = 2 ∨ lam = 6 ∨ lam = 7) ∧
       ¬ ∃ (S : (Fin 4 → ℂ) →ₗ[ℂ] (Fin 4 → ℂ)) (hS : IsInvertible S),
         R = hS.inv ∘ₗ T ∘ₗ S := by
   sorry
@@ -736,12 +741,12 @@ theorem exercise_5D_10 :
 /-- 5D.11 -/
 theorem exercise_5D_11 :
     ∃ T : (Fin 3 → ℂ) →ₗ[ℂ] (Fin 3 → ℂ),
-      IsEigenvalue T 6 ∧ IsEigenvalue T 7 ∧ ¬ IsDiagonalizable T := by
+      HasEigenvalue T 6 ∧ HasEigenvalue T 7 ∧ ¬ IsDiagonalizable T := by
   sorry
 
 /-- 5D.12 -/
 theorem exercise_5D_12 (T : (Fin 3 → ℂ) →ₗ[ℂ] (Fin 3 → ℂ))
-    (h6 : IsEigenvalue T 6) (h7 : IsEigenvalue T 7)
+    (h6 : HasEigenvalue T 6) (h7 : HasEigenvalue T 7)
     (hnd : ¬ IsDiagonalizable T) :
     ∃ z : Fin 3 → ℂ, T z = ![6 + 8 * z 0, 7 + 8 * z 1, 13 + 8 * z 2] := by
   sorry
@@ -783,7 +788,7 @@ the (direct) sum of its intersections with the eigenspaces. -/
 theorem exercise_5D_16 [Finite F V] (T : V →ₗ[F] V)
     (hT : IsDiagonalizable T) {m : ℕ} (lam : Fin m → F)
     (hlam : Function.Injective lam)
-    (hall : ∀ mu : F, IsEigenvalue T mu ↔ ∃ k, lam k = mu)
+    (hall : ∀ mu : F, HasEigenvalue T mu ↔ ∃ k, lam k = mu)
     (U : Submodule F V) :
     InvariantUnder T U ↔
       U = ⨆ k, U ⊓ Module.End.eigenspace T (lam k) := by
@@ -847,7 +852,7 @@ theorem exercise_5D_21a (n : ℕ) :
 
 /-- 5D.21 (b) The eigenvalues of {lit}`T` are {lit}`(1 ± √5)/2`. -/
 theorem exercise_5D_21b (lam : ℝ) :
-    IsEigenvalue T_fib lam ↔
+    HasEigenvalue T_fib lam ↔
       lam = (1 + Real.sqrt 5) / 2 ∨ lam = (1 - Real.sqrt 5) / 2 := by
   sorry
 
@@ -884,7 +889,7 @@ theorem exercise_5D_22 {V : Type*} [AddCommGroup V] [Module ℂ V]
 row sums. -/
 theorem exercise_5D_23 {V : Type*} [AddCommGroup V] [Module ℂ V]
     [Finite ℂ V] {n : ℕ} {v : Fin n → V} (hv : IsBasis ℂ v)
-    (T : V →ₗ[ℂ] V) {lam : ℂ} (hlam : IsEigenvalue T lam) :
+    (T : V →ₗ[ℂ] V) {lam : ℂ} (hlam : HasEigenvalue T lam) :
     ∃ j, ‖lam - matrixOf hv hv T j j‖ ≤
       ∑ k ∈ Finset.univ.erase j, ‖matrixOf hv hv T k j‖ := by
   sorry

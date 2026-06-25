@@ -52,9 +52,8 @@ variable {F : Type*} [Field F]
 
 A linear map from a vector space to itself is called an *operator*;
 Axler writes {lit}`ℒ(V) = ℒ(V, V)`. In Lean an operator is simply
-{lit}`T : V →ₗ[F] V`; mathlib's {name}`Module.End` is definitionally the
-same type, and provides the ring structure (composition as multiplication,
-powers, etc.) that we use later in this section. -/
+{lit}`T : V →ₗ[F] V`; mathlib's {name}`Module.End` is a synomym
+for linear endomorphisms. -/
 
 example : Module.End F V = (V →ₗ[F] V) := rfl
 
@@ -98,7 +97,8 @@ example : InvariantUnder (Polynomial.derivative : Polynomial ℝ →ₗ[ℝ] Pol
   exact lt_of_le_of_lt (Polynomial.degree_derivative_le (p := p)) hp
 
 /-! 5.4 Example: four invariant subspaces, not necessarily all different:
-{lit}`{0}`, {lit}`V`, {lit}`null T`, {lit}`range T`. -/
+{lit}`{0}`, {lit}`V`, {lit}`null T`, {lit}`range T`. (In mathlib's lattice of
+submodules we write {lit}`⊥` for {lit}`{0}` and {lit}`⊤` for {lit}`V`.) -/
 
 example (T : V →ₗ[F] V) : InvariantUnder T ⊥ := by
   intro u hu
@@ -106,7 +106,7 @@ example (T : V →ₗ[F] V) : InvariantUnder T ⊥ := by
   rw [hu, map_zero]
 
 example (T : V →ₗ[F] V) : InvariantUnder T ⊤ :=
-  fun _u _ => Submodule.mem_top
+  fun _ _ => Submodule.mem_top
 
 example (T : V →ₗ[F] V) : InvariantUnder T (ker T) := by
   intro u hu
@@ -116,12 +116,8 @@ example (T : V →ₗ[F] V) : InvariantUnder T (ker T) := by
 example (T : V →ₗ[F] V) : InvariantUnder T (range T) :=
   fun u _ => LinearMap.mem_range_self T u
 
-/-! One-dimensional invariant subspaces: for {lit}`v ≠ 0`, the line
-{lit}`span(v)` is invariant under {lit}`T` iff {lit}`Tv` is a scalar multiple
-of {lit}`v`. This computation motivates the definition of eigenvalue. -/
-
-theorem span_singleton_invariant_iff (T : V →ₗ[F] V) {v : V} (_hv : v ≠ 0) :
-    InvariantUnder T (Submodule.span F {v}) ↔ ∃ lam : F, T v = lam • v := by
+theorem span_singleton_invariant_iff (T : V →ₗ[F] V) {v : V} :
+    InvariantUnder T (Submodule.span F {v}) ↔ ∃ γ : F, T v = γ • v := by
   constructor
   · intro h
     have hTv : T v ∈ Submodule.span F {v} :=
@@ -133,36 +129,29 @@ theorem span_singleton_invariant_iff (T : V →ₗ[F] V) {v : V} (_hv : v ≠ 0)
     rw [map_smul, hlam, smul_smul]
     exact Submodule.mem_span_singleton.mpr ⟨a * lam, rfl⟩
 
-/-! 5.5 Definition: eigenvalue -/
+/-! 5.5 Definition: eigenvalue.
 
-/-- {lit}`λ ∈ F` is an *eigenvalue* of {lit}`T ∈ ℒ(V)` if there exists
-{lit}`v ∈ V` with {lit}`v ≠ 0` and {lit}`Tv = λv`. -/
-def IsEigenvalue (T : V →ₗ[F] V) (lam : F) : Prop :=
-  ∃ v : V, v ≠ 0 ∧ T v = lam • v
+Axler defines {lit}`λ ∈ F` to be an *eigenvalue* of {lit}`T ∈ ℒ(V)` when there
+exists {lit}`v ≠ 0` with {lit}`Tv = λv`. In mathlib this is exactly
+{name}`Module.End.HasEigenvalue` (defined via a nontrivial eigenspace
+{lit}`E(λ, T) ≠ {0}`); we use it throughout under the short name
+{lit}`HasEigenvalue`. -/
 
-/-- Bridge to mathlib, where the same notion is
-{name}`Module.End.HasEigenvalue` (defined via a nontrivial eigenspace). -/
-theorem isEigenvalue_iff_hasEigenvalue (T : V →ₗ[F] V) (lam : F) :
-    IsEigenvalue T lam ↔ Module.End.HasEigenvalue T lam := by
+open Module.End (HasEigenvalue)
+
+/-- {lit}`HasEigenvalue` unfolds to Axler's definition 5.5: {lit}`γ` is an
+eigenvalue of {lit}`T` iff some nonzero {lit}`v` satisfies {lit}`Tv = γv`.
+This bridges mathlib's eigenspace-based definition to the explicit witness, so
+eigenvalue proofs can {lit}`rw` to and from {lit}`⟨v, hv, hTv⟩`. -/
+theorem _root_.Module.End.hasEigenvalue_iff_exists {T : V →ₗ[F] V} {γ : F} :
+    HasEigenvalue T γ ↔ ∃ v : V, v ≠ 0 ∧ T v = γ • v := by
   constructor
-  · rintro ⟨v, hv, hTv⟩
-    exact Module.End.hasEigenvalue_of_hasEigenvector
-      ⟨Module.End.mem_eigenspace_iff.mpr hTv, hv⟩
   · intro h
     obtain ⟨v, hv⟩ := h.exists_hasEigenvector
     exact ⟨v, hv.2, Module.End.mem_eigenspace_iff.mp hv.1⟩
-
-/-- {lit}`V` has a one-dimensional subspace invariant under {lit}`T` iff
-{lit}`T` has an eigenvalue. -/
-theorem exists_invariant_line_iff (T : V →ₗ[F] V) :
-    (∃ v : V, v ≠ 0 ∧ InvariantUnder T (Submodule.span F {v})) ↔
-      ∃ lam : F, IsEigenvalue T lam := by
-  constructor
-  · rintro ⟨v, hv, hinv⟩
-    obtain ⟨lam, hlam⟩ := (span_singleton_invariant_iff T hv).mp hinv
-    exact ⟨lam, v, hv, hlam⟩
-  · rintro ⟨lam, v, hv, hlam⟩
-    exact ⟨v, hv, (span_singleton_invariant_iff T hv).mpr ⟨lam, hlam⟩⟩
+  · rintro ⟨v, hv, hTv⟩
+    exact Module.End.hasEigenvalue_of_hasEigenvector
+      ⟨Module.End.mem_eigenspace_iff.mpr hTv, hv⟩
 
 /-! 5.6 Example: {lit}`T(x, y, z) = (7x + 3z, 3x + 6y + 9z, −6y)` on
 {lit}`F³` has eigenvalue {lit}`6`, with eigenvector {lit}`(3, 1, −1)`. -/
@@ -176,7 +165,8 @@ def T_5_6 : (Fin 3 → F) →ₗ[F] (Fin 3 → F) where
     funext i
     fin_cases i <;> simp <;> ring
 
-example : IsEigenvalue (T_5_6 (F := F)) 6 := by
+example : HasEigenvalue (T_5_6 (F := F)) 6 := by
+  rw [Module.End.hasEigenvalue_iff_exists]
   refine ⟨![3, 1, -1], ?_, ?_⟩
   · intro h
     have h1 : (![3, 1, -1] : Fin 3 → F) 1 = 0 := by rw [h]; rfl
@@ -184,25 +174,21 @@ example : IsEigenvalue (T_5_6 (F := F)) 6 := by
   · funext i
     fin_cases i <;> simp [T_5_6] <;> norm_num
 
-/-! 5.7 Equivalent conditions to be an eigenvalue (finite-dimensional case):
-{lit}`λ` is an eigenvalue of {lit}`T` iff {lit}`T − λI` is not injective, iff
-{lit}`T − λI` is not surjective, iff {lit}`T − λI` is not invertible.
-The last three equivalences are Axler's 3.65
-({name}`LADR.Section_3D.tfae_isInvertible`). -/
-
-theorem tfae_isEigenvalue [Finite F V] (T : V →ₗ[F] V) (lam : F) :
-    [IsEigenvalue T lam,
-      ¬ Function.Injective (T - lam • (LinearMap.id : V →ₗ[F] V)),
-      ¬ Function.Surjective (T - lam • (LinearMap.id : V →ₗ[F] V)),
-      ¬ IsInvertible (T - lam • (LinearMap.id : V →ₗ[F] V))].TFAE := by
+/-! 5.7 -/
+theorem tfae_isEigenvalue [Finite F V] (T : V →ₗ[F] V) (γ : F) :
+    [HasEigenvalue T γ,
+      ¬ Function.Injective (T - γ • (LinearMap.id : V →ₗ[F] V)),
+      ¬ Function.Surjective (T - γ • (LinearMap.id : V →ₗ[F] V)),
+      ¬ IsInvertible (T - γ • (LinearMap.id : V →ₗ[F] V))].TFAE := by
   have h365 := LADR.Section_3D.tfae_isInvertible (F := F) (V := V) (W := V)
-    rfl (T - lam • LinearMap.id)
+    rfl (T - γ • LinearMap.id)
   -- (a) ↔ (b): {lit}`Tv = λv` iff {lit}`(T − λI)v = 0`.
   tfae_have 1 ↔ 2 := by
+    rw [Module.End.hasEigenvalue_iff_exists]
     constructor
     · rintro ⟨v, hv, hTv⟩ hinj
       apply hv
-      have h0 : (T - lam • (LinearMap.id : V →ₗ[F] V)) v = 0 := by
+      have h0 : (T - γ • (LinearMap.id : V →ₗ[F] V)) v = 0 := by
         rw [LinearMap.sub_apply, LinearMap.smul_apply, LinearMap.id_apply,
           hTv, sub_self]
       exact hinj (by simpa using h0)
@@ -219,26 +205,26 @@ theorem tfae_isEigenvalue [Finite F V] (T : V →ₗ[F] V) (lam : F) :
 
 /-! 5.8 Definition: eigenvector -/
 
-/-- A vector {lit}`v ∈ V` is an *eigenvector* of {lit}`T` corresponding to the
-eigenvalue {lit}`λ` if {lit}`v ≠ 0` and {lit}`Tv = λv`. (mathlib:
-{name}`Module.End.HasEigenvector`.) -/
-def IsEigenvector (T : V →ₗ[F] V) (lam : F) (v : V) : Prop :=
-  v ≠ 0 ∧ T v = lam • v
+open Module.End (HasEigenvector)
 
-theorem isEigenvector_iff_hasEigenvector (T : V →ₗ[F] V) (lam : F) (v : V) :
-    IsEigenvector T lam v ↔ Module.End.HasEigenvector T lam v := by
+/-- {lit}`HasEigenvector` unfolds to Axler's definition 5.8: {lit}`v` is an
+eigenvector of {lit}`T` for {lit}`λ` iff {lit}`v ≠ 0` and {lit}`Tv = λv`.
+This bridges mathlib's eigenspace-based definition to the explicit conditions,
+so eigenvector proofs can {lit}`rw` to and from {lit}`⟨hv, hTv⟩`. -/
+theorem _root_.Module.End.hasEigenvector_iff_and {T : V →ₗ[F] V} {γ : F}
+    {v : V} : HasEigenvector T γ v ↔ v ≠ 0 ∧ T v = γ • v := by
   constructor
-  · rintro ⟨hv, hTv⟩
-    exact ⟨Module.End.mem_eigenspace_iff.mpr hTv, hv⟩
   · rintro ⟨hmem, hv⟩
     exact ⟨hv, Module.End.mem_eigenspace_iff.mp hmem⟩
+  · rintro ⟨hv, hTv⟩
+    exact ⟨Module.End.mem_eigenspace_iff.mpr hTv, hv⟩
 
 /-- A nonzero vector {lit}`v` is an eigenvector of {lit}`T` corresponding to
-{lit}`λ` iff {lit}`v ∈ null (T − λI)`. -/
-theorem isEigenvector_iff_mem_ker (T : V →ₗ[F] V) (lam : F) (v : V) :
-    IsEigenvector T lam v ↔ v ≠ 0 ∧ v ∈ ker (T - lam • LinearMap.id) := by
-  unfold IsEigenvector
-  rw [LinearMap.mem_ker, LinearMap.sub_apply, sub_eq_zero]
+{lit}`γ` iff {lit}`v ∈ null (T − γI)`. -/
+theorem isEigenvector_iff_mem_ker (T : V →ₗ[F] V) (γ : F) (v : V) :
+    HasEigenvector T γ v ↔ v ≠ 0 ∧ v ∈ ker (T - γ • LinearMap.id) := by
+  rw [Module.End.hasEigenvector_iff_and, LinearMap.mem_ker, LinearMap.sub_apply,
+    sub_eq_zero]
   simp [eq_comm]
 
 /-! 5.9 Example: {lit}`T(w, z) = (−z, w)`.
@@ -260,28 +246,30 @@ def T_5_9 (F : Type*) [Field F] : (Fin 2 → F) →ₗ[F] (Fin 2 → F) where
     funext i
     fin_cases i <;> simp
 
-example : ¬ ∃ lam : ℝ, IsEigenvalue (T_5_9 ℝ) lam := by
-  rintro ⟨lam, v, hv, hTv⟩
+example : ¬ ∃ γ : ℝ, HasEigenvalue (T_5_9 ℝ) γ := by
+  rintro ⟨γ, hev⟩
+  obtain ⟨v, hv, hTv⟩ := Module.End.hasEigenvalue_iff_exists.mp hev
   -- The two coordinates of {lit}`Tv = λv` say {lit}`−v₁ = λv₀` and
   -- {lit}`v₀ = λv₁`; together {lit}`(λ² + 1)v₁ = 0` and {lit}`(λ² + 1)v₀ = 0`.
-  have h0 : -v 1 = lam * v 0 := congrFun hTv 0
-  have h1 : v 0 = lam * v 1 := congrFun hTv 1
-  have h2 : (1 + lam ^ 2) * v 0 = 0 := by linear_combination h1 - lam * h0
-  have h3 : (1 + lam ^ 2) * v 1 = 0 := by linear_combination -h0 - lam * h1
-  have hpos : (0 : ℝ) < 1 + lam ^ 2 := by positivity
+  have h0 : -v 1 = γ * v 0 := congrFun hTv 0
+  have h1 : v 0 = γ * v 1 := congrFun hTv 1
+  have h2 : (1 + γ ^ 2) * v 0 = 0 := by linear_combination h1 - γ * h0
+  have h3 : (1 + γ ^ 2) * v 1 = 0 := by linear_combination -h0 - γ * h1
+  have hpos : (0 : ℝ) < 1 + γ ^ 2 := by positivity
   apply hv
   funext i
   fin_cases i
   · exact (mul_eq_zero.mp h2).resolve_left (ne_of_gt hpos)
   · exact (mul_eq_zero.mp h3).resolve_left (ne_of_gt hpos)
 
-example : ∀ lam : ℂ, IsEigenvalue (T_5_9 ℂ) lam ↔
-    lam = Complex.I ∨ lam = -Complex.I := by
-  intro lam
+example : ∀ γ : ℂ, HasEigenvalue (T_5_9 ℂ) γ ↔
+    γ = Complex.I ∨ γ = -Complex.I := by
+  intro γ
+  rw [Module.End.hasEigenvalue_iff_exists]
   constructor
   · rintro ⟨v, hv, hTv⟩
-    have h0 : -v 1 = lam * v 0 := congrFun hTv 0
-    have h1 : v 0 = lam * v 1 := congrFun hTv 1
+    have h0 : -v 1 = γ * v 0 := congrFun hTv 0
+    have h1 : v 0 = γ * v 1 := congrFun hTv 1
     -- {lit}`−v₁ = λ²v₁`; if {lit}`v₁ = 0` then also {lit}`v₀ = 0`,
     -- contradicting {lit}`v ≠ 0`. Hence {lit}`λ² = −1`.
     have hv1 : v 1 ≠ 0 := by
@@ -291,14 +279,14 @@ example : ∀ lam : ℂ, IsEigenvalue (T_5_9 ℂ) lam ↔
       fin_cases i
       · simpa [h] using h1
       · exact h
-    have hlam_sq : lam ^ 2 = -1 := by
-      have h2 : lam ^ 2 * v 1 = -v 1 := by
+    have hlam_sq : γ ^ 2 = -1 := by
+      have h2 : γ ^ 2 * v 1 = -v 1 := by
         rw [pow_two, mul_assoc, ← h1, ← h0]
-      have h3 : (lam ^ 2 + 1) * v 1 = 0 := by linear_combination h2
+      have h3 : (γ ^ 2 + 1) * v 1 = 0 := by linear_combination h2
       rcases mul_eq_zero.mp h3 with h | h
       · linear_combination h
       · exact absurd h hv1
-    have hfactor : (lam - Complex.I) * (lam + Complex.I) = 0 := by
+    have hfactor : (γ - Complex.I) * (γ + Complex.I) = 0 := by
       have : Complex.I ^ 2 = -1 := Complex.I_sq
       linear_combination hlam_sq - this
     rcases mul_eq_zero.mp hfactor with h | h
@@ -322,29 +310,80 @@ example : ∀ lam : ℂ, IsEigenvalue (T_5_9 ℂ) lam ↔
 
 /-! 5.11 Linearly independent eigenvectors.
 
-Axler's proof takes a minimal-length linearly dependent list of eigenvectors,
-applies {lit}`T − λₘI` to a dependence relation, and contradicts minimality.
-mathlib proves the same statement (by induction) as
-{name}`Module.End.eigenvectors_linearIndependent'`; we bridge to it. -/
+Axler's proof takes a dependence relation and applies {lit}`T − λI` to peel off
+one eigenvalue at a time. We follow that argument by induction on the number of
+eigenvectors: given a dependence {lit}`∑ cᵢvᵢ = 0`, applying
+{lit}`T − λₘI` annihilates the last term and leaves a dependence among the
+first {lit}`m` eigenvectors, which are independent by the induction hypothesis;
+since the surviving coefficients carry nonzero factors {lit}`λᵢ − λₘ` they must
+vanish, and then {lit}`cₘvₘ = 0` forces {lit}`cₘ = 0` as well.
+(mathlib's own version is {name}`Module.End.eigenvectors_linearIndependent'`.) -/
 
 theorem eigenvectors_linearIndependent (T : V →ₗ[F] V) {m : ℕ}
     (lam : Fin m → F) (hlam : Function.Injective lam) (v : Fin m → V)
-    (hv : ∀ k, IsEigenvector T (lam k) (v k)) :
-    LinearIndependent F v :=
-  Module.End.eigenvectors_linearIndependent' T lam hlam v
-    fun k => (isEigenvector_iff_hasEigenvector T (lam k) (v k)).mp (hv k)
+    (hv : ∀ k, HasEigenvector T (lam k) (v k)) :
+    LinearIndependent F v := by
+  induction m with
+  | zero =>
+    rw [Fintype.linearIndependent_iff]
+    exact fun c _ i => Fin.elim0 i
+  | succ m ih =>
+    -- Work with the linear-combination characterization of independence.
+    rw [Fintype.linearIndependent_iff]
+    intro c hc
+    set μ := lam (Fin.last m) with hμ
+    -- Apply {lit}`T − μI` to the dependence {lit}`∑ cᵢ vᵢ = 0`. On each
+    -- eigenvector it acts as multiplication by {lit}`λᵢ − μ`.
+    have key : ∀ i, (T - μ • (LinearMap.id : V →ₗ[F] V)) (v i) =
+        (lam i - μ) • v i := by
+      intro i
+      simp only [LinearMap.sub_apply, LinearMap.smul_apply, LinearMap.id_apply]
+      rw [Module.End.mem_eigenspace_iff.mp (hv i).1, sub_smul]
+    have hD : ∑ i, c i • ((lam i - μ) • v i) = 0 := by
+      have h : (T - μ • (LinearMap.id : V →ₗ[F] V)) (∑ i, c i • v i) = 0 := by
+        rw [hc, map_zero]
+      rw [map_sum] at h
+      rw [← h]
+      exact Finset.sum_congr rfl fun i _ => by rw [map_smul, key i]
+    -- The last term vanishes ({lit}`λₘ − μ = 0`), leaving a dependence among
+    -- the first {lit}`m` eigenvectors.
+    rw [Fin.sum_univ_castSucc] at hD
+    simp only [hμ, sub_self, zero_smul, smul_zero, add_zero] at hD
+    -- By the induction hypothesis those eigenvectors are independent.
+    have hli : LinearIndependent F (v ∘ Fin.castSucc) :=
+      ih (lam ∘ Fin.castSucc) (hlam.comp (Fin.castSucc_injective m))
+        (v ∘ Fin.castSucc) fun k => hv k.castSucc
+    rw [Fintype.linearIndependent_iff] at hli
+    have hzero : ∀ i : Fin m, c i.castSucc * (lam i.castSucc - μ) = 0 := by
+      apply hli
+      simpa only [smul_smul, Function.comp_apply] using hD
+    -- Distinct eigenvalues make each factor {lit}`λᵢ − μ` nonzero, so each
+    -- surviving coefficient is zero.
+    have hc0 : ∀ i : Fin m, c i.castSucc = 0 := by
+      intro i
+      rcases mul_eq_zero.mp (hzero i) with h | h
+      · exact h
+      · exact absurd (hlam (sub_eq_zero.mp h)) (Fin.castSucc_lt_last i).ne
+    -- Finally {lit}`cₘ vₘ = 0` with {lit}`vₘ ≠ 0` forces {lit}`cₘ = 0`.
+    have hclast : c (Fin.last m) = 0 := by
+      rw [Fin.sum_univ_castSucc] at hc
+      rw [Finset.sum_eq_zero fun i _ => by rw [hc0 i, zero_smul], zero_add] at hc
+      exact (smul_eq_zero.mp hc).resolve_right (hv (Fin.last m)).2
+    exact fun i => Fin.lastCases hclast hc0 i
 
 /-! 5.12 An operator cannot have more eigenvalues than the dimension of the
 vector space. -/
 
 theorem card_eigenvalues_le_finrank [Finite F V] (T : V →ₗ[F] V) {m : ℕ}
     (lam : Fin m → F) (hlam : Function.Injective lam)
-    (hev : ∀ k, IsEigenvalue T (lam k)) : m ≤ finrank F V := by
+    (hev : ∀ k, HasEigenvalue T (lam k)) : m ≤ finrank F V := by
   -- Choose an eigenvector for each eigenvalue; by 5.11 the list is linearly
   -- independent, so its length is at most {lit}`dim V` (2.22).
+  simp only [Module.End.hasEigenvalue_iff_exists] at hev
   choose v hv_ne hv_eq using hev
   have hli : LinearIndependent F v :=
-    eigenvectors_linearIndependent T lam hlam v fun k => ⟨hv_ne k, hv_eq k⟩
+    eigenvectors_linearIndependent T lam hlam v
+      fun k => Module.End.hasEigenvector_iff_and.mpr ⟨hv_ne k, hv_eq k⟩
   simpa using hli.fintype_card_le_finrank
 
 /-! Polynomials Applied to Operators -/
@@ -451,14 +490,12 @@ theorem ker_aeval_invariant (T : V →ₗ[F] V) (p : Polynomial F) :
     InvariantUnder T (ker (aeval T p)) := by
   intro u hu
   rw [LinearMap.mem_ker] at hu ⊢
-  -- {lit}`p(T)(Tu) = T(p(T)u) = T0 = 0`.
   rw [aeval_comm_self, hu, map_zero]
 
 theorem range_aeval_invariant (T : V →ₗ[F] V) (p : Polynomial F) :
     InvariantUnder T (range (aeval T p)) := by
   rintro u hu
   obtain ⟨v, rfl⟩ := hu
-  -- {lit}`T(p(T)v) = p(T)(Tv) ∈ range p(T)`.
   exact ⟨T v, aeval_comm_self T p v⟩
 
 /-! # Exercises -/
@@ -506,11 +543,16 @@ def T_ex_5A_5 : (Fin 2 → ℝ) →ₗ[ℝ] (Fin 2 → ℝ) where
     · simp [mul_left_comm]
     · simp
 
-theorem exercise_5A_5 : ∀ lam : ℝ, ¬ IsEigenvalue T_ex_5A_5 lam := by
+/-- The set of eigenvalues of {lit}`T_ex_5A_5` — to be determined by the
+solver. -/
+def eigenvalues_5A_5 : Set ℝ := sorry
+
+theorem exercise_5A_5 (γ : ℝ) :
+    HasEigenvalue T_ex_5A_5 γ ↔ γ ∈ eigenvalues_5A_5 := by
   sorry
 
-/-- 5A.6 {lit}`T(w, z) = (z, w)` on {lit}`F²`: the eigenvalues are
-{lit}`1` and {lit}`−1`… -/
+/-- 5A.6 {lit}`T(w, z) = (z, w)` on {lit}`F²`: find all eigenvalues and
+eigenvectors. -/
 def T_ex_5A_6 : (Fin 2 → F) →ₗ[F] (Fin 2 → F) where
   toFun v := ![v 1, v 0]
   map_add' x y := by
@@ -520,15 +562,19 @@ def T_ex_5A_6 : (Fin 2 → F) →ₗ[F] (Fin 2 → F) where
     funext i
     fin_cases i <;> simp
 
-theorem exercise_5A_6a : ∀ lam : F, IsEigenvalue (T_ex_5A_6 (F := F)) lam ↔
-    lam = 1 ∨ lam = -1 := by
+/-- The set of eigenvalues of {lit}`T_ex_5A_6` — to be determined. -/
+def eigenvalues_5A_6 (F : Type*) [Field F] : Set F := sorry
+
+/-- The set of eigenvectors of {lit}`T_ex_5A_6` for a scalar {lit}`lam` — to be
+determined (empty when {lit}`lam` is not an eigenvalue). -/
+def eigenvectors_5A_6 (F : Type*) [Field F] (lam : F) : Set (Fin 2 → F) := sorry
+
+theorem exercise_5A_6a (lam : F) :
+    HasEigenvalue (T_ex_5A_6 (F := F)) lam ↔ lam ∈ eigenvalues_5A_6 F := by
   sorry
 
-/-- …with eigenvectors the nonzero vectors {lit}`(w, w)` resp.
-{lit}`(w, −w)`. -/
-theorem exercise_5A_6b (v : Fin 2 → F) :
-    (IsEigenvector (T_ex_5A_6 (F := F)) 1 v ↔ v ≠ 0 ∧ v 1 = v 0) ∧
-    (IsEigenvector (T_ex_5A_6 (F := F)) (-1) v ↔ v ≠ 0 ∧ v 1 = -v 0) := by
+theorem exercise_5A_6b (lam : F) (v : Fin 2 → F) :
+    HasEigenvector (T_ex_5A_6 (F := F)) lam v ↔ v ∈ eigenvectors_5A_6 F lam := by
   sorry
 
 /-- 5A.7 {lit}`T(z₁, z₂, z₃) = (2z₂, 0, 5z₃)` on {lit}`F³`: find all
@@ -542,31 +588,41 @@ def T_ex_5A_7 : (Fin 3 → F) →ₗ[F] (Fin 3 → F) where
     funext i
     fin_cases i <;> simp <;> ring
 
-theorem exercise_5A_7a : ∀ lam : F, IsEigenvalue (T_ex_5A_7 (F := F)) lam ↔
-    lam = 0 ∨ lam = 5 := by
+/-- The set of eigenvalues of {lit}`T_ex_5A_7` — to be determined. -/
+def eigenvalues_5A_7 (F : Type*) [Field F] : Set F := sorry
+
+/-- The set of eigenvectors of {lit}`T_ex_5A_7` for a scalar {lit}`lam` — to be
+determined (empty when {lit}`lam` is not an eigenvalue). -/
+def eigenvectors_5A_7 (F : Type*) [Field F] (lam : F) : Set (Fin 3 → F) := sorry
+
+theorem exercise_5A_7a (lam : F) :
+    HasEigenvalue (T_ex_5A_7 (F := F)) lam ↔ lam ∈ eigenvalues_5A_7 F := by
   sorry
 
-theorem exercise_5A_7b (v : Fin 3 → F) :
-    (IsEigenvector (T_ex_5A_7 (F := F)) 0 v ↔
-      v ≠ 0 ∧ v 1 = 0 ∧ v 2 = 0) ∧
-    (IsEigenvector (T_ex_5A_7 (F := F)) 5 v ↔
-      v ≠ 0 ∧ v 0 = 0 ∧ v 1 = 0) := by
+theorem exercise_5A_7b (lam : F) (v : Fin 3 → F) :
+    HasEigenvector (T_ex_5A_7 (F := F)) lam v ↔ v ∈ eigenvectors_5A_7 F lam := by
   sorry
 
 /-- 5A.8 -/
-theorem exercise_5A_8 (P : V →ₗ[F] V) (hP : P ∘ₗ P = P) (lam : F)
-    (h : IsEigenvalue P lam) : lam = 0 ∨ lam = 1 := by
+theorem exercise_5A_8 (P : V →ₗ[F] V) (hP : P ∘ₗ P = P) (γ : F)
+    (h : HasEigenvalue P γ) : γ = 0 ∨ γ = 1 := by
   sorry
 
-/-- 5A.9 The differentiation operator on {lit}`𝒫(ℝ)`: the only eigenvalue is
-{lit}`0`, and its eigenvectors are the nonzero constant polynomials. -/
+/-- 5A.9 The differentiation operator on {lit}`𝒫(ℝ)`: find all eigenvalues and
+eigenvectors. -/
+def eigenvalues_5A_9 : Set ℝ := sorry
+
+/-- The eigenvectors of differentiation for a scalar {lit}`lam` — to be
+determined (empty when {lit}`lam` is not an eigenvalue). -/
+def eigenvectors_5A_9 (lam : ℝ) : Set (Polynomial ℝ) := sorry
+
 theorem exercise_5A_9 :
-    (∀ lam : ℝ,
-      IsEigenvalue (Polynomial.derivative : Polynomial ℝ →ₗ[ℝ] Polynomial ℝ)
-        lam ↔ lam = 0) ∧
-    (∀ p : Polynomial ℝ,
-      IsEigenvector (Polynomial.derivative : Polynomial ℝ →ₗ[ℝ] Polynomial ℝ)
-        0 p ↔ ∃ c : ℝ, c ≠ 0 ∧ p = Polynomial.C c) := by
+    (∀ γ : ℝ,
+      HasEigenvalue (Polynomial.derivative : Polynomial ℝ →ₗ[ℝ] Polynomial ℝ)
+        γ ↔ γ ∈ eigenvalues_5A_9) ∧
+    (∀ (γ : ℝ) (p : Polynomial ℝ),
+      HasEigenvector (Polynomial.derivative : Polynomial ℝ →ₗ[ℝ] Polynomial ℝ)
+        γ p ↔ p ∈ eigenvectors_5A_9 γ) := by
   sorry
 
 /-- 5A.10 {lit}`(Tp)(x) = x p′(x)` as an operator on {lit}`𝒫₄(ℝ)`
@@ -599,99 +655,108 @@ noncomputable def T_ex_5A_10 :
     ext
     simp
 
-theorem exercise_5A_10a : ∀ lam : ℝ, IsEigenvalue T_ex_5A_10 lam ↔
-    lam = 0 ∨ lam = 1 ∨ lam = 2 ∨ lam = 3 ∨ lam = 4 := by
+/-- The set of eigenvalues of {lit}`T_ex_5A_10` — to be determined. -/
+def eigenvalues_5A_10 : Set ℝ := sorry
+
+/-- The eigenvectors of {lit}`T_ex_5A_10` for a scalar {lit}`lam` — to be
+determined (empty when {lit}`lam` is not an eigenvalue). -/
+def eigenvectors_5A_10 (γ : ℝ) : Set (Polynomial.degreeLT ℝ 5) := sorry
+
+theorem exercise_5A_10a (γ : ℝ) :
+    HasEigenvalue T_ex_5A_10 γ ↔ γ ∈ eigenvalues_5A_10 := by
   sorry
 
-theorem exercise_5A_10b (k : Fin 5) (p : Polynomial.degreeLT ℝ 5) :
-    IsEigenvector T_ex_5A_10 (k : ℝ) p ↔
-      ∃ c : ℝ, c ≠ 0 ∧ (p : Polynomial ℝ) =
-        Polynomial.C c * Polynomial.X ^ (k : ℕ) := by
+theorem exercise_5A_10b (γ : ℝ) (p : Polynomial.degreeLT ℝ 5) :
+    HasEigenvector T_ex_5A_10 γ p ↔ p ∈ eigenvectors_5A_10 γ := by
   sorry
 
-/-- 5A.11 Eigenvalues are isolated: away from {lit}`α` (but close to it),
-{lit}`T − λI` is invertible. Stated over {lit}`ℂ`. -/
+/-- 5A.11 Stated over {lit}`ℂ`. Same proof should work for `ℝ`. -/
 theorem exercise_5A_11 {V : Type*} [AddCommGroup V] [Module ℂ V]
     [Finite ℂ V] (T : V →ₗ[ℂ] V) (α : ℂ) :
-    ∃ δ : ℝ, 0 < δ ∧ ∀ lam : ℂ, 0 < ‖α - lam‖ → ‖α - lam‖ < δ →
-      IsInvertible (T - lam • LinearMap.id) := by
+    ∃ δ : ℝ, 0 < δ ∧ ∀ γ : ℂ, 0 < ‖α - γ‖ → ‖α - γ‖ < δ →
+      IsInvertible (T - γ • LinearMap.id) := by
   sorry
 
-/-- 5A.12 {lit}`V = U ⊕ W` with {lit}`U, W` nonzero, and
-{lit}`P(u + w) = u`: the eigenvalues of {lit}`P` are exactly {lit}`0` and
-{lit}`1`… -/
+/-! 5A.12 {lit}`V = U ⊕ W` with {lit}`U, W` nonzero, and the projection
+{lit}`P(u + w) = u`: find all eigenvalues and eigenvectors. -/
+
+/-- The eigenvalues of the projection {lit}`P` — to be determined. -/
+def eigenvalues_5A_12 (F : Type*) [Field F] : Set F := sorry
+
+/-- The eigenvectors of the projection {lit}`P` onto {lit}`U` along {lit}`W`
+for a scalar {lit}`lam` — to be determined (empty when {lit}`lam` is not an
+eigenvalue). -/
+def eigenvectors_5A_12 (U W : Submodule F V) (lam : F) : Set V := sorry
+
 theorem exercise_5A_12a (U W : Submodule F V) (hUW : IsCompl U W)
     (hU : U ≠ ⊥) (hW : W ≠ ⊥) (P : V →ₗ[F] V)
     (hP : ∀ u ∈ U, ∀ w ∈ W, P (u + w) = u) :
-    ∀ lam : F, IsEigenvalue P lam ↔ lam = 0 ∨ lam = 1 := by
+    ∀ γ : F, HasEigenvalue P γ ↔ γ ∈ eigenvalues_5A_12 F := by
   sorry
 
-/-- …with eigenvectors of {lit}`0` the nonzero vectors of {lit}`W` and
-eigenvectors of {lit}`1` the nonzero vectors of {lit}`U`. -/
 theorem exercise_5A_12b (U W : Submodule F V) (hUW : IsCompl U W)
-    (P : V →ₗ[F] V) (hP : ∀ u ∈ U, ∀ w ∈ W, P (u + w) = u) (v : V) :
-    (IsEigenvector P 0 v ↔ v ≠ 0 ∧ v ∈ W) ∧
-    (IsEigenvector P 1 v ↔ v ≠ 0 ∧ v ∈ U) := by
+    (P : V →ₗ[F] V) (hP : ∀ u ∈ U, ∀ w ∈ W, P (u + w) = u) (γ : F) (v : V) :
+    HasEigenvector P γ v ↔ v ∈ eigenvectors_5A_12 U W γ := by
   sorry
 
 /-- 5A.13 (a) {lit}`T` and {lit}`S⁻¹TS` have the same eigenvalues. -/
-theorem exercise_5A_13a (T S : V →ₗ[F] V) (hS : IsInvertible S) (lam : F) :
-    IsEigenvalue T lam ↔ IsEigenvalue (hS.inv ∘ₗ T ∘ₗ S) lam := by
+theorem exercise_5A_13a (T S : V →ₗ[F] V) (hS : IsInvertible S) (γ : F) :
+    HasEigenvalue T γ ↔ HasEigenvalue (hS.inv ∘ₗ T ∘ₗ S) γ := by
   sorry
 
-/-- 5A.13 (b) The eigenvectors of {lit}`S⁻¹TS` are obtained from the
-eigenvectors of {lit}`T` by applying {lit}`S⁻¹`: {lit}`v` is an eigenvector
-of {lit}`S⁻¹TS` iff {lit}`Sv` is an eigenvector of {lit}`T`. -/
-theorem exercise_5A_13b (T S : V →ₗ[F] V) (hS : IsInvertible S) (lam : F)
+/-- The map carrying each eigenvector of {lit}`T` to an eigenvector of
+{lit}`S⁻¹TS` for the same eigenvalue — to be determined. -/
+def exercise_5A_13_map (S : V →ₗ[F] V) (hS : IsInvertible S) : V →ₗ[F] V := sorry
+
+/-- 5A.13 (b) Determine how the eigenvectors of {lit}`S⁻¹TS` are obtained from
+those of {lit}`T`: {lit}`v` is an eigenvector of {lit}`T` iff
+{lit}`exercise_5A_13_map S hS v` is an eigenvector of {lit}`S⁻¹TS`. -/
+theorem exercise_5A_13b (T S : V →ₗ[F] V) (hS : IsInvertible S) (γ : F)
     (v : V) :
-    IsEigenvector (hS.inv ∘ₗ T ∘ₗ S) lam v ↔ IsEigenvector T lam (S v) := by
+    HasEigenvector T γ v ↔
+      HasEigenvector (hS.inv ∘ₗ T ∘ₗ S) γ (exercise_5A_13_map S hS v) := by
   sorry
 
 /-- 5A.14 -/
 theorem exercise_5A_14 :
-    ∃ T : (Fin 4 → ℝ) →ₗ[ℝ] (Fin 4 → ℝ), ∀ lam : ℝ, ¬ IsEigenvalue T lam := by
+    ∃ T : (Fin 4 → ℝ) →ₗ[ℝ] (Fin 4 → ℝ), ∀ γ : ℝ, ¬ HasEigenvalue T γ := by
   sorry
 
-/-- 5A.15 {lit}`λ` is an eigenvalue of {lit}`T` iff it is an eigenvalue of the
-dual operator {lit}`T′ ∈ ℒ(V′)`. -/
-theorem exercise_5A_15 [Finite F V] (T : V →ₗ[F] V) (lam : F) :
-    IsEigenvalue T lam ↔ IsEigenvalue T.dualMap lam := by
+/-- 5A.15 -/
+theorem exercise_5A_15 [Finite F V] (T : V →ₗ[F] V) (γ : F) :
+    HasEigenvalue T γ ↔ HasEigenvalue T.dualMap γ := by
   sorry
 
-/-- 5A.16 An eigenvalue bound from any matrix of {lit}`T`:
-{lit}`|λ| ≤ n max |𝒜(T)_{j,k}|`, stated with an arbitrary bound {lit}`M`
-on the entries (over {lit}`ℂ`). -/
+/-- 5A.16 -/
 theorem exercise_5A_16 {V : Type*} [AddCommGroup V] [Module ℂ V]
-    {n : ℕ} {v : Fin n → V} (hv : IsBasis ℂ v) (T : V →ₗ[ℂ] V) (lam : ℂ)
-    (hlam : IsEigenvalue T lam) (M : ℝ)
-    (hM : ∀ j k, ‖LADR.Section_3C.matrixOf hv hv T j k‖ ≤ M) :
-    ‖lam‖ ≤ n * M := by
+    {n : ℕ} (hn : 0 < n) {v : Fin n → V} (hv : IsBasis ℂ v) (T : V →ₗ[ℂ] V)
+    (γ : ℂ) (hγ : HasEigenvalue T γ) :
+    ‖γ‖ ≤ n * Finset.univ.sup' ⟨(⟨0, hn⟩, ⟨0, hn⟩), Finset.mem_univ _⟩
+      (fun jk : Fin n × Fin n => ‖LADR.Section_3C.matrixOf hv hv T jk.1 jk.2‖) := by
   sorry
 
 open LADR.Section_1B (Complexification exercise_1B_8) in
 open LADR.Section_3B (complexification_map) in
-/-- 5A.17 For {lit}`F = ℝ`: {lit}`λ ∈ ℝ` is an eigenvalue of {lit}`T` iff it
-is an eigenvalue of the complexification {lit}`T_ℂ`. -/
+/-- 5A.17 -/
 theorem exercise_5A_17 {V : Type*} [AddCommGroup V] [Module ℝ V]
-    (T : V →ₗ[ℝ] V) (lam : ℝ) :
+    (T : V →ₗ[ℝ] V) (γ : ℝ) :
     letI : Module ℂ (Complexification V) := exercise_1B_8 V
-    (IsEigenvalue T lam ↔
-      IsEigenvalue (complexification_map T) (lam : ℂ)) := by
+    (HasEigenvalue T γ ↔
+      HasEigenvalue (complexification_map T) (γ : ℂ)) := by
   sorry
 
+open scoped ComplexConjugate in
 open LADR.Section_1B (Complexification exercise_1B_8) in
 open LADR.Section_3B (complexification_map) in
-/-- 5A.18 For {lit}`F = ℝ` and {lit}`λ ∈ ℂ`: {lit}`λ` is an eigenvalue of
-{lit}`T_ℂ` iff {lit}`λ̄` is an eigenvalue of {lit}`T_ℂ`. -/
+/-- 5A.18 -/
 theorem exercise_5A_18 {V : Type*} [AddCommGroup V] [Module ℝ V]
     (T : V →ₗ[ℝ] V) (lam : ℂ) :
     letI : Module ℂ (Complexification V) := exercise_1B_8 V
-    (IsEigenvalue (complexification_map T) lam ↔
-      IsEigenvalue (complexification_map T) (starRingEnd ℂ lam)) := by
+    (HasEigenvalue (complexification_map T) lam ↔
+      HasEigenvalue (complexification_map T) (conj lam)) := by
   sorry
 
-/-- 5A.19 The forward shift {lit}`T(z₁, z₂, …) = (0, z₁, z₂, …)` on
-{lit}`F^∞` has no eigenvalues. -/
+/-- 5A.19 -/
 def forwardShift : (ℕ → F) →ₗ[F] (ℕ → F) where
   toFun x := fun i => match i with
     | 0 => 0
@@ -703,92 +768,90 @@ def forwardShift : (ℕ → F) →ₗ[F] (ℕ → F) where
     funext i
     cases i <;> simp
 
-theorem exercise_5A_19 : ∀ lam : F, ¬ IsEigenvalue (forwardShift (F := F)) lam := by
+theorem exercise_5A_19 : ∀ γ : F, ¬ HasEigenvalue (forwardShift (F := F)) γ := by
   sorry
 
 open LADR.Section_3A (backwardShift) in
-/-- 5A.20 (a) Every {lit}`λ ∈ F` is an eigenvalue of the backward shift
-{lit}`S(z₁, z₂, z₃, …) = (z₂, z₃, …)`. -/
-theorem exercise_5A_20a : ∀ lam : F, IsEigenvalue (backwardShift (F := F)) lam := by
+/-- 5A.20 -/
+theorem exercise_5A_20a : ∀ γ : F, HasEigenvalue (backwardShift (F := F)) γ := by
   sorry
+
+/-- The eigenvectors of the backward shift for an eigenvalue {lit}`γ` — to be
+determined. -/
+def eigenvectors_5A_20 (F : Type*) [Field F] (γ : F) : Set (ℕ → F) := sorry
 
 open LADR.Section_3A (backwardShift) in
-/-- 5A.20 (b) The eigenvectors of {lit}`λ` are the nonzero geometric
-sequences {lit}`(c, cλ, cλ², …)`. -/
-theorem exercise_5A_20b (lam : F) (x : ℕ → F) :
-    IsEigenvector (backwardShift (F := F)) lam x ↔
-      x ≠ 0 ∧ ∀ n, x n = x 0 * lam ^ n := by
+/-- 5A.20 (b) Find all eigenvectors of the backward shift. -/
+theorem exercise_5A_20b (γ : F) (x : ℕ → F) :
+    HasEigenvector (backwardShift (F := F)) γ x ↔ x ∈ eigenvectors_5A_20 F γ := by
   sorry
 
-/-- 5A.21 (a) For invertible {lit}`T` and {lit}`λ ≠ 0`: {lit}`λ` is an
-eigenvalue of {lit}`T` iff {lit}`1/λ` is an eigenvalue of {lit}`T⁻¹`. -/
-theorem exercise_5A_21a (T : V →ₗ[F] V) (hT : IsInvertible T) (lam : F)
-    (hlam : lam ≠ 0) :
-    IsEigenvalue T lam ↔ IsEigenvalue hT.inv lam⁻¹ := by
+/-- 5A.21 (a) -/
+theorem exercise_5A_21a (T : V →ₗ[F] V) (hT : IsInvertible T) (γ : F)
+    (hγ : γ ≠ 0) :
+    HasEigenvalue T γ ↔ HasEigenvalue hT.inv γ⁻¹ := by
   sorry
 
 /-- 5A.21 (b) {lit}`T` and {lit}`T⁻¹` have the same eigenvectors. -/
 theorem exercise_5A_21b (T : V →ₗ[F] V) (hT : IsInvertible T) (v : V) :
-    (∃ lam, IsEigenvector T lam v) ↔ (∃ lam, IsEigenvector hT.inv lam v) := by
+    (∃ γ, HasEigenvector T γ v) ↔ (∃ γ, HasEigenvector hT.inv γ v) := by
   sorry
 
 /-- 5A.22 -/
 theorem exercise_5A_22 (T : V →ₗ[F] V) (u w : V) (hu : u ≠ 0) (hw : w ≠ 0)
     (huw : T u = 3 • w) (hwu : T w = 3 • u) :
-    IsEigenvalue T 3 ∨ IsEigenvalue T (-3) := by
+    HasEigenvalue T 3 ∨ HasEigenvalue T (-3) := by
   sorry
 
 /-- 5A.23 -/
-theorem exercise_5A_23 [Finite F V] (S T : V →ₗ[F] V) (lam : F) :
-    IsEigenvalue (S ∘ₗ T) lam ↔ IsEigenvalue (T ∘ₗ S) lam := by
+theorem exercise_5A_23 [Finite F V] (S T : V →ₗ[F] V) (γ : F) :
+    HasEigenvalue (S ∘ₗ T) γ ↔ HasEigenvalue (T ∘ₗ S) γ := by
   sorry
 
 open LADR.Section_3A (fromFnToFm) in
-/-- 5A.24 (a) If every row of the {lit}`n`-by-{lit}`n` matrix {lit}`A` sums
-to {lit}`1`, then {lit}`1` is an eigenvalue of {lit}`x ↦ Ax`. -/
+/-- 5A.24 (a) -/
 theorem exercise_5A_24a {n : ℕ} (hn : 0 < n) (A : Fin n → Fin n → F)
-    (h : ∀ j, ∑ k, A j k = 1) :
-    IsEigenvalue (fromFnToFm A) 1 := by
+    (h : ∀ i, ∑ j, A i j = 1) :
+    HasEigenvalue (fromFnToFm A) 1 := by
   sorry
 
 open LADR.Section_3A (fromFnToFm) in
-/-- 5A.24 (b) If every column of {lit}`A` sums to {lit}`1`, then {lit}`1` is
-an eigenvalue of {lit}`x ↦ Ax`. -/
+/-- 5A.24 (b) -/
 theorem exercise_5A_24b {n : ℕ} (hn : 0 < n) (A : Fin n → Fin n → F)
-    (h : ∀ k, ∑ j, A j k = 1) :
-    IsEigenvalue (fromFnToFm A) 1 := by
+    (h : ∀ j, ∑ i, A i j = 1) :
+    HasEigenvalue (fromFnToFm A) 1 := by
   sorry
 
 /-- 5A.25 -/
 theorem exercise_5A_25 (T : V →ₗ[F] V) (u w : V) (a b : F)
-    (hu : IsEigenvector T a u) (hw : IsEigenvector T b w)
-    (huw : ∃ c, IsEigenvector T c (u + w)) : a = b := by
+    (hu : HasEigenvector T a u) (hw : HasEigenvector T b w)
+    (huw : ∃ c, HasEigenvector T c (u + w)) : a = b := by
   sorry
 
 /-- 5A.26 -/
 theorem exercise_5A_26 (T : V →ₗ[F] V)
-    (h : ∀ v : V, v ≠ 0 → ∃ lam : F, T v = lam • v) :
+    (h : ∀ v : V, v ≠ 0 → ∃ γ : F, HasEigenvector T γ v) :
     ∃ c : F, T = c • LinearMap.id := by
   sorry
 
 /-- 5A.27 -/
-theorem exercise_5A_27 [Finite F V] (T : V →ₗ[F] V) (k : ℕ)
-    (hk : 1 ≤ k) (hk' : k ≤ finrank F V - 1)
+theorem exercise_5A_27 [Finite F V] (T : V →ₗ[F] V) (k : ℕ+)
+    (hk' : k ≤ finrank F V - 1)
     (h : ∀ U : Submodule F V, finrank F U = k → InvariantUnder T U) :
     ∃ c : F, T = c • LinearMap.id := by
   sorry
 
 /-- 5A.28 -/
 theorem exercise_5A_28 [Finite F V] (T : V →ₗ[F] V) {m : ℕ}
-    (lam : Fin m → F) (hlam : Function.Injective lam)
-    (hev : ∀ k, IsEigenvalue T (lam k)) :
+    (γ : Fin m → F) (hγ : Function.Injective γ)
+    (hev : ∀ k, HasEigenvalue T (γ k)) :
     m ≤ 1 + finrank F (range T) := by
   sorry
 
 /-- 5A.29 -/
 theorem exercise_5A_29 (T : (Fin 3 → ℝ) →ₗ[ℝ] (Fin 3 → ℝ))
-    (h4 : IsEigenvalue T (-4)) (h5 : IsEigenvalue T 5)
-    (h7 : IsEigenvalue T (Real.sqrt 7)) :
+    (h4 : HasEigenvalue T (-4)) (h5 : HasEigenvalue T 5)
+    (h7 : HasEigenvalue T (Real.sqrt 7)) :
     ∃ x : Fin 3 → ℝ, T x - 9 • x = ![-4, 5, Real.sqrt 7] := by
   sorry
 
@@ -796,8 +859,8 @@ theorem exercise_5A_29 (T : (Fin 3 → ℝ) →ₗ[ℝ] (Fin 3 → ℝ))
 theorem exercise_5A_30 (T : V →ₗ[F] V)
     (h : (T - 2 • LinearMap.id) ∘ₗ (T - 3 • LinearMap.id) ∘ₗ
       (T - 4 • LinearMap.id) = 0)
-    (lam : F) (hlam : IsEigenvalue T lam) :
-    lam = 2 ∨ lam = 3 ∨ lam = 4 := by
+    (γ : F) (hγ : HasEigenvalue T γ) :
+    γ = 2 ∨ γ = 3 ∨ γ = 4 := by
   sorry
 
 /-- 5A.31 -/
@@ -807,76 +870,66 @@ theorem exercise_5A_31 :
 
 /-- 5A.32 -/
 theorem exercise_5A_32 (T : V →ₗ[F] V)
-    (h : ∀ lam : F, ¬ IsEigenvalue T lam) (h4 : T ^ 4 = LinearMap.id) :
+    (h : ∀ γ : F, ¬ HasEigenvalue T γ) (h4 : T ^ 4 = LinearMap.id) :
     T ^ 2 = -LinearMap.id := by
   sorry
 
 /-- 5A.33 (a) -/
-theorem exercise_5A_33a (T : V →ₗ[F] V) (m : ℕ) (hm : 0 < m) :
-    Function.Injective T ↔ Function.Injective (T ^ m) := by
+theorem exercise_5A_33a (T : V →ₗ[F] V) (m : ℕ+) :
+    Function.Injective T ↔ Function.Injective (T ^ m.val) := by
   sorry
 
 /-- 5A.33 (b) -/
-theorem exercise_5A_33b (T : V →ₗ[F] V) (m : ℕ) (hm : 0 < m) :
-    Function.Surjective T ↔ Function.Surjective (T ^ m) := by
+theorem exercise_5A_33b (T : V →ₗ[F] V) (m : ℕ+) :
+    Function.Surjective T ↔ Function.Surjective (T ^ m.val) := by
   sorry
 
 /-- 5A.34 -/
 theorem exercise_5A_34 [Finite F V] {m : ℕ} (v : Fin m → V) :
     LinearIndependent F v ↔
-      ∃ (T : V →ₗ[F] V) (lam : Fin m → F), Function.Injective lam ∧
-        ∀ k, IsEigenvector T (lam k) (v k) := by
+      ∃ (T : V →ₗ[F] V) (γ : Fin m → F), Function.Injective γ ∧
+        ∀ k, HasEigenvector T (γ k) (v k) := by
   sorry
 
-/-- 5A.35 For distinct {lit}`λ₁, …, λₙ`, the functions {lit}`e^{λ₁x}, …,
-e^{λₙx}` are linearly independent in the space of real-valued functions
-on {lit}`ℝ`. -/
-theorem exercise_5A_35 {n : ℕ} (lam : Fin n → ℝ)
-    (hlam : Function.Injective lam) :
-    LinearIndependent ℝ (fun k => fun x : ℝ => Real.exp (lam k * x)) := by
+/-- 5A.35 -/
+theorem exercise_5A_35 {n : ℕ} (γ : Fin n → ℝ)
+    (hγ : Function.Injective γ) :
+    LinearIndependent ℝ (fun k => fun x : ℝ => Real.exp (γ k * x)) := by
   sorry
 
-/-- 5A.36 For distinct positive {lit}`λ₁, …, λₙ`, the functions
-{lit}`cos(λ₁x), …, cos(λₙx)` are linearly independent. -/
-theorem exercise_5A_36 {n : ℕ} (lam : Fin n → ℝ)
-    (hlam : Function.Injective lam) (hpos : ∀ k, 0 < lam k) :
-    LinearIndependent ℝ (fun k => fun x : ℝ => Real.cos (lam k * x)) := by
+/-- 5A.36  -/
+theorem exercise_5A_36 {n : ℕ} (γ : Fin n → ℝ)
+    (hγ : Function.Injective γ) (hpos : ∀ k, 0 < γ k) :
+    LinearIndependent ℝ (fun k => fun x : ℝ => Real.cos (γ k * x)) := by
   sorry
 
-/-- 5A.37 The operator {lit}`𝒜 ∈ ℒ(ℒ(V))` of left composition with
-{lit}`T` ({lit}`𝒜(S) = TS`, mathlib's {name}`LinearMap.mulLeft`) has the same
-eigenvalues as {lit}`T`. -/
-theorem exercise_5A_37 [Finite F V] (T : V →ₗ[F] V) (lam : F) :
-    IsEigenvalue (LinearMap.mulLeft F T : (V →ₗ[F] V) →ₗ[F] (V →ₗ[F] V)) lam ↔
-      IsEigenvalue T lam := by
+/-- 5A.37 -/
+theorem exercise_5A_37 [Finite F V] (T : V →ₗ[F] V) (γ : F) :
+    HasEigenvalue (LinearMap.mulLeft F T : (V →ₗ[F] V) →ₗ[F] (V →ₗ[F] V)) γ ↔
+      HasEigenvalue T γ := by
   sorry
 
-/-- 5A.38 (a) The quotient operator {lit}`T/U ∈ ℒ(V/U)` defined by
-{lit}`(T/U)(v + U) = Tv + U` when {lit}`U` is invariant under {lit}`T`.
-The {lit}`sorry` is the well-definedness condition (which requires the
-invariance of {lit}`U`); mathlib's {name}`Submodule.mapQ` then provides the
-operator, satisfying {lit}`(T/U)(v + U) = Tv + U` by
-{name}`Submodule.mapQ_apply`. -/
+/-- 5A.38 (a) -/
 def exercise_5A_38_quotient_op (T : V →ₗ[F] V) (U : Submodule F V)
     (hU : InvariantUnder T U) : V ⧸ U →ₗ[F] V ⧸ U :=
   Submodule.mapQ U U T (by sorry)
 
--- The defining property, for use in later sections:
+-- The defining property from Axler.
 example (T : V →ₗ[F] V) (U : Submodule F V) (hU : InvariantUnder T U)
     (v : V) :
     exercise_5A_38_quotient_op T U hU (U.mkQ v) = U.mkQ (T v) := by
   simp [exercise_5A_38_quotient_op, Submodule.mapQ_apply]
 
-/-- 5A.38 (b) Each eigenvalue of {lit}`T/U` is an eigenvalue of {lit}`T`. -/
+/-- 5A.38 (b) -/
 theorem exercise_5A_38b [Finite F V] (T : V →ₗ[F] V) (U : Submodule F V)
-    (hU : InvariantUnder T U) (lam : F)
-    (h : IsEigenvalue (exercise_5A_38_quotient_op T U hU) lam) :
-    IsEigenvalue T lam := by
+    (hU : InvariantUnder T U) (γ : F)
+    (h : HasEigenvalue (exercise_5A_38_quotient_op T U hU) γ) :
+    HasEigenvalue T γ := by
   sorry
 
 /-- 5A.39 -/
 theorem exercise_5A_39 [Finite F V] (T : V →ₗ[F] V) :
-    (∃ lam : F, IsEigenvalue T lam) ↔
+    (∃ γ : F, HasEigenvalue T γ) ↔
       ∃ U : Submodule F V, InvariantUnder T U ∧
         finrank F U = finrank F V - 1 := by
   sorry
@@ -893,9 +946,7 @@ theorem exercise_5A_41 (T : V →ₗ[F] V) (U : Submodule F V)
     InvariantUnder (aeval T p) U := by
   sorry
 
-/-- 5A.42 {lit}`T(x₁, …, xₙ) = (x₁, 2x₂, 3x₃, …, nxₙ)` on {lit}`ℝⁿ`.
-(a) The eigenvalues are exactly {lit}`1, …, n`, with eigenvectors the nonzero
-multiples of the standard basis vectors. -/
+/-- 5A.42 {lit}`T(x₁, …, xₙ) = (x₁, 2x₂, 3x₃, …, nxₙ)` on {lit}`ℝⁿ`. -/
 def T_ex_5A_42 (n : ℕ) : (Fin n → ℝ) →ₗ[ℝ] (Fin n → ℝ) where
   toFun v := fun j => ((j : ℕ) + 1) * v j
   map_add' x y := by
@@ -906,21 +957,26 @@ def T_ex_5A_42 (n : ℕ) : (Fin n → ℝ) →ₗ[ℝ] (Fin n → ℝ) where
     simp
     ring
 
+/-- (a) The set of eigenvalues of {lit}`T_ex_5A_42 n` — to be determined. -/
+def eigenvalues_5A_42 (n : ℕ) : Set ℝ := sorry
+
+/-- The eigenvectors of {lit}`T_ex_5A_42 n` for a scalar {lit}`γ` — to be
+determined (empty when {lit}`γ` is not an eigenvalue). -/
+def eigenvectors_5A_42 (n : ℕ) (γ : ℝ) : Set (Fin n → ℝ) := sorry
+
 theorem exercise_5A_42a (n : ℕ) :
-    (∀ lam : ℝ, IsEigenvalue (T_ex_5A_42 n) lam ↔
-      ∃ j : Fin n, lam = (j : ℕ) + 1) ∧
-    (∀ (j : Fin n) (v : Fin n → ℝ),
-      IsEigenvector (T_ex_5A_42 n) ((j : ℕ) + 1) v ↔
-        v ≠ 0 ∧ ∀ k, k ≠ j → v k = 0) := by
+    (∀ γ : ℝ,
+      HasEigenvalue (T_ex_5A_42 n) γ ↔ γ ∈ eigenvalues_5A_42 n) ∧
+    (∀ (γ : ℝ) (v : Fin n → ℝ),
+      HasEigenvector (T_ex_5A_42 n) γ v ↔ v ∈ eigenvectors_5A_42 n γ) := by
   sorry
 
-/-- 5A.42 (b) The invariant subspaces of {lit}`T` are exactly the spans of
-subsets of the standard basis vectors. -/
+/-- The invariant subspaces of {lit}`T_ex_5A_42 n` — to be determined. -/
+def invariantSubspaces_5A_42 (n : ℕ) : Set (Submodule ℝ (Fin n → ℝ)) := sorry
+
+/-- 5A.42 (b) Find all invariant subspaces of {lit}`T`. -/
 theorem exercise_5A_42b (n : ℕ) (U : Submodule ℝ (Fin n → ℝ)) :
-    InvariantUnder (T_ex_5A_42 n) U ↔
-      ∃ s : Finset (Fin n),
-        U = Submodule.span ℝ
-          ((fun j => (Pi.single j 1 : Fin n → ℝ)) '' s) := by
+    InvariantUnder (T_ex_5A_42 n) U ↔ U ∈ invariantSubspaces_5A_42 n := by
   sorry
 
 /-- 5A.43 -/

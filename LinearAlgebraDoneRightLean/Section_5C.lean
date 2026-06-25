@@ -39,7 +39,8 @@ open LADR.Section_2A (Spans)
 open LADR.Section_2B (IsBasis isBasis_stdBasis isBasis_stdBasis_repr)
 open LADR.Section_3C (matrixOf matrixOf_apply matrixOf_spec)
 open LADR.Section_3D (IsInvertible)
-open LADR.Section_5A (InvariantUnder IsEigenvalue aeval_mul_eq_comp
+open Module.End (HasEigenvalue)
+open LADR.Section_5A (InvariantUnder aeval_mul_eq_comp
   range_aeval_invariant exercise_5A_38_quotient_op)
 open LADR.Section_5B (aeval_eq_zero_iff_minpoly_dvd isEigenvalue_iff_isRoot
   aeval_restrict_coe)
@@ -296,7 +297,7 @@ eigenvalues of {lit}`T` are precisely the diagonal entries. -/
 theorem isEigenvalue_iff_diag [Finite F V] {n : ℕ} {v : Fin n → V}
     (hv : IsBasis F v) (T : V →ₗ[F] V)
     (hA : IsUpperTriangular (matrixOf hv hv T)) (lam : F) :
-    IsEigenvalue T lam ↔ ∃ k, matrixOf hv hv T k k = lam := by
+    HasEigenvalue T lam ↔ ∃ k, matrixOf hv hv T k k = lam := by
   constructor
   · -- An eigenvalue is a zero of the minimal polynomial (5.27), which
     -- divides {lit}`∏ (z − λₖ)` (5.40 + 5.29), so it equals some {lit}`λₖ`.
@@ -367,7 +368,8 @@ theorem isEigenvalue_iff_diag [Finite F V] {n : ℕ} {v : Fin n → V}
     have hfx : f (x : V) = 0 := by
       have := congrArg Subtype.val hx_mem
       exact this
-    refine ⟨(x : V), fun h => hx_ne (Subtype.ext h), ?_⟩
+    refine Module.End.hasEigenvalue_iff_exists.mpr
+      ⟨(x : V), fun h => hx_ne (Subtype.ext h), ?_⟩
     rw [hf_def] at hfx
     rw [LinearMap.sub_apply, LinearMap.smul_apply, LinearMap.id_apply,
       sub_eq_zero] at hfx
@@ -376,7 +378,7 @@ theorem isEigenvalue_iff_diag [Finite F V] {n : ℕ} {v : Fin n → V}
 /-! 5.42 Example: the eigenvalues of the operator of 5.36 are exactly the
 diagonal entries {lit}`2, 5, 8` of its upper-triangular matrix. -/
 
-example : ∀ lam : F, IsEigenvalue (T_5_36 (F := F)) lam ↔
+example : ∀ lam : F, HasEigenvalue (T_5_36 (F := F)) lam ↔
     lam = 2 ∨ lam = 5 ∨ lam = 8 := by
   intro lam
   have hA : IsUpperTriangular
