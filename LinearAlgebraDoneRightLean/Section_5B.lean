@@ -59,16 +59,7 @@ variable {F : Type*} [Field F]
 
 /-! Existence of Eigenvalues on Complex Vector Spaces -/
 
-/-! 5.19 Existence of eigenvalues: every operator on a finite-dimensional
-nonzero complex vector space has an eigenvalue.
-
-Axler's proof: for {lit}`v ≠ 0` the list {lit}`v, Tv, T²v, …, Tⁿv` (with
-{lit}`n = dim V`) is linearly dependent, so some nonzero polynomial {lit}`p`
-satisfies {lit}`p(T)v = 0`. By the fundamental theorem of algebra {lit}`p`
-has a root {lit}`λ`, so {lit}`p(z) = (z − λ)q(z)`; then
-{lit}`0 = p(T)v = (T − λI)(q(T)v)`, and if {lit}`q(T)v ≠ 0` we are done while
-otherwise we recurse on the smaller-degree polynomial {lit}`q`.
-(mathlib's version is {name}`Module.End.exists_eigenvalue`.) -/
+/-! 5.19 Existence of eigenvalues -/
 
 /-- Helper for 5.19: if some nonzero polynomial annihilates a nonzero vector,
 then {lit}`T` has an eigenvalue. Induction on the degree, peeling off one
@@ -121,7 +112,7 @@ private lemma exists_eigenvalue_aux {V : Type*} [AddCommGroup V] [Module ℂ V]
 
 theorem exists_eigenvalue {V : Type*} [AddCommGroup V] [Module ℂ V]
     [Finite ℂ V] [Nontrivial V] (T : V →ₗ[ℂ] V) :
-    ∃ lam : ℂ, HasEigenvalue T lam := by
+    ∃ γ : ℂ, HasEigenvalue T γ := by
   obtain ⟨v, hv⟩ := exists_ne (0 : V)
   set n := finrank ℂ V with hn
   -- {lit}`v, Tv, …, Tⁿv` has length {lit}`n + 1`, hence is linearly
@@ -153,10 +144,7 @@ theorem exists_eigenvalue {V : Type*} [AddCommGroup V] [Module ℂ V]
       Module.algebraMap_end_apply]
   exact exists_eigenvalue_aux T p.natDegree p rfl hp_ne v hv hpv
 
-/-! 5.20 Example: on the infinite-dimensional space {lit}`𝒫(ℂ)`, the operator
-{lit}`Tp = z·p` has no eigenvalues: multiplying by {lit}`z` raises the degree
-of every nonzero polynomial, so {lit}`Tp` is never a scalar multiple of
-{lit}`p`. -/
+/-! 5.20 -/
 
 noncomputable def T_5_20 : Polynomial ℂ →ₗ[ℂ] Polynomial ℂ where
   toFun p := Polynomial.X * p
@@ -165,12 +153,12 @@ noncomputable def T_5_20 : Polynomial ℂ →ₗ[ℂ] Polynomial ℂ where
     simp only [RingHom.id_apply]
     exact mul_smul_comm a _ p
 
-example : ∀ lam : ℂ, ¬ HasEigenvalue T_5_20 lam := by
-  intro lam hev
+example : ∀ γ : ℂ, ¬ HasEigenvalue T_5_20 γ := by
+  intro γ hev
   obtain ⟨p, hp, hXp⟩ := Module.End.hasEigenvalue_iff_exists.mp hev
-  have hXp' : Polynomial.X * p = lam • p := by
+  have hXp' : Polynomial.X * p = γ • p := by
     simpa [T_5_20] using hXp
-  rcases eq_or_ne lam 0 with rfl | hlam
+  rcases eq_or_ne γ 0 with rfl | hlam
   · rw [zero_smul] at hXp'
     rcases mul_eq_zero.mp hXp' with h | h
     · exact Polynomial.X_ne_zero h
@@ -197,11 +185,11 @@ example : (Polynomial.X ^ 7 + Polynomial.C 9 * Polynomial.X ^ 2 +
 
 In mathlib the minimal polynomial of {lit}`T` is {name}`minpoly`
 ({lit}`minpoly F T`), available because a finite-dimensional {lit}`V` makes
-every operator integral over {lit}`F`
-({name}`Module.End.isIntegral`). Axler proves the degree bound
-{lit}`deg p ≤ dim V` by an induction on dimension; here we obtain it from
-the Cayley–Hamilton theorem (the minimal polynomial divides the
-characteristic polynomial, which has degree {lit}`dim V`). -/
+every operator integral over {lit}`F` ({name}`Module.End.isIntegral`). We
+record existence and uniqueness here; the degree bound {lit}`deg p ≤ dim V`
+is Axler's 5.23, proved below ({lit}`minpoly_natDegree_le`) by induction on
+dimension once the restriction {lit}`T|_U` to an invariant subspace is
+available. -/
 
 theorem exists_unique_minimal_polynomial [Finite F V] (T : V →ₗ[F] V) :
     ∃! p : Polynomial F, p.Monic ∧ aeval T p = 0 ∧
@@ -213,12 +201,204 @@ theorem exists_unique_minimal_polynomial [Finite F V] (T : V →ₗ[F] V) :
   rintro p ⟨hmonic, haeval, hmin⟩
   exact minpoly.unique F T hmonic haeval hmin
 
-theorem minpoly_natDegree_le [Finite F V] (T : V →ₗ[F] V) :
+/-! Restriction of an operator to an invariant subspace, and powers and
+polynomials of the restriction. -/
+
+theorem restrict_pow_coe {T : V →ₗ[F] V} {U : Submodule F V}
+    (h : InvariantUnder T U) (n : ℕ) (u : U) :
+    (((h.restrict ^ n) u : U) : V) = (T ^ n) (u : V) := by
+  induction n generalizing u with
+  | zero => rfl
+  | succ n ih =>
+    rw [pow_succ, Module.End.mul_apply, pow_succ, Module.End.mul_apply,
+      ih (h.restrict u)]
+    congr 1
+
+theorem aeval_restrict_coe {T : V →ₗ[F] V} {U : Submodule F V}
+    (h : InvariantUnder T U) (p : Polynomial F) (u : U) :
+    (((aeval h.restrict p) u : U) : V) = aeval T p (u : V) := by
+  induction p using Polynomial.induction_on' with
+  | add p q hp hq =>
+    rw [map_add, map_add, LinearMap.add_apply, LinearMap.add_apply,
+      Submodule.coe_add, hp, hq]
+  | monomial n a =>
+    rw [Polynomial.aeval_monomial, Polynomial.aeval_monomial,
+      Module.End.mul_apply, Module.End.mul_apply,
+      Module.algebraMap_end_apply, Module.algebraMap_end_apply,
+      Submodule.coe_smul, restrict_pow_coe h n u]
+
+/-! 5.23 Degree of the minimal polynomial: {lit}`deg(minpoly T) ≤ dim V`. -/
+
+/-- Package a coefficient vector {lit}`g : Fin N → F` as the polynomial
+{lit}`∑ᵢ gᵢ zⁱ`. -/
+private noncomputable def polyOfCoeffs {N : ℕ} (g : Fin N → F) : Polynomial F :=
+  ∑ i : Fin N, Polynomial.monomial (i : ℕ) (g i)
+
+private lemma polyOfCoeffs_coeff {N : ℕ} (g : Fin N → F) (j : Fin N) :
+    (polyOfCoeffs g).coeff (j : ℕ) = g j := by
+  unfold polyOfCoeffs
+  rw [Polynomial.finset_sum_coeff, Finset.sum_eq_single j]
+  · rw [Polynomial.coeff_monomial, if_pos rfl]
+  · intro i _ hij
+    rw [Polynomial.coeff_monomial, if_neg (fun h => hij (Fin.val_injective h))]
+  · intro h
+    exact absurd (Finset.mem_univ j) h
+
+private lemma polyOfCoeffs_natDegree_le {N : ℕ} (g : Fin N → F) :
+    (polyOfCoeffs g).natDegree ≤ N - 1 := by
+  unfold polyOfCoeffs
+  apply Polynomial.natDegree_sum_le_of_forall_le
+  intro i _
+  have hi : (i : ℕ) ≤ N - 1 := by have := i.2; omega
+  exact le_trans (Polynomial.natDegree_monomial_le (g i)) hi
+
+private lemma polyOfCoeffs_aeval {W : Type*} [AddCommGroup W] [Module F W]
+    {N : ℕ} (S : W →ₗ[F] W) (g : Fin N → F) (v : W) :
+    aeval S (polyOfCoeffs g) v = ∑ i : Fin N, g i • (S ^ (i : ℕ)) v := by
+  unfold polyOfCoeffs
+  rw [map_sum, LinearMap.sum_apply]
+  refine Finset.sum_congr rfl fun i _ => ?_
+  rw [Polynomial.aeval_monomial, Module.End.mul_apply, Module.algebraMap_end_apply]
+
+/-- Axler's 5.23, stated for an arbitrary operator on a space of a fixed
+dimension {lit}`n` (the induction hypothesis). -/
+private lemma minpoly_natDegree_le_aux (n : ℕ) (W : Type u) [AddCommGroup W]
+    [Module F W] [Module.Finite F W] (hW : finrank F W = n) (S : W →ₗ[F] W) :
+    ∃ p : Polynomial F, p.Monic ∧ aeval S p = 0 ∧ p.natDegree ≤ n := by
+  induction n using Nat.strong_induction_on generalizing W with
+  | _ n ih =>
+    classical
+    rcases Nat.eq_zero_or_pos n with h0 | hpos
+    · -- {lit}`dim W = 0`: the constant polynomial {lit}`1` annihilates the
+      -- (subsingleton) space.
+      subst h0
+      haveI : Subsingleton W := (Module.finrank_eq_zero_iff_of_free F W).mp hW
+      exact ⟨1, Polynomial.monic_one, Subsingleton.elim _ _, by simp⟩
+    · haveI : Nontrivial W :=
+        Module.nontrivial_of_finrank_pos (R := F) (by omega)
+      obtain ⟨u, hu⟩ := exists_ne (0 : W)
+      -- A monic polynomial of degree ≤ n annihilates {lit}`u`, from the
+      -- linear dependence of {lit}`u, Su, …, Sⁿu` (length {lit}`n + 1`).
+      obtain ⟨q0, hq0_monic, hq0_deg, hq0_aeval⟩ :
+          ∃ q0 : Polynomial F, q0.Monic ∧ q0.natDegree ≤ n ∧ aeval S q0 u = 0 := by
+        have hdep : ¬ LinearIndependent F
+            (fun i : Fin (n + 1) => (S ^ (i : ℕ)) u) := by
+          intro hli
+          have hcard := hli.fintype_card_le_finrank
+          rw [Fintype.card_fin, hW] at hcard
+          omega
+        obtain ⟨g, hsum, i₀, hi₀⟩ := Fintype.not_linearIndependent_iff.mp hdep
+        have hg_ne : polyOfCoeffs g ≠ 0 := fun h =>
+          hi₀ (by rw [← polyOfCoeffs_coeff g i₀, h, Polynomial.coeff_zero])
+        have hg_aeval : aeval S (polyOfCoeffs g) u = 0 := by
+          rw [polyOfCoeffs_aeval]; exact hsum
+        have hg_deg : (polyOfCoeffs g).natDegree ≤ n := by
+          have := polyOfCoeffs_natDegree_le g; omega
+        refine ⟨polyOfCoeffs g * Polynomial.C (polyOfCoeffs g).leadingCoeff⁻¹,
+          Polynomial.monic_mul_leadingCoeff_inv hg_ne, ?_, ?_⟩
+        · rw [Polynomial.natDegree_mul hg_ne (Polynomial.C_ne_zero.mpr
+            (inv_ne_zero (Polynomial.leadingCoeff_ne_zero.mpr hg_ne))),
+            Polynomial.natDegree_C, add_zero]
+          exact hg_deg
+        · simp only [map_mul, Module.End.mul_apply, Polynomial.aeval_C,
+            Module.algebraMap_end_apply, map_smul, hg_aeval, smul_zero]
+      -- The *smallest* degree of a monic annihilator of {lit}`u`.
+      have hExists : ∃ d, ∃ q : Polynomial F,
+          q.Monic ∧ q.natDegree = d ∧ aeval S q u = 0 :=
+        ⟨q0.natDegree, q0, hq0_monic, rfl, hq0_aeval⟩
+      set m := Nat.find hExists with hm
+      obtain ⟨q, hqmonic, hqdeg, hqu⟩ := Nat.find_spec hExists
+      rw [← hm] at hqdeg
+      have hm_le : m ≤ n :=
+        le_trans (Nat.find_le ⟨q0, hq0_monic, rfl, hq0_aeval⟩) hq0_deg
+      -- {lit}`m ≥ 1`: a degree-0 monic is {lit}`1`, which cannot kill {lit}`u`.
+      have hm_pos : 0 < m := by
+        rcases Nat.eq_zero_or_pos m with hm0 | h
+        · exfalso
+          have hq1 : q = 1 := (hqmonic.natDegree_eq_zero).mp (by rw [hqdeg, hm0])
+          rw [hq1, map_one] at hqu
+          simp only [Module.End.one_apply] at hqu
+          exact hu hqu
+        · exact h
+      -- {lit}`q(S)` commutes with powers of {lit}`S`.
+      have hcomm : ∀ (j : ℕ) (x : W),
+          aeval S q ((S ^ j) x) = (S ^ j) (aeval S q x) := by
+        intro j x
+        have h := aeval_comp_comm S q (Polynomial.X ^ j)
+        rw [map_pow, Polynomial.aeval_X] at h
+        exact LinearMap.congr_fun h x
+      -- {lit}`u, Su, …, S^{m-1}u` are linearly independent.
+      have hli : LinearIndependent F (fun j : Fin m => (S ^ (j : ℕ)) u) := by
+        by_contra hdep
+        obtain ⟨b, hb_sum, j₀, hj₀⟩ := Fintype.not_linearIndependent_iff.mp hdep
+        have hb_ne : polyOfCoeffs b ≠ 0 := fun h =>
+          hj₀ (by rw [← polyOfCoeffs_coeff b j₀, h, Polynomial.coeff_zero])
+        have hb_aeval : aeval S (polyOfCoeffs b) u = 0 := by
+          rw [polyOfCoeffs_aeval]; exact hb_sum
+        have hb_deg : (polyOfCoeffs b).natDegree < m := by
+          have := polyOfCoeffs_natDegree_le b; omega
+        have hmon : (polyOfCoeffs b *
+            Polynomial.C (polyOfCoeffs b).leadingCoeff⁻¹).Monic :=
+          Polynomial.monic_mul_leadingCoeff_inv hb_ne
+        have hdeg' : (polyOfCoeffs b *
+            Polynomial.C (polyOfCoeffs b).leadingCoeff⁻¹).natDegree =
+            (polyOfCoeffs b).natDegree := by
+          rw [Polynomial.natDegree_mul hb_ne (Polynomial.C_ne_zero.mpr
+            (inv_ne_zero (Polynomial.leadingCoeff_ne_zero.mpr hb_ne))),
+            Polynomial.natDegree_C, add_zero]
+        have haev' : aeval S (polyOfCoeffs b *
+            Polynomial.C (polyOfCoeffs b).leadingCoeff⁻¹) u = 0 := by
+          simp only [map_mul, Module.End.mul_apply, Polynomial.aeval_C,
+            Module.algebraMap_end_apply, map_smul, hb_aeval, smul_zero]
+        have hlt : (polyOfCoeffs b *
+            Polynomial.C (polyOfCoeffs b).leadingCoeff⁻¹).natDegree < m := by
+          rw [hdeg']; exact hb_deg
+        exact Nat.find_min hExists hlt
+          ⟨_, hmon, rfl, haev'⟩
+      -- These {lit}`m` independent vectors lie in {lit}`null q(S)`.
+      have hmem : ∀ j : Fin m, (S ^ (j : ℕ)) u ∈ ker (aeval S q) := by
+        intro j
+        rw [LinearMap.mem_ker, hcomm, hqu, map_zero]
+      have hli' : LinearIndependent F
+          (fun j : Fin m => (⟨(S ^ (j : ℕ)) u, hmem j⟩ : ker (aeval S q))) := by
+        apply LinearIndependent.of_comp (ker (aeval S q)).subtype
+        exact hli
+      have hm_le_ker : m ≤ finrank F (ker (aeval S q)) := by
+        have := hli'.fintype_card_le_finrank
+        rwa [Fintype.card_fin] at this
+      -- {lit}`U = range q(S)` is invariant with {lit}`dim U ≤ n − m < n`.
+      set U := range (aeval S q) with hU
+      have hU_inv : InvariantUnder S U := by
+        rw [hU]; exact range_aeval_invariant S q
+      have hrank := LADR.Section_3B.finrank_ker_add_finrank_range (aeval S q)
+      rw [← hU, hW] at hrank
+      have hU_lt : finrank F U < n := by omega
+      -- Induction on {lit}`U` supplies a monic {lit}`s` with {lit}`s(S|_U)=0`.
+      obtain ⟨s, hs_monic, hs_aeval, hs_deg⟩ :=
+        ih (finrank F U) hU_lt U rfl hU_inv.restrict
+      refine ⟨s * q, hs_monic.mul hqmonic, ?_, ?_⟩
+      · -- {lit}`(sq)(S) = 0`.
+        rw [aeval_mul_eq_comp]
+        apply LinearMap.ext
+        intro x
+        rw [LinearMap.comp_apply, LinearMap.zero_apply]
+        have hxU : aeval S q x ∈ U := by rw [hU]; exact ⟨x, rfl⟩
+        have hcoe := aeval_restrict_coe hU_inv s ⟨aeval S q x, hxU⟩
+        rw [hs_aeval] at hcoe
+        simp only [LinearMap.zero_apply, ZeroMemClass.coe_zero] at hcoe
+        exact hcoe.symm
+      · -- {lit}`deg(sq) = deg s + deg q ≤ (n − m) + m = n`.
+        rw [Polynomial.Monic.natDegree_mul hs_monic hqmonic, hqdeg]
+        omega
+
+theorem minpoly_natDegree_le {V : Type u} [AddCommGroup V] [Module F V]
+    [Finite F V] (T : V →ₗ[F] V) :
     (minpoly F T).natDegree ≤ finrank F V := by
-  have h := minpoly.min (A := F) T T.charpoly_monic T.aeval_self_charpoly
+  obtain ⟨p, hmonic, haeval, hdeg⟩ :=
+    minpoly_natDegree_le_aux (finrank F V) V rfl T
   calc (minpoly F T).natDegree
-      ≤ T.charpoly.natDegree := Polynomial.natDegree_le_natDegree h
-    _ = finrank F V := T.charpoly_natDegree
+      ≤ p.natDegree := Polynomial.natDegree_le_natDegree (minpoly.min F T hmonic haeval)
+    _ ≤ finrank F V := hdeg
 
 /-! 5.24 Definition: minimal polynomial — mathlib's {name}`minpoly`. It is
 monic, annihilates {lit}`T`, and has minimal degree among monic annihilating
@@ -237,27 +417,27 @@ example [Finite F V] (T : V →ₗ[F] V) (q : Polynomial F) (hq : q.Monic)
     (hq0 : aeval T q = 0) : (minpoly F T).degree ≤ q.degree :=
   minpoly.min F T hq hq0
 
+/-! TODO: add (verified?) computation of minimal polynomial and example 5.26 -/
+
 /-! 5.27 Eigenvalues are the zeros of the minimal polynomial.
 
 (a) is mathlib's {name}`Module.End.hasEigenvalue_iff_isRoot`; we give Axler's
 proof. -/
 
-theorem isEigenvalue_iff_isRoot [Finite F V] (T : V →ₗ[F] V) (lam : F) :
-    HasEigenvalue T lam ↔ (minpoly F T).IsRoot lam := by
+theorem isEigenvalue_iff_isRoot [Finite F V] (T : V →ₗ[F] V) (γ : F) :
+    HasEigenvalue T γ ↔ (minpoly F T).IsRoot γ := by
   rw [Module.End.hasEigenvalue_iff_exists]
   constructor
   · -- An eigenvalue is a zero: {lit}`0 = p(T)v = p(λ)v` and {lit}`v ≠ 0`.
     rintro ⟨v, hv, hTv⟩
-    have hkey : aeval T (minpoly F T) v = (minpoly F T).eval lam • v :=
+    have hkey : aeval T (minpoly F T) v = (minpoly F T).eval γ • v :=
       Module.End.aeval_apply_of_hasEigenvector
         (Module.End.hasEigenvector_iff_and.mpr ⟨hv, hTv⟩)
     rw [minpoly.aeval, LinearMap.zero_apply] at hkey
     rcases smul_eq_zero.mp hkey.symm with h | h
     · exact h
     · exact absurd h hv
-  · -- A zero is an eigenvalue: write {lit}`p(z) = (z − λ)q(z)`; minimality
-    -- gives {lit}`q(T) ≠ 0`, and {lit}`(T − λI)(q(T)v) = p(T)v = 0`.
-    intro hroot
+  · intro hroot
     obtain ⟨q, hq⟩ := Polynomial.dvd_iff_isRoot.mpr hroot
     have hminne : minpoly F T ≠ 0 :=
       minpoly.ne_zero (Algebra.IsIntegral.isIntegral T)
@@ -270,7 +450,7 @@ theorem isEigenvalue_iff_isRoot [Finite F V] (T : V →ₗ[F] V) (lam : F) :
       have hdvd := minpoly.dvd F T h0
       have hle := Polynomial.natDegree_le_of_dvd hdvd hqne
       have hmul := Polynomial.natDegree_mul
-        (Polynomial.X_sub_C_ne_zero lam) hqne
+        (Polynomial.X_sub_C_ne_zero γ) hqne
       rw [← hq, Polynomial.natDegree_X_sub_C] at hmul
       omega
     obtain ⟨v, hv⟩ : ∃ v, aeval T q v ≠ 0 := by
@@ -281,7 +461,7 @@ theorem isEigenvalue_iff_isRoot [Finite F V] (T : V →ₗ[F] V) (lam : F) :
     have h1 : aeval T (minpoly F T) v = 0 := by
       rw [minpoly.aeval, LinearMap.zero_apply]
     rw [hq, aeval_mul_eq_comp, LinearMap.comp_apply] at h1
-    have h2 : T (aeval T q v) - lam • aeval T q v = 0 := by
+    have h2 : T (aeval T q v) - γ • aeval T q v = 0 := by
       rwa [map_sub, Polynomial.aeval_X, Polynomial.aeval_C,
         LinearMap.sub_apply, Module.algebraMap_end_apply] at h1
     rw [sub_eq_zero] at h2
@@ -294,7 +474,7 @@ theorem minpoly_eq_prod_roots {V : Type*} [AddCommGroup V] [Module ℂ V]
     [Finite ℂ V] (T : V →ₗ[ℂ] V) :
     minpoly ℂ T = (Multiset.map (fun a => Polynomial.X - Polynomial.C a)
         (minpoly ℂ T).roots).prod ∧
-      ∀ lam : ℂ, lam ∈ (minpoly ℂ T).roots ↔ HasEigenvalue T lam := by
+      ∀ γ : ℂ, γ ∈ (minpoly ℂ T).roots ↔ HasEigenvalue T γ := by
   have hmonic : (minpoly ℂ T).Monic :=
     minpoly.monic (Algebra.IsIntegral.isIntegral T)
   constructor
@@ -338,32 +518,6 @@ theorem aeval_eq_zero_iff_minpoly_dvd [Finite F V] (T : V →ₗ[F] V)
       exact absurd hdeg (not_lt.mpr hge)
   · rintro ⟨s, rfl⟩
     rw [map_mul, minpoly.aeval, zero_mul]
-
-/-! Restriction of an operator to an invariant subspace, and powers and
-polynomials of the restriction. -/
-
-theorem restrict_pow_coe {T : V →ₗ[F] V} {U : Submodule F V}
-    (h : InvariantUnder T U) (n : ℕ) (u : U) :
-    (((h.restrict ^ n) u : U) : V) = (T ^ n) (u : V) := by
-  induction n generalizing u with
-  | zero => rfl
-  | succ n ih =>
-    rw [pow_succ, Module.End.mul_apply, pow_succ, Module.End.mul_apply,
-      ih (h.restrict u)]
-    congr 1
-
-theorem aeval_restrict_coe {T : V →ₗ[F] V} {U : Submodule F V}
-    (h : InvariantUnder T U) (p : Polynomial F) (u : U) :
-    (((aeval h.restrict p) u : U) : V) = aeval T p (u : V) := by
-  induction p using Polynomial.induction_on' with
-  | add p q hp hq =>
-    rw [map_add, map_add, LinearMap.add_apply, LinearMap.add_apply,
-      Submodule.coe_add, hp, hq]
-  | monomial n a =>
-    rw [Polynomial.aeval_monomial, Polynomial.aeval_monomial,
-      Module.End.mul_apply, Module.End.mul_apply,
-      Module.algebraMap_end_apply, Module.algebraMap_end_apply,
-      Submodule.coe_smul, restrict_pow_coe h n u]
 
 /-! 5.31 The minimal polynomial of {lit}`T` is a polynomial multiple of the
 minimal polynomial of the restriction {lit}`T|_U` to an invariant
@@ -463,17 +617,14 @@ private lemma no_eigenvalue_of_quadratic {W : Type u} [AddCommGroup W]
   · nlinarith [sq_nonneg (lam + b / 2)]
   · exact hv h
 
-private lemma even_finrank_of_quadratic_aux {b c : ℝ} (hbc : b ^ 2 < 4 * c) :
-    ∀ (n : ℕ) (W : Type u) (_ : AddCommGroup W),
-      ∀ (_ : Module ℝ W) (_ : Module.Finite ℝ W), finrank ℝ W = n →
-      ∀ S : W →ₗ[ℝ] W,
-        aeval S (Polynomial.X ^ 2 + Polynomial.C b * Polynomial.X +
-          Polynomial.C c) = 0 →
-        Even n := by
-  intro n
-  induction n using Nat.strong_induction_on with
+private lemma even_finrank_of_quadratic_aux {b c : ℝ} (hbc : b ^ 2 < 4 * c)
+    (n : ℕ) (W : Type u) [AddCommGroup W] [Module ℝ W] [Module.Finite ℝ W]
+    (hW : finrank ℝ W = n) (S : W →ₗ[ℝ] W)
+    (hS : aeval S (Polynomial.X ^ 2 + Polynomial.C b * Polynomial.X +
+      Polynomial.C c) = 0) :
+    Even n := by
+  induction n using Nat.strong_induction_on generalizing W with
   | _ n ih =>
-    intro W _ _ _ hW S hS
     rcases Nat.eq_zero_or_pos n with h0 | hpos
     · simp [h0]
     · have : Nontrivial W := by
@@ -551,8 +702,8 @@ private lemma even_finrank_of_quadratic_aux {b c : ℝ} (hbc : b ^ 2 < 4 * c) :
       have h2n : 2 ≤ n := by
         rw [← hW, ← hU_rank]
         exact Submodule.finrank_le U
-      have heven := ih (n - 2) (by omega) (W ⧸ U) inferInstance
-        inferInstance inferInstance hquot_rank (quotOp S U hU_inv) hquot
+      have heven := ih (n - 2) (by omega) (W ⧸ U) hquot_rank
+        (quotOp S U hU_inv) hquot
       obtain ⟨k, hk⟩ := heven
       exact ⟨k + 1, by omega⟩
 
@@ -574,8 +725,8 @@ theorem even_finrank_ker_quadratic {V : Type u} [AddCommGroup V] [Module ℝ V]
     rw [LinearMap.mem_ker] at hu
     rw [hu]
     rfl
-  exact even_finrank_of_quadratic_aux hbc _ (ker (aeval T q)) inferInstance
-    inferInstance inferInstance rfl hinv.restrict hrestrict
+  exact even_finrank_of_quadratic_aux hbc _ (ker (aeval T q)) rfl
+    hinv.restrict hrestrict
 
 /-! 5.34 Every operator on an odd-dimensional real vector space has an
 eigenvalue.
@@ -589,14 +740,11 @@ smaller than {lit}`dim V` — so induction applies, and the resulting
 eigenvalue of the restriction is an eigenvalue of {lit}`T`, contradicting
 the assumption that {lit}`p` has no real zero. -/
 
-private lemma exists_eigenvalue_of_odd_aux :
-    ∀ (n : ℕ), Odd n → ∀ (W : Type u) (_ : AddCommGroup W),
-      ∀ (_ : Module ℝ W) (_ : Module.Finite ℝ W), finrank ℝ W = n →
-      ∀ T : W →ₗ[ℝ] W, ∃ lam : ℝ, HasEigenvalue T lam := by
-  intro n
-  induction n using Nat.strong_induction_on with
+private lemma exists_eigenvalue_of_odd_aux (n : ℕ) (hodd : Odd n) (W : Type u)
+    [AddCommGroup W] [Module ℝ W] [Module.Finite ℝ W] (hW : finrank ℝ W = n)
+    (T : W →ₗ[ℝ] W) : ∃ lam : ℝ, HasEigenvalue T lam := by
+  induction n using Nat.strong_induction_on generalizing W with
   | _ n ih =>
-    intro hodd W _ _ _ hW T
     by_cases hroot : ∃ lam : ℝ, (minpoly ℝ T).IsRoot lam
     · obtain ⟨lam, hlam⟩ := hroot
       exact ⟨lam, (isEigenvalue_iff_isRoot T lam).mpr hlam⟩
@@ -693,8 +841,8 @@ private lemma exists_eigenvalue_of_odd_aux :
         exact ⟨i - j, by omega⟩
       -- Induction: {lit}`T|_U` has an eigenvalue, which lifts to {lit}`T`
       -- and is then a real zero of {lit}`p` — contradiction.
-      obtain ⟨lam, hlam⟩ := ih (finrank ℝ U) hU_lt hU_odd U
-        inferInstance inferInstance inferInstance rfl hU_inv.restrict
+      obtain ⟨lam, hlam⟩ :=
+        ih (finrank ℝ U) hU_lt hU_odd U rfl hU_inv.restrict
       obtain ⟨u, hu_ne, hu_eq⟩ := Module.End.hasEigenvalue_iff_exists.mp hlam
       have hTlam : HasEigenvalue T lam := by
         refine Module.End.hasEigenvalue_iff_exists.mpr
@@ -706,8 +854,7 @@ private lemma exists_eigenvalue_of_odd_aux :
 theorem exists_eigenvalue_of_odd_finrank {V : Type u} [AddCommGroup V]
     [Module ℝ V] [Finite ℝ V] (hodd : Odd (finrank ℝ V)) (T : V →ₗ[ℝ] V) :
     ∃ lam : ℝ, HasEigenvalue T lam :=
-  exists_eigenvalue_of_odd_aux (finrank ℝ V) hodd V inferInstance
-    inferInstance inferInstance rfl T
+  exists_eigenvalue_of_odd_aux (finrank ℝ V) hodd V rfl T
 
 /-! # Exercises -/
 
@@ -718,7 +865,7 @@ theorem exercise_5B_1 (T : V →ₗ[F] V) :
 
 /-- 5B.2 -/
 theorem exercise_5B_2 {V : Type*} [AddCommGroup V] [Module ℂ V]
-    (T : V →ₗ[ℂ] V) (h : ∀ lam : ℂ, ¬ HasEigenvalue T lam)
+    (T : V →ₗ[ℂ] V) (h : ∀ γ : ℂ, ¬ HasEigenvalue T γ)
     (U : Submodule ℂ V) (hU : InvariantUnder T U) :
     U = ⊥ ∨ ¬ Module.Finite ℂ U := by
   sorry
@@ -733,37 +880,49 @@ def T_ex_5B_3 (n : ℕ) : (Fin n → F) →ₗ[F] (Fin n → F) where
     funext j
     simp [Finset.mul_sum]
 
-theorem exercise_5B_3a (n : ℕ) (hn : 1 < n) :
-    ∀ lam : F, HasEigenvalue (T_ex_5B_3 (F := F) n) lam ↔
-      lam = 0 ∨ lam = (n : F) := by
+/-- The set of eigenvalues of {lit}`T_ex_5B_3 n` — to be determined by the
+solver. -/
+def eigenvalues_5B_3 (F : Type*) [Field F] (n : ℕ) : Set F := sorry
+
+/-- 5B.3 (a) Find the eigenvalues of {lit}`T`. -/
+theorem exercise_5B_3a (n : ℕ) (hn : 1 < n) (γ : F) :
+    HasEigenvalue (T_ex_5B_3 (F := F) n) γ ↔ γ ∈ eigenvalues_5B_3 F n := by
   sorry
 
+/-- The minimal polynomial of {lit}`T_ex_5B_3 n` — to be determined by the
+solver. -/
+noncomputable def minpoly_5B_3 (F : Type*) [Field F] (n : ℕ) : Polynomial F :=
+  sorry
+
+/-- 5B.3 (b) Find the minimal polynomial of {lit}`T`. -/
 theorem exercise_5B_3b (n : ℕ) (hn : 1 < n) :
-    minpoly F (T_ex_5B_3 (F := F) n) =
-      Polynomial.X ^ 2 - Polynomial.C (n : F) * Polynomial.X := by
+    minpoly F (T_ex_5B_3 (F := F) n) = minpoly_5B_3 F n := by
   sorry
 
-/-- 5B.4 Spectral mapping: for {lit}`F = ℂ` and nonconstant {lit}`p`,
-the eigenvalues of {lit}`p(T)` are exactly {lit}`p` of the eigenvalues
-of {lit}`T`. -/
+/-- 5B.4 -/
 theorem exercise_5B_4 {V : Type*} [AddCommGroup V] [Module ℂ V]
-    [Finite ℂ V] (T : V →ₗ[ℂ] V) (p : Polynomial ℂ)
-    (hp : 0 < p.natDegree) (alpha : ℂ) :
-    HasEigenvalue (aeval T p) alpha ↔
-      ∃ lam : ℂ, HasEigenvalue T lam ∧ alpha = p.eval lam := by
+    (T : V →ₗ[ℂ] V) (p : Polynomial ℂ)
+    (hp : 0 < p.natDegree) (α : ℂ) :
+    HasEigenvalue (aeval T p) α ↔
+      ∃ γ : ℂ, HasEigenvalue T γ ∧ α = p.eval γ := by
   sorry
 
 /-- 5B.5 The previous exercise fails over {lit}`ℝ`. -/
 theorem exercise_5B_5 :
-    ∃ (T : (Fin 2 → ℝ) →ₗ[ℝ] (Fin 2 → ℝ)) (p : Polynomial ℝ) (alpha : ℝ),
-      HasEigenvalue (aeval T p) alpha ∧
-        ¬ ∃ lam : ℝ, HasEigenvalue T lam ∧ alpha = p.eval lam := by
+    ∃ (T : (Fin 2 → ℝ) →ₗ[ℝ] (Fin 2 → ℝ)) (p : Polynomial ℝ)
+      (hp : 0 < p.natDegree) (α : ℝ),
+      ¬ (HasEigenvalue (aeval T p) α ↔
+      ∃ γ : ℝ, HasEigenvalue T γ ∧ α = p.eval γ) := by
   sorry
 
+/-- The minimal polynomial of {lit}`T_5_9` — to be determined by the
+solver. -/
+noncomputable def minpoly_5B_6 (F : Type*) [Field F] : Polynomial F := sorry
+
 open LADR.Section_5A (T_5_9) in
-/-- 5B.6 The minimal polynomial of {lit}`T(w, z) = (−z, w)`. -/
+/-- 5B.6 Find the minimal polynomial of {lit}`T(w, z) = (−z, w)`. -/
 theorem exercise_5B_6 :
-    minpoly F (T_5_9 F) = Polynomial.X ^ 2 + 1 := by
+    minpoly F (T_5_9 F) = minpoly_5B_6 F := by
   sorry
 
 /-- 5B.7 (a) -/
@@ -774,12 +933,12 @@ theorem exercise_5B_7a :
 
 /-- 5B.7 (b) -/
 theorem exercise_5B_7b [Finite F V] (S T : V →ₗ[F] V)
-    (hS : IsInvertible S) :
+    (hST : IsInvertible S ∨ IsInvertible T) :
     minpoly F (S ∘ₗ T) = minpoly F (T ∘ₗ S) := by
   sorry
 
-/-- 5B.8 The minimal polynomial of counterclockwise rotation by {lit}`1°`
-is {lit}`x² − (2cos 1°)x + 1`. -/
+/-- 5B.8 Find the minimal polynomial of counterclockwise rotation by
+{lit}`1°`. -/
 noncomputable def T_ex_5B_8 : (Fin 2 → ℝ) →ₗ[ℝ] (Fin 2 → ℝ) where
   toFun v := ![Real.cos (Real.pi / 180) * v 0 - Real.sin (Real.pi / 180) * v 1,
     Real.sin (Real.pi / 180) * v 0 + Real.cos (Real.pi / 180) * v 1]
@@ -798,9 +957,11 @@ noncomputable def T_ex_5B_8 : (Fin 2 → ℝ) →ₗ[ℝ] (Fin 2 → ℝ) where
     · simp
       ring
 
-theorem exercise_5B_8 :
-    minpoly ℝ T_ex_5B_8 = Polynomial.X ^ 2 -
-      Polynomial.C (2 * Real.cos (Real.pi / 180)) * Polynomial.X + 1 := by
+/-- The minimal polynomial of {lit}`T_ex_5B_8` — to be determined by the
+solver. -/
+noncomputable def minpoly_5B_8 : Polynomial ℝ := sorry
+
+theorem exercise_5B_8 : minpoly ℝ T_ex_5B_8 = minpoly_5B_8 := by
   sorry
 
 open LADR.Section_3C (matrixOf) in
@@ -853,12 +1014,15 @@ theorem exercise_5B_11b2 [Finite F V] {v : Fin 2 → V} (hv : IsBasis F v)
         matrixOf hv hv T 1 0 * matrixOf hv hv T 0 1) := by
   sorry
 
+/-- The minimal polynomial of {lit}`T_ex_5A_42 n` — to be determined by the
+solver. -/
+noncomputable def minpoly_5B_12 (n : ℕ) : Polynomial ℝ := sorry
+
 open LADR.Section_5A (T_ex_5A_42) in
-/-- 5B.12 The minimal polynomial of
+/-- 5B.12 Find the minimal polynomial of
 {lit}`T(x₁, …, xₙ) = (x₁, 2x₂, …, nxₙ)`. -/
 theorem exercise_5B_12 (n : ℕ) :
-    minpoly ℝ (T_ex_5A_42 n) =
-      ∏ k : Fin n, (Polynomial.X - Polynomial.C ((k : ℕ) + 1 : ℝ)) := by
+    minpoly ℝ (T_ex_5A_42 n) = minpoly_5B_12 n := by
   sorry
 
 /-- 5B.13 -/
@@ -867,28 +1031,25 @@ theorem exercise_5B_13 [Finite F V] (T : V →ₗ[F] V) (p : Polynomial F) :
       r.degree < (minpoly F T).degree := by
   sorry
 
-/-- 5B.14 An operator with minimal polynomial
-{lit}`4 + 5z − 6z² − 7z³ + 2z⁴ + z⁵` is invertible (constant term nonzero),
-and the minimal polynomial of {lit}`T⁻¹` is
-{lit}`1/4 + z/2 − 7z²/4 − 3z³/2 + 5z⁴/4 + z⁵`. -/
+/-- The minimal polynomial of {lit}`T⁻¹` in 5B.14, given that of {lit}`T` —
+to be determined by the solver. -/
+noncomputable def minpoly_5B_14 : Polynomial ℝ := sorry
+
+/-- 5B.14 Given the minimal polynomial of an invertible {lit}`T`, find the
+minimal polynomial of {lit}`T⁻¹`. -/
 theorem exercise_5B_14 {V : Type*} [AddCommGroup V] [Module ℝ V]
     [Finite ℝ V] (T : V →ₗ[ℝ] V) (hT : IsInvertible T)
     (hmin : minpoly ℝ T = Polynomial.C 4 + Polynomial.C 5 * Polynomial.X -
       Polynomial.C 6 * Polynomial.X ^ 2 - Polynomial.C 7 * Polynomial.X ^ 3 +
       Polynomial.C 2 * Polynomial.X ^ 4 + Polynomial.X ^ 5) :
-    minpoly ℝ hT.inv = Polynomial.C (1 / 4 : ℝ) +
-      Polynomial.C (1 / 2) * Polynomial.X -
-      Polynomial.C (7 / 4) * Polynomial.X ^ 2 -
-      Polynomial.C (3 / 2) * Polynomial.X ^ 3 +
-      Polynomial.C (5 / 4) * Polynomial.X ^ 4 + Polynomial.X ^ 5 := by
+    minpoly ℝ hT.inv = minpoly_5B_14 := by
   sorry
 
-/-- 5B.15 The function {lit}`λ ↦ dim range(T − λI)` is not continuous
-(for {lit}`V` a nonzero finite-dimensional complex vector space). -/
+/-- 5B.15 -/
 theorem exercise_5B_15 {V : Type*} [AddCommGroup V] [Module ℂ V]
     [Finite ℂ V] (hV : 0 < finrank ℂ V) (T : V →ₗ[ℂ] V) :
-    ¬ Continuous (fun lam : ℂ =>
-      (finrank ℂ (range (T - lam • (LinearMap.id : V →ₗ[ℂ] V))) : ℝ)) := by
+    ¬ Continuous (fun γ : ℂ =>
+      (finrank ℂ (range (T - γ • (LinearMap.id : V →ₗ[ℂ] V))) : ℝ)) := by
   sorry
 
 open LADR.Section_3A (fromFnToFm) in
@@ -908,20 +1069,18 @@ theorem exercise_5B_16 {n : ℕ} (hn : 0 < n) (a : Fin n → F) :
   sorry
 
 /-- 5B.17 -/
-theorem exercise_5B_17 [Finite F V] (T : V →ₗ[F] V) (lam : F) :
-    minpoly F (T - lam • (LinearMap.id : V →ₗ[F] V)) =
-      (minpoly F T).comp (Polynomial.X + Polynomial.C lam) := by
+theorem exercise_5B_17 [Finite F V] (T : V →ₗ[F] V) (γ : F) :
+    minpoly F (T - γ • (LinearMap.id : V →ₗ[F] V)) =
+      (minpoly F T).comp (Polynomial.X + Polynomial.C γ) := by
   sorry
 
 /-- 5B.18 -/
-theorem exercise_5B_18 [Finite F V] (T : V →ₗ[F] V) (lam : F)
-    (hlam : lam ≠ 0) :
-    minpoly F (lam • T) = Polynomial.C (lam ^ (minpoly F T).natDegree) *
-      (minpoly F T).comp (Polynomial.C lam⁻¹ * Polynomial.X) := by
+theorem exercise_5B_18 [Finite F V] (T : V →ₗ[F] V) (γ : F) (hγ : γ ≠ 0) :
+    minpoly F (γ • T) = Polynomial.C (γ ^ (minpoly F T).natDegree) *
+      (minpoly F T).comp (Polynomial.C γ⁻¹ * Polynomial.X) := by
   sorry
 
-/-- 5B.19 The subspace {lit}`ℰ = {q(T) : q ∈ 𝒫(F)}` of {lit}`ℒ(V)` has
-dimension equal to the degree of the minimal polynomial of {lit}`T`. -/
+/-- 5B.19 -/
 theorem exercise_5B_19 [Finite F V] (T : V →ₗ[F] V) :
     finrank F (range (Polynomial.aeval (R := F) T).toLinearMap) =
       (minpoly F T).natDegree := by
@@ -929,7 +1088,7 @@ theorem exercise_5B_19 [Finite F V] (T : V →ₗ[F] V) :
 
 /-- 5B.20 -/
 theorem exercise_5B_20 (T : (Fin 4 → ℝ) →ₗ[ℝ] (Fin 4 → ℝ))
-    (hev : ∀ lam : ℝ, HasEigenvalue T lam ↔ lam = 3 ∨ lam = 5 ∨ lam = 8) :
+    (hev : ∀ γ : ℝ, HasEigenvalue T γ ↔ γ = 3 ∨ γ = 5 ∨ γ = 8) :
     ((T - 3 • LinearMap.id) ^ 2) ∘ₗ ((T - 5 • LinearMap.id) ^ 2) ∘ₗ
       ((T - 8 • LinearMap.id) ^ 2) = 0 := by
   sorry
@@ -954,7 +1113,7 @@ theorem exercise_5B_23 [Finite F V] (T : V →ₗ[F] V) (v : V) :
 /-- 5B.24 -/
 theorem exercise_5B_24 {V : Type*} [AddCommGroup V] [Module ℂ V]
     [Finite ℂ V] (T : V →ₗ[ℂ] V)
-    (hev : ∀ lam : ℂ, HasEigenvalue T lam ↔ lam = 5 ∨ lam = 6) :
+    (hev : ∀ γ : ℂ, HasEigenvalue T γ ↔ γ = 5 ∨ γ = 6) :
     ((T - 5 • LinearMap.id) ^ (finrank ℂ V - 1)) ∘ₗ
       ((T - 6 • LinearMap.id) ^ (finrank ℂ V - 1)) = 0 := by
   sorry
@@ -977,18 +1136,16 @@ theorem exercise_5B_25b [Finite F V] (T : V →ₗ[F] V) (U : Submodule F V)
   sorry
 
 open LADR.Section_5A (exercise_5A_38_quotient_op) in
-/-- 5B.26 The eigenvalues of {lit}`T` are exactly the eigenvalues of
-{lit}`T|_U` together with those of {lit}`T/U`. -/
+/-- 5B.26 -/
 theorem exercise_5B_26 [Finite F V] (T : V →ₗ[F] V) (U : Submodule F V)
-    (hU : InvariantUnder T U) (lam : F) :
-    HasEigenvalue T lam ↔ HasEigenvalue hU.restrict lam ∨
-      HasEigenvalue (exercise_5A_38_quotient_op T U hU) lam := by
+    (hU : InvariantUnder T U) (γ : F) :
+    HasEigenvalue T γ ↔ HasEigenvalue hU.restrict γ ∨
+      HasEigenvalue (exercise_5A_38_quotient_op T U hU) γ := by
   sorry
 
 open LADR.Section_1B (Complexification exercise_1B_8) in
 open LADR.Section_3B (complexification_map) in
-/-- 5B.27 The minimal polynomial of the complexification {lit}`T_ℂ` is the
-(complexification of the) minimal polynomial of {lit}`T`. -/
+/-- 5B.27 -/
 theorem exercise_5B_27 {V : Type*} [AddCommGroup V] [Module ℝ V]
     [Finite ℝ V] (T : V →ₗ[ℝ] V) :
     letI : Module ℂ (Complexification V) := exercise_1B_8 V
@@ -996,14 +1153,12 @@ theorem exercise_5B_27 {V : Type*} [AddCommGroup V] [Module ℝ V]
       (minpoly ℝ T).map (algebraMap ℝ ℂ) := by
   sorry
 
-/-- 5B.28 The minimal polynomial of the dual operator {lit}`T′` equals the
-minimal polynomial of {lit}`T`. -/
+/-- 5B.28 -/
 theorem exercise_5B_28 [Finite F V] (T : V →ₗ[F] V) :
     minpoly F T.dualMap = minpoly F T := by
   sorry
 
-/-- 5B.29 Every operator on a finite-dimensional real vector space of
-dimension at least two has an invariant subspace of dimension two. -/
+/-- 5B.29 -/
 theorem exercise_5B_29 {V : Type*} [AddCommGroup V] [Module ℝ V]
     [Finite ℝ V] (hV : 2 ≤ finrank ℝ V) (T : V →ₗ[ℝ] V) :
     ∃ U : Submodule ℝ V, InvariantUnder T U ∧ finrank ℝ U = 2 := by
