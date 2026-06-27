@@ -1,9 +1,13 @@
 import Mathlib.Algebra.Module.LinearMap.Basic
 import Mathlib.Algebra.Module.LinearMap.End
+import Mathlib.Algebra.GroupWithZero.Associated
 import Mathlib.Algebra.Polynomial.AlgebraMap
 import Mathlib.Algebra.Polynomial.Basic
 import Mathlib.Algebra.Polynomial.BigOperators
+import Mathlib.Algebra.Polynomial.Monic
+import Mathlib.Algebra.Polynomial.RingDivision
 import Mathlib.Algebra.Polynomial.Roots
+import Mathlib.Algebra.Polynomial.SpecificDegree
 import Mathlib.Data.Complex.Basic
 import Mathlib.Data.Matrix.Basic
 import Mathlib.Data.Matrix.Block
@@ -14,7 +18,10 @@ import Mathlib.FieldTheory.Minpoly.Field
 import Mathlib.LinearAlgebra.Dual.Defs
 import Mathlib.LinearAlgebra.FiniteDimensional.Basic
 import Mathlib.LinearAlgebra.FiniteDimensional.Lemmas
+import Mathlib.LinearAlgebra.Matrix.Charpoly.Minpoly
 import Mathlib.LinearAlgebra.Matrix.NonsingularInverse
+import Mathlib.RingTheory.PrincipalIdealDomain
+import Mathlib.Tactic.ComputeDegree
 import Mathlib.Tactic.FinCases
 import Mathlib.Tactic.Linarith
 import Mathlib.Tactic.Linter.Style
@@ -99,7 +106,7 @@ def IsUpperTriangular {n : ℕ} (A : Matrix (Fin n) (Fin n) F) : Prop :=
 
 example {n : ℕ} (A : Matrix (Fin n) (Fin n) F) :
     IsUpperTriangular A ↔ A.BlockTriangular id :=
-  ⟨fun h _i _j hij => h _ _ hij, fun h _i _j hij => h hij⟩
+  ⟨fun h _ _ hij => h _ _ hij, fun h _ _ hij => h hij⟩
 
 /-! 5.39 Conditions for upper-triangular matrix.
 
@@ -145,10 +152,7 @@ theorem tfae_upperTriangular {n : ℕ} {v : Fin n → V} (hv : IsBasis F v)
     exact absurd (hsupp (Finsupp.mem_support_iff.mpr hne)) (not_le.mpr hkj)
   tfae_finish
 
-/-! 5.40 Equation satisfied by an operator with an upper-triangular matrix:
-if {lit}`ℳ(T)` is upper triangular with diagonal entries
-{lit}`λ₁, …, λₙ`, then {lit}`(T − λ₁I)⋯(T − λₙI) = 0`. We state this in the
-polynomial form {lit}`q(T) = 0` for {lit}`q(z) = (z − λ₁)⋯(z − λₙ)`. -/
+/-! 5.40 -/
 
 /-- The key step in 5.40 and 5.41: {lit}`T − λₖI` maps
 {lit}`span(v₁, …, vₖ)` into {lit}`span(v₁, …, v_{k−1})`. -/
@@ -296,18 +300,18 @@ eigenvalues of {lit}`T` are precisely the diagonal entries. -/
 
 theorem isEigenvalue_iff_diag [Finite F V] {n : ℕ} {v : Fin n → V}
     (hv : IsBasis F v) (T : V →ₗ[F] V)
-    (hA : IsUpperTriangular (matrixOf hv hv T)) (lam : F) :
-    HasEigenvalue T lam ↔ ∃ k, matrixOf hv hv T k k = lam := by
+    (hA : IsUpperTriangular (matrixOf hv hv T)) (γ : F) :
+    HasEigenvalue T γ ↔ ∃ k, matrixOf hv hv T k k = γ := by
   constructor
   · -- An eigenvalue is a zero of the minimal polynomial (5.27), which
     -- divides {lit}`∏ (z − λₖ)` (5.40 + 5.29), so it equals some {lit}`λₖ`.
-    intro hlam
-    have hroot := (isEigenvalue_iff_isRoot T lam).mp hlam
+    intro hγ
+    have hroot := (isEigenvalue_iff_isRoot T γ).mp hγ
     have hdvd : minpoly F T ∣ ∏ k, (Polynomial.X -
         Polynomial.C (matrixOf hv hv T k k)) :=
       (aeval_eq_zero_iff_minpoly_dvd T _).mp (aeval_prod_diag_eq_zero hv T hA)
     have hroot' : (∏ k, (Polynomial.X -
-        Polynomial.C (matrixOf hv hv T k k))).IsRoot lam :=
+        Polynomial.C (matrixOf hv hv T k k))).IsRoot γ :=
       hroot.dvd hdvd
     rw [Polynomial.IsRoot.def, Polynomial.eval_prod] at hroot'
     obtain ⟨k, -, hk⟩ := Finset.prod_eq_zero_iff.mp hroot'
@@ -315,7 +319,7 @@ theorem isEigenvalue_iff_diag [Finite F V] {n : ℕ} {v : Fin n → V}
     rw [Polynomial.eval_sub, Polynomial.eval_X, Polynomial.eval_C,
       sub_eq_zero] at hk
     exact hk.symm
-  · -- A diagonal entry {lit}`λₖ` is an eigenvalue: {lit}`T − λₖI` maps the
+  · -- A diagonal entry {lit}`γₖ` is an eigenvalue: {lit}`T − γₖI` maps the
     -- {lit}`(k+1)`-dimensional {lit}`span(v₁, …, vₖ)` into the
     -- {lit}`k`-dimensional {lit}`span(v₁, …, v_{k−1})`, so it is not
     -- injective there (3.22).
@@ -378,15 +382,15 @@ theorem isEigenvalue_iff_diag [Finite F V] {n : ℕ} {v : Fin n → V}
 /-! 5.42 Example: the eigenvalues of the operator of 5.36 are exactly the
 diagonal entries {lit}`2, 5, 8` of its upper-triangular matrix. -/
 
-example : ∀ lam : F, HasEigenvalue (T_5_36 (F := F)) lam ↔
-    lam = 2 ∨ lam = 5 ∨ lam = 8 := by
-  intro lam
+example : ∀ γ : F, HasEigenvalue (T_5_36 (F := F)) γ ↔
+    γ = 2 ∨ γ = 5 ∨ γ = 8 := by
+  intro γ
   have hA : IsUpperTriangular
       (matrixOf (isBasis_stdBasis (F := F) 3) (isBasis_stdBasis 3) T_5_36) := by
     rw [matrixOf_T_5_36]
     intro j k hkj
     fin_cases j <;> fin_cases k <;> simp_all [Fin.lt_def]
-  rw [isEigenvalue_iff_diag (isBasis_stdBasis 3) T_5_36 hA lam,
+  rw [isEigenvalue_iff_diag (isBasis_stdBasis 3) T_5_36 hA γ,
     matrixOf_T_5_36]
   constructor
   · rintro ⟨k, hk⟩
@@ -396,12 +400,135 @@ example : ∀ lam : F, HasEigenvalue (T_5_36 (F := F)) lam ↔
     · exact ⟨1, by simp⟩
     · exact ⟨2, by simp⟩
 
-/-! 5.43 Example (not formalized): whether {lit}`T` has an upper-triangular
-matrix can depend on {lit}`F` — the operator on {lit}`F⁴` with matrix
+/-! 5.43 Example: whether {lit}`T` has an upper-triangular matrix can depend on
+{lit}`F`. The operator on {lit}`ℝ⁴` with matrix
 {lit}`[[0,−1,0,0],[1,0,0,0],[2,0,3,0],[0,0,1,3]]` has minimal polynomial
 {lit}`(z² + 1)(z − 3)²`, which factors into linear factors over {lit}`ℂ` but
 not over {lit}`ℝ`; by 5.44 it is upper-triangularizable over {lit}`ℂ` only.
-(The minimal-polynomial computation is omitted here.) -/
+
+We formalize the minimal-polynomial computation, which Axler omits. The strategy
+(see {lit}`Example_5_43.minpoly_eq` below):
+* {lit}`p A = 0` for {lit}`p = (z²+1)(z−3)²` — a finite computation in
+  {lit}`Mat₄(ℝ)` — so {lit}`minpoly ∣ p` by {lit}`minpoly.dvd`;
+* neither maximal proper monic divisor {lit}`(z²+1)(z−3)` nor {lit}`(z−3)²`
+  annihilates {lit}`A`, so {lit}`minpoly` is not a proper divisor of {lit}`p`;
+* therefore {lit}`minpoly A = p`.
+
+The blocks {lit}`[[0,−1],[1,0]]` and {lit}`[[3,0],[1,3]]` (a rotation and a
+Jordan block) contribute the factors {lit}`z²+1` and {lit}`(z−3)²`. -/
+
+namespace Example_5_43
+
+open Polynomial Matrix
+
+/-- The operator of 5.43, as a matrix on {lit}`ℝ⁴`. -/
+noncomputable def A : Matrix (Fin 4) (Fin 4) ℝ :=
+  !![0, -1, 0, 0;
+     1,  0, 0, 0;
+     2,  0, 3, 0;
+     0,  0, 1, 3]
+
+/-- The irreducible quadratic factor {lit}`z² + 1`. -/
+noncomputable def u1 : Polynomial ℝ := X ^ 2 + 1
+/-- The linear factor {lit}`z − 3`. -/
+noncomputable def u2 : Polynomial ℝ := X - C 3
+/-- The candidate minimal polynomial {lit}`(z² + 1)(z − 3)²`. -/
+noncomputable def p : Polynomial ℝ := u1 * u2 ^ 2
+
+/-- {lit}`z² + 1` is irreducible over {lit}`ℝ` (degree two, no real root), hence
+prime. -/
+private theorem u1_prime : Prime u1 := by
+  have hirr : Irreducible u1 := by
+    apply irreducible_of_degree_le_three_of_not_isRoot (p := u1)
+    · have h : u1.natDegree = 2 := by unfold u1; compute_degree!
+      rw [h]; decide
+    · intro x hx
+      simp only [u1, IsRoot.def, eval_add, eval_pow, eval_X, eval_one] at hx
+      nlinarith [sq_nonneg x]
+  exact hirr.prime
+
+private theorem u2_prime : Prime u2 := prime_X_sub_C 3
+
+private theorem p_monic : p.Monic := by unfold p u1 u2; monicity!
+
+/-- {lit}`aeval A` sends each factor of {lit}`p` to the matching matrix. -/
+private theorem aeval_p : aeval A p = (A ^ 2 + 1) * (A - (3 : ℝ) • 1) ^ 2 := by
+  simp [p, u1, u2, map_mul, map_pow, map_add, map_sub, map_one, aeval_X, aeval_C,
+    Algebra.algebraMap_eq_smul_one]
+
+/-- {lit}`p` annihilates {lit}`A`: a finite entrywise computation in
+{lit}`Mat₄(ℝ)`. -/
+private theorem aeval_p_eq_zero : aeval A p = 0 := by
+  rw [aeval_p]; ext i j
+  fin_cases i <;> fin_cases j <;>
+    simp [A, pow_succ, Matrix.mul_apply, Fin.sum_univ_succ, Matrix.sub_apply,
+      Matrix.smul_apply, Matrix.one_apply] <;> norm_num
+
+/-- The maximal proper divisor {lit}`(z²+1)(z−3)` does *not* annihilate
+{lit}`A` (witnessed by entry {lit}`(3,2) = 10`). -/
+private theorem aeval_q1_ne_zero : aeval A (u1 * u2) ≠ 0 := by
+  have e : aeval A (u1 * u2) = (A ^ 2 + 1) * (A - (3 : ℝ) • 1) := by
+    simp [u1, u2, map_mul, map_pow, map_add, map_sub, map_one, aeval_X, aeval_C,
+      Algebra.algebraMap_eq_smul_one]
+  rw [e]; intro h; have := congrFun (congrFun h 3) 2
+  simp [A, pow_succ, Matrix.mul_apply, Fin.sum_univ_succ, Matrix.sub_apply,
+    Matrix.smul_apply, Matrix.one_apply] at this; norm_num at this
+
+/-- The maximal proper divisor {lit}`(z−3)²` does *not* annihilate {lit}`A`
+(witnessed by entry {lit}`(0,0) = 8`). -/
+private theorem aeval_q2_ne_zero : aeval A (u2 ^ 2) ≠ 0 := by
+  have e : aeval A (u2 ^ 2) = (A - (3 : ℝ) • 1) ^ 2 := by
+    simp [u2, map_pow, map_sub, aeval_X, aeval_C, Algebra.algebraMap_eq_smul_one]
+  rw [e]; intro h; have := congrFun (congrFun h 0) 0
+  simp [A, pow_succ, Matrix.mul_apply, Fin.sum_univ_succ, Matrix.sub_apply,
+    Matrix.smul_apply, Matrix.one_apply] at this; norm_num at this
+
+/-- **5.43.** The minimal polynomial of the operator is {lit}`(z² + 1)(z − 3)²`.
+Since {lit}`z² + 1` is irreducible over {lit}`ℝ`, this does not split into linear
+factors over {lit}`ℝ`; by 5.44 the operator is therefore *not*
+upper-triangularizable over {lit}`ℝ`, though it is over {lit}`ℂ` (where
+{lit}`z² + 1 = (z − i)(z + i)`). -/
+theorem minpoly_eq : minpoly ℝ A = p := by
+  have hint : IsIntegral ℝ A := Matrix.isIntegral A
+  -- `minpoly ∣ q` forces `q` to annihilate `A`.
+  have hdvd_imp : ∀ q : Polynomial ℝ, minpoly ℝ A ∣ q → aeval A q = 0 := by
+    rintro q ⟨r, rfl⟩; rw [map_mul, minpoly.aeval, zero_mul]
+  have hndvd_q1 : ¬minpoly ℝ A ∣ u1 * u2 := fun h => aeval_q1_ne_zero (hdvd_imp _ h)
+  have hndvd_q2 : ¬minpoly ℝ A ∣ u2 ^ 2 := fun h => aeval_q2_ne_zero (hdvd_imp _ h)
+  have hpdvd : minpoly ℝ A ∣ u1 * u2 ^ 2 := by
+    have h := minpoly.dvd ℝ A aeval_p_eq_zero; simpa [p] using h
+  -- `z² + 1` must divide `minpoly`; otherwise it is coprime to `minpoly`,
+  -- forcing `minpoly ∣ (z−3)²`, contradicting `aeval_q2_ne_zero`.
+  have hu1_dvd : u1 ∣ minpoly ℝ A := by
+    by_contra h1
+    exact hndvd_q2 ((u1_prime.coprime_iff_not_dvd.mpr h1).symm.dvd_of_dvd_mul_left hpdvd)
+  obtain ⟨m, hm⟩ := hu1_dvd
+  have hm_dvd : m ∣ u2 ^ 2 := (mul_dvd_mul_iff_left u1_prime.ne_zero).mp (hm ▸ hpdvd)
+  have hm_ndvd : ¬m ∣ u2 := fun h => hndvd_q1 (hm ▸ mul_dvd_mul_left u1 h)
+  -- divisors of the prime power `(z−3)²` are `1, z−3, (z−3)²`; the first two
+  -- divide `z−3`, so `m` is associate to `(z−3)²`, giving `p ∣ minpoly`.
+  obtain ⟨i, _, hassoc⟩ := (dvd_prime_pow u2_prime 2).mp hm_dvd
+  have hpm : p ∣ minpoly ℝ A := by
+    interval_cases i
+    · simp only [pow_zero] at hassoc
+      exact absurd (hassoc.dvd.trans (one_dvd u2)) hm_ndvd
+    · simp only [pow_one] at hassoc
+      exact absurd hassoc.dvd hm_ndvd
+    · rw [hm, p]; exact mul_dvd_mul_left u1 hassoc.symm.dvd
+  exact eq_of_monic_of_associated (minpoly.monic hint) p_monic
+    (associated_of_dvd_dvd (minpoly.dvd ℝ A aeval_p_eq_zero) hpm)
+
+end Example_5_43
+
+/-! Hint toward 5.44: {lit}`Example_5_43.minpoly_eq` is exactly the input 5.44
+needs. Once 5.44 is available as a theorem — {lit}`T` has an upper-triangular
+matrix over {lit}`F` iff {lit}`minpoly F T` is a product of linear factors
+{lit}`(z − λ₁)⋯(z − λₘ)`, {lit}`λᵢ ∈ F` — the example follows by feeding it this
+minimal polynomial: over {lit}`ℝ` the factor {lit}`z² + 1` is irreducible (no
+real root), so {lit}`minpoly` is not a product of linear factors and 5.44 denies
+an upper-triangular matrix; over {lit}`ℂ`, {lit}`z² + 1 = (z − I)(z + I)` splits,
+so 5.44 grants one. Formalizing that step needs 5.44 itself (currently the
+doc-comment below) and the {lit}`ℂ`-vs-{lit}`ℝ` splitting of {lit}`z² + 1`. -/
 
 /-! 5.44 Necessary and sufficient condition to have an upper-triangular
 matrix: {lit}`T` has an upper-triangular matrix with respect to some basis
@@ -412,8 +539,8 @@ of {lit}`V` iff the minimal polynomial of {lit}`T` equals
 linear factors. -/
 private lemma monic_splits_eq_prod_fin {p : Polynomial F} (hmonic : p.Monic)
     (hsplits : p.Splits) :
-    ∃ (m : ℕ) (lam : Fin m → F),
-      p = ∏ k, (Polynomial.X - Polynomial.C (lam k)) ∧ m = p.natDegree := by
+    ∃ (m : ℕ) (γ : Fin m → F),
+      p = ∏ k, (Polynomial.X - Polynomial.C (γ k)) ∧ m = p.natDegree := by
   have h := Polynomial.C_leadingCoeff_mul_prod_multiset_X_sub_C
     (p := p) (Polynomial.splits_iff_card_roots.mp hsplits)
   rw [hmonic.leadingCoeff, Polynomial.C_1, one_mul] at h
@@ -438,14 +565,14 @@ respect to which {lit}`T` is upper triangular. Strong induction on
 private lemma exists_upperTriangular_of_minpoly_prod :
     ∀ (m : ℕ) (W : Type u) (_ : AddCommGroup W),
       ∀ (_ : Module F W) (_ : Module.Finite F W) (T : W →ₗ[F] W)
-        (lam : Fin m → F),
-        minpoly F T = (∏ k, (Polynomial.X - Polynomial.C (lam k))) →
+        (γ : Fin m → F),
+        minpoly F T = (∏ k, (Polynomial.X - Polynomial.C (γ k))) →
         ∃ (n : ℕ) (w : Fin n → W) (hw : IsBasis F w),
           IsUpperTriangular (matrixOf hw hw T) := by
   intro m
   induction m using Nat.strong_induction_on with
   | _ m ih =>
-    intro W _ _ _ T lam hfact
+    intro W _ _ _ T γ hfact
     rcases Nat.eq_zero_or_pos m with rfl | hm
     · -- Base case: the minimal polynomial is the empty product {lit}`1`,
       -- which forces {lit}`W = {0}`; the empty basis works.
@@ -470,10 +597,10 @@ private lemma exists_upperTriangular_of_minpoly_prod :
         exact j.elim0
     · -- Inductive step: peel off the last factor {lit}`z − λₘ`.
       set mlast : Fin m := ⟨m - 1, by omega⟩ with hmlast_def
-      set lamm : F := lam mlast with hlamm_def
-      set f : W →ₗ[F] W := T - lamm • LinearMap.id with hf_def
-      have hf_aeval : f = aeval T (Polynomial.X - Polynomial.C lamm) :=
-        LinearMap.ext fun x => (aeval_X_sub_C_apply T lamm x).symm
+      set gamm : F := γ mlast with hgamm_def
+      set f : W →ₗ[F] W := T - gamm • LinearMap.id with hf_def
+      have hf_aeval : f = aeval T (Polynomial.X - Polynomial.C gamm) :=
+        LinearMap.ext fun x => (aeval_X_sub_C_apply T gamm x).symm
       set U : Submodule F W := range f with hU_def
       have hU_inv : InvariantUnder T U := by
         rw [hU_def, hf_aeval]
@@ -482,13 +609,13 @@ private lemma exists_upperTriangular_of_minpoly_prod :
       -- every {lit}`u ∈ U` is {lit}`(T − λₘI)x`, and applying the remaining
       -- factors gives {lit}`p(T)x = 0`.
       have hprod_split : (∏ k ∈ Finset.univ.erase mlast,
-          (Polynomial.X - Polynomial.C (lam k))) *
-            (Polynomial.X - Polynomial.C lamm) = minpoly F T := by
-        rw [hfact, hlamm_def]
+          (Polynomial.X - Polynomial.C (γ k))) *
+            (Polynomial.X - Polynomial.C gamm) = minpoly F T := by
+        rw [hfact, hgamm_def]
         exact Finset.prod_erase_mul _ _ (Finset.mem_univ mlast)
       have hdvd : minpoly F hU_inv.restrict ∣
           ∏ k ∈ Finset.univ.erase mlast,
-            (Polynomial.X - Polynomial.C (lam k)) := by
+            (Polynomial.X - Polynomial.C (γ k)) := by
         rw [← aeval_eq_zero_iff_minpoly_dvd]
         apply LinearMap.ext
         intro u
@@ -499,8 +626,8 @@ private lemma exists_upperTriangular_of_minpoly_prod :
           hprod_split, minpoly.aeval, LinearMap.zero_apply,
           LinearMap.zero_apply, ZeroMemClass.coe_zero]
       have hprod_ne : (∏ k ∈ Finset.univ.erase mlast,
-          (Polynomial.X - Polynomial.C (lam k))) ≠ 0 :=
-        Finset.prod_ne_zero_iff.mpr fun k _ => Polynomial.X_sub_C_ne_zero _
+          (Polynomial.X - Polynomial.C (γ k))) ≠ 0 :=
+        Finset.prod_ne_zero_iff.mpr fun k _ => Polynomial.X_sub_C_ne_zero (γ k)
       -- The minimal polynomial of {lit}`T|_U` is a product of fewer than
       -- {lit}`m` monic linear factors.
       have hsplits : (minpoly F hU_inv.restrict).Splits :=
@@ -513,9 +640,9 @@ private lemma exists_upperTriangular_of_minpoly_prod :
       have hm'_lt : m' < m := by
         have hle := Polynomial.natDegree_le_of_dvd hdvd hprod_ne
         have hdeg_prod : (∏ k ∈ Finset.univ.erase mlast,
-            (Polynomial.X - Polynomial.C (lam k))).natDegree = m - 1 := by
+            (Polynomial.X - Polynomial.C (γ k))).natDegree = m - 1 := by
           rw [Polynomial.natDegree_prod _ _
-            (fun k _ => Polynomial.X_sub_C_ne_zero (lam k))]
+            (fun k _ => Polynomial.X_sub_C_ne_zero (γ k))]
           simp [Finset.card_erase_of_mem]
         omega
       -- Induction: an upper-triangular basis {lit}`u₁, …, u_M` for
@@ -532,7 +659,7 @@ private lemma exists_upperTriangular_of_minpoly_prod :
       -- It remains to verify 5.39(c) for the extended basis.
       have h31 := (tfae_upperTriangular hw T).out 2 0
       apply h31.mp
-      have hT_decomp : ∀ x : W, T x = f x + lamm • x := by
+      have hT_decomp : ∀ x : W, T x = f x + gamm • x := by
         intro x
         rw [hf_def, LinearMap.sub_apply, LinearMap.smul_apply,
           LinearMap.id_apply, sub_add_cancel]
@@ -573,7 +700,7 @@ private lemma exists_upperTriangular_of_minpoly_prod :
         rw [Set.mem_setOf_eq, Fin.le_def]
         simp only [Fin.val_castLE]
         exact Fin.le_def.mp hi
-      · -- {lit}`k ≥ M`: write {lit}`Twₖ = (T − λₘI)wₖ + λₘwₖ`, with the
+      · -- {lit}`k ≥ M`: write {lit}`Twₖ = (T − γₘI)wₖ + γₘwₖ`, with the
         -- first summand in {lit}`U ⊆ span(w₁, …, w_M)`.
         rw [hT_decomp (w k)]
         apply Submodule.add_mem
@@ -591,8 +718,8 @@ theorem exists_upperTriangular_iff_minpoly_eq_prod [Finite F V]
     (T : V →ₗ[F] V) :
     (∃ (n : ℕ) (v : Fin n → V) (hv : IsBasis F v),
       IsUpperTriangular (matrixOf hv hv T)) ↔
-    ∃ (m : ℕ) (lam : Fin m → F),
-      minpoly F T = ∏ k, (Polynomial.X - Polynomial.C (lam k)) := by
+    ∃ (m : ℕ) (γ : Fin m → F),
+      minpoly F T = ∏ k, (Polynomial.X - Polynomial.C (γ k)) := by
   constructor
   · -- 5.40 gives {lit}`q(T) = 0` for the product of diagonal factors; thus
     -- the minimal polynomial divides a split polynomial, hence splits.
@@ -625,10 +752,10 @@ theorem exists_upperTriangular_complex {V : Type u} [AddCommGroup V]
     ∃ (n : ℕ) (v : Fin n → V) (hv : IsBasis ℂ v),
       IsUpperTriangular (matrixOf hv hv T) := by
   rw [exists_upperTriangular_iff_minpoly_eq_prod]
-  obtain ⟨m, lam, hfact, -⟩ := monic_splits_eq_prod_fin
+  obtain ⟨m, γ, hfact, -⟩ := monic_splits_eq_prod_fin
     (minpoly.monic (Algebra.IsIntegral.isIntegral T))
     (IsAlgClosed.splits (k := ℂ) _)
-  exact ⟨m, lam, hfact⟩
+  exact ⟨m, γ, hfact⟩
 
 /-! # Exercises -/
 
@@ -666,15 +793,17 @@ theorem exercise_5C_3 [Finite F V] {n : ℕ} {v : Fin n → V}
 
 /-- 5C.4 -/
 theorem exercise_5C_4 :
-    ∃ T : (Fin 2 → ℝ) →ₗ[ℝ] (Fin 2 → ℝ),
-      (∃ (v : Fin 2 → (Fin 2 → ℝ)) (hv : IsBasis ℝ v),
+    ∃ (V : Type) (_ : AddCommGroup V) (_ : Module ℝ V) (_ : Finite ℝ V)
+      (T : V →ₗ[ℝ] V),
+      (∃ (v : Fin (finrank ℝ V) → V) (hv : IsBasis ℝ v),
         ∀ k, matrixOf hv hv T k k = 0) ∧ IsInvertible T := by
   sorry
 
 /-- 5C.5 -/
 theorem exercise_5C_5 :
-    ∃ T : (Fin 2 → ℝ) →ₗ[ℝ] (Fin 2 → ℝ),
-      (∃ (v : Fin 2 → (Fin 2 → ℝ)) (hv : IsBasis ℝ v),
+    ∃ (V : Type) (_ : AddCommGroup V) (_ : Module ℝ V) (_ : Finite ℝ V)
+      (T : V →ₗ[ℝ] V),
+      (∃ (v : Fin (finrank ℝ V) → V) (hv : IsBasis ℝ v),
         ∀ k, matrixOf hv hv T k k ≠ 0) ∧ ¬ IsInvertible T := by
   sorry
 
@@ -693,13 +822,23 @@ theorem exercise_5C_7a [Finite F V] (T : V →ₗ[F] V) (v : V) :
         p.degree ≤ q.degree := by
   sorry
 
+/-- The monic polynomial {lit}`p_v` of smallest degree with {lit}`p_v(T)v = 0`,
+chosen from the existence-and-uniqueness statement {name}`exercise_5C_7a`. -/
+noncomputable def p_v [Finite F V] (T : V →ₗ[F] V) (v : V) : Polynomial F :=
+  (exercise_5C_7a T v).exists.choose
+
+/-- Defining properties of {lit}`p_v`: it is monic, annihilates {lit}`v`, and
+has smallest degree among monic polynomials that annihilate {lit}`v`. -/
+theorem p_v_spec [Finite F V] (T : V →ₗ[F] V) (v : V) :
+    (p_v T v).Monic ∧ aeval T (p_v T v) v = 0 ∧
+      ∀ q : Polynomial F, q.Monic → aeval T q v = 0 →
+        (p_v T v).degree ≤ q.degree :=
+  (exercise_5C_7a T v).exists.choose_spec
+
 /-- 5C.7 (b) The minimal polynomial of {lit}`T` is a polynomial multiple of
-each {lit}`p_v`. -/
-theorem exercise_5C_7b [Finite F V] (T : V →ₗ[F] V) (v : V)
-    (p : Polynomial F) (hp : p.Monic) (hpv : aeval T p v = 0)
-    (hmin : ∀ q : Polynomial F, q.Monic → aeval T q v = 0 →
-      p.degree ≤ q.degree) :
-    p ∣ minpoly F T := by
+{lit}`p_v` for each {lit}`v`. -/
+theorem exercise_5C_7b [Finite F V] (T : V →ₗ[F] V) (v : V) :
+    p_v T v ∣ minpoly F T := by
   sorry
 
 /-- 5C.8 (a) If {lit}`F = ℝ` and {lit}`T²v + 2Tv = −2v` for some
@@ -791,9 +930,9 @@ theorem exercise_5C_13 [Finite F V] (T : V →ₗ[F] V) (U : Submodule F V)
 of {lit}`V` iff the dual operator {lit}`T′` has an upper-triangular matrix
 with respect to some basis of {lit}`V′`. -/
 theorem exercise_5C_14 [Finite F V] (T : V →ₗ[F] V) :
-    (∃ (n : ℕ) (v : Fin n → V) (hv : IsBasis F v),
+    (∃ (v : Fin (finrank F V) → V) (hv : IsBasis F v),
       IsUpperTriangular (matrixOf hv hv T)) ↔
-    ∃ (n : ℕ) (φ : Fin n → Module.Dual F V) (hφ : IsBasis F φ),
+    ∃ (φ : Fin (finrank F V) → Module.Dual F V) (hφ : IsBasis F φ),
       IsUpperTriangular (matrixOf hφ hφ T.dualMap) := by
   sorry
 

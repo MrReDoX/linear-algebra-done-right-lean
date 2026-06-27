@@ -76,7 +76,7 @@ the section's exercises.
 | 4. Polynomials | ✓ | ✓ | — |
 | 5A. Invariant Subspaces | ✓ | ✓ | — |
 | 5B. The Minimal Polynomial | ✓ | ✓ | — |
-| 5C. Upper-Triangular Matrices | ✓ | — | — |
+| 5C. Upper-Triangular Matrices | ✓ | ✓ | — |
 | 5D. Diagonalizable Operators | ✓ | — | — |
 | 5E. Commuting Operators | ✓ | — | — |
 
