@@ -3,6 +3,7 @@ import Mathlib.Analysis.InnerProductSpace.Projection.Submodule
 import Mathlib.Analysis.InnerProductSpace.Projection.FiniteDimensional
 import Mathlib.Analysis.InnerProductSpace.Projection.Minimal
 import Mathlib.Analysis.InnerProductSpace.PiL2
+import Mathlib.Analysis.InnerProductSpace.Adjoint
 import Mathlib.Tactic.Linarith
 import Mathlib.Tactic.Linter.Style
 import CompanionHelper
@@ -160,14 +161,105 @@ theorem minimizing_distance (v : V) (u : V) (hu : u ∈ U) :
   nlinarith [norm_nonneg (v - U.starProjection v), norm_nonneg (v - u),
     sq_nonneg ‖U.starProjection v - u‖, hpyth]
 
-/-! 6.58 Riesz representation theorem, revisited, and the pseudoinverse (6.67–6.72)
+/-! 6.58 Riesz representation theorem, revisited.
 
 Axler gives a second proof of the Riesz representation theorem using orthogonal
 complements (6.58); the theorem itself is
-{lit}`LADR.Section_6B.riesz_representation`. The *pseudoinverse* {lit}`T†`
-(6.67–6.72) — the best-approximate-solution inverse built from
-{lit}`(T|_(null T)⟂)⁻¹ ∘ P_(range T)` — is not available as a linear-map
-construction in this mathlib pin, so its formalization is deferred. -/
+{lit}`LADR.Section_6B.riesz_representation`. -/
+
+/-! # Pseudoinverse -/
+
+section Pseudoinverse
+
+variable [FiniteDimensional 𝕜 V]
+  {W : Type*} [NormedAddCommGroup W] [InnerProductSpace 𝕜 W] [FiniteDimensional 𝕜 W]
+
+/-! 6.67 The restriction of {lit}`T` to {lit}`(null T)⟂` is an injective map of
+{lit}`(null T)⟂` onto {lit}`range T`. -/
+
+/-- {lit}`T` restricted to {lit}`(null T)⟂`, with codomain {lit}`range T`. -/
+noncomputable def restr (T : V →ₗ[𝕜] W) : (Submodule.orthogonal (LinearMap.ker T)) →ₗ[𝕜] (LinearMap.range T) :=
+  LinearMap.codRestrict (LinearMap.range T) (T ∘ₗ (Submodule.orthogonal (LinearMap.ker T)).subtype)
+    (fun x => ⟨x, rfl⟩)
+
+@[simp] theorem restr_coe (T : V →ₗ[𝕜] W) (x : (Submodule.orthogonal (LinearMap.ker T))) :
+    (restr T x : W) = T (x : V) := rfl
+
+theorem restr_injective (T : V →ₗ[𝕜] W) : Function.Injective (restr T) := by
+  rw [← LinearMap.ker_eq_bot, Submodule.eq_bot_iff]
+  intro x hx
+  rw [LinearMap.mem_ker] at hx
+  have hx0 : T (x : V) = 0 := by have := congrArg (Subtype.val) hx; simpa using this
+  have : (x : V) ∈ LinearMap.ker T ⊓ (Submodule.orthogonal (LinearMap.ker T)) := ⟨hx0, x.2⟩
+  rw [Submodule.inf_orthogonal_eq_bot] at this
+  ext; simpa using this
+
+theorem restr_surjective (T : V →ₗ[𝕜] W) : Function.Surjective (restr T) := by
+  rintro ⟨w, v, rfl⟩
+  have hsup : (LinearMap.ker T) ⊔ (Submodule.orthogonal (LinearMap.ker T)) = ⊤ :=
+    ((LinearMap.ker T).isCompl_orthogonal_of_hasOrthogonalProjection).sup_eq_top
+  have hv : v ∈ (LinearMap.ker T) ⊔ (Submodule.orthogonal (LinearMap.ker T)) := hsup ▸ Submodule.mem_top
+  rw [Submodule.mem_sup] at hv
+  obtain ⟨u, hu, x, hx, rfl⟩ := hv
+  refine ⟨⟨x, hx⟩, ?_⟩
+  ext
+  simp [LinearMap.mem_ker.mp hu]
+
+/-- The isomorphism {lit}`(null T)⟂ ≃ range T` induced by {lit}`T`. -/
+noncomputable def restrEquiv (T : V →ₗ[𝕜] W) : (Submodule.orthogonal (LinearMap.ker T)) ≃ₗ[𝕜] (LinearMap.range T) :=
+  LinearEquiv.ofBijective (restr T) ⟨restr_injective T, restr_surjective T⟩
+
+@[simp] theorem restrEquiv_coe (T : V →ₗ[𝕜] W) (x) : (restrEquiv T) x = restr T x := rfl
+
+/-! 6.68 Definition: pseudoinverse, {lit}`T†`. For {lit}`T ∈ ℒ(V, W)`,
+{lit}`T† w = (T|_(null T)⟂)⁻¹ (P_(range T) w)`. -/
+
+/-- The pseudoinverse {lit}`T† ∈ ℒ(W, V)`. -/
+noncomputable def pinv (T : V →ₗ[𝕜] W) : W →ₗ[𝕜] V :=
+  (Submodule.orthogonal (LinearMap.ker T)).subtype ∘ₗ (restrEquiv T).symm.toLinearMap ∘ₗ
+    ((LinearMap.range T).orthogonalProjection : W →L[𝕜] (LinearMap.range T))
+
+/-- 6.69 (b) {lit}`T T† = P_(range T)`. -/
+theorem T_comp_pinv (T : V →ₗ[𝕜] W) :
+    T ∘ₗ pinv T = ((LinearMap.range T).starProjection : W →ₗ[𝕜] W) := by
+  ext w
+  simp only [LinearMap.comp_apply, pinv, LinearMap.coe_comp, Function.comp_apply,
+    Submodule.coe_subtype, ContinuousLinearMap.coe_coe, LinearEquiv.coe_coe,
+    LinearEquiv.coe_toLinearMap]
+  rw [← restr_coe, ← restrEquiv_coe, LinearEquiv.apply_symm_apply,
+    Submodule.starProjection_apply]
+
+/-- 6.69 (c) {lit}`T† T = P_(null T)⟂`. -/
+theorem pinv_comp_T (T : V →ₗ[𝕜] W) :
+    pinv T ∘ₗ T = ((Submodule.orthogonal (LinearMap.ker T)).starProjection : V →ₗ[𝕜] V) := by
+  ext v
+  simp only [LinearMap.comp_apply, pinv, LinearMap.coe_comp, Function.comp_apply,
+    Submodule.coe_subtype, ContinuousLinearMap.coe_coe, LinearEquiv.coe_coe,
+    LinearEquiv.coe_toLinearMap]
+  set x := (Submodule.orthogonal (LinearMap.ker T)).orthogonalProjection v with hx
+  have hTx : T ((x : V)) = T v := by
+    have hmem : v - (x : V) ∈ LinearMap.ker T := by
+      have h1 : (x : V) = (Submodule.orthogonal (LinearMap.ker T)).starProjection v :=
+        (Submodule.starProjection_apply _ v).symm
+      rw [h1]
+      have h2 := (LinearMap.ker T).starProjection_add_starProjection_orthogonal v
+      have h3 : v - (Submodule.orthogonal (LinearMap.ker T)).starProjection v = (LinearMap.ker T).starProjection v := by
+        rw [eq_comm, eq_sub_iff_add_eq]; exact h2
+      rw [h3]; exact (LinearMap.ker T).starProjection_apply_mem v
+    rw [LinearMap.mem_ker, map_sub, sub_eq_zero] at hmem
+    exact hmem.symm
+  have hproj : (LinearMap.range T).orthogonalProjection (T v) = restr T x := by
+    apply Subtype.ext
+    rw [restr_coe, hTx]
+    exact congrArg Subtype.val
+      (Submodule.orthogonalProjection_mem_subspace_eq_self (⟨T v, ⟨v, rfl⟩⟩ : LinearMap.range T))
+  rw [hproj, ← restrEquiv_coe, LinearEquiv.symm_apply_apply, Submodule.starProjection_apply]
+
+/-! 6.69 (a) ({lit}`T† = T⁻¹` when {lit}`T` is invertible) and 6.70 (the
+pseudoinverse gives the best approximate / minimal-norm solution) are not yet
+developed here; their formalization is deferred. -/
+
+end Pseudoinverse
 
 /-! # Exercises 6C -/
 
