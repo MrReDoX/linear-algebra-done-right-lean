@@ -81,17 +81,13 @@ the section's exercises.
 | 5E. Commuting Operators | ✓ | — | — |
 | 6A. Inner Products and Norms | ✓ | — | — |
 | 6B. Orthonormal Bases | ✓* | — | — |
-| 6C. Orthogonal Complements and Minimization Problems | ✓* | — | — |
+| 6C. Orthogonal Complements and Minimization Problems | ✓ | — | — |
 | 7A. Self-Adjoint and Normal Operators | ✓ | — | — |
 | 7B. Spectral Theorem | ✓* | — | — |
 | 7C. Positive Operators | ✓ | — | — |
 
 \* Section 6B currently defers Schur's theorem and the orthonormal
-upper-triangularization result (Axler 6.37–6.38); Section 6C constructs the
-pseudoinverse `T†` and proves 6.67 (the restriction `T|_(null T)⟂ → range T` is
-an isomorphism), 6.68 (definition), and 6.69 (b)/(c) (`T T† = P_(range T)`,
-`T† T = P_(null T)⟂`), but defers 6.69 (a) and the best-approximation property
-6.70; and Section 7B proves the real spectral theorem's core (self-adjoint operators
+upper-triangularization result (Axler 6.37–6.38); and Section 7B proves the real spectral theorem's core (self-adjoint operators
 are orthonormally diagonalizable, via mathlib), the invertible-quadratic lemma
 7.26, and that a self-adjoint operator's minimal polynomial splits (7.27), but
 defers the complex spectral theorem 7.31 (whose textbook proof runs through

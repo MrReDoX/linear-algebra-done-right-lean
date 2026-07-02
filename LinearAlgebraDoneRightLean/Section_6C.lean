@@ -255,9 +255,58 @@ theorem pinv_comp_T (T : V →ₗ[𝕜] W) :
       (Submodule.orthogonalProjection_mem_subspace_eq_self (⟨T v, ⟨v, rfl⟩⟩ : LinearMap.range T))
   rw [hproj, ← restrEquiv_coe, LinearEquiv.symm_apply_apply, Submodule.starProjection_apply]
 
-/-! 6.69 (a) ({lit}`T† = T⁻¹` when {lit}`T` is invertible) and 6.70 (the
-pseudoinverse gives the best approximate / minimal-norm solution) are not yet
-developed here; their formalization is deferred. -/
+/-- 6.69 (a) If {lit}`T` is invertible then {lit}`T† = T⁻¹`. -/
+theorem pinv_eq_symm (e : V ≃ₗ[𝕜] W) : pinv (e : V →ₗ[𝕜] W) = (e.symm : W →ₗ[𝕜] V) := by
+  have hker : LinearMap.ker (e : V →ₗ[𝕜] W) = ⊥ := LinearMap.ker_eq_bot.mpr e.injective
+  have htop : Submodule.orthogonal (LinearMap.ker (e : V →ₗ[𝕜] W)) = ⊤ := by
+    rw [hker, Submodule.bot_orthogonal_eq_top]
+  have hcomp : pinv (e : V →ₗ[𝕜] W) ∘ₗ (e : V →ₗ[𝕜] W) = LinearMap.id := by
+    rw [pinv_comp_T]
+    ext x
+    have hmem : x ∈ Submodule.orthogonal (LinearMap.ker (e : V →ₗ[𝕜] W)) := by
+      rw [htop]; exact Submodule.mem_top
+    simpa using Submodule.starProjection_eq_self_iff.mpr hmem
+  ext w
+  have h := LinearMap.congr_fun hcomp (e.symm w)
+  simp only [LinearMap.comp_apply, LinearMap.id_coe, id_eq, LinearEquiv.coe_coe,
+    LinearEquiv.apply_symm_apply] at h
+  simpa using h
+
+/-- 6.70 (a) {lit}`T† b` is a *best approximate solution* of {lit}`T x = b`:
+{lit}`‖T (T† b) − b‖ ≤ ‖T x − b‖` for every {lit}`x`. -/
+theorem pinv_best_approx (T : V →ₗ[𝕜] W) (b : W) (x : V) :
+    ‖T (pinv T b) - b‖ ≤ ‖T x - b‖ := by
+  have h1 : T (pinv T b) = (LinearMap.range T).starProjection b := by
+    have := LinearMap.congr_fun (T_comp_pinv T) b; simpa using this
+  rw [h1, show ‖(LinearMap.range T).starProjection b - b‖
+        = ‖b - (LinearMap.range T).starProjection b‖ from norm_sub_rev _ _,
+    show ‖T x - b‖ = ‖b - T x‖ from norm_sub_rev _ _]
+  exact minimizing_distance (U := LinearMap.range T) b (T x) ⟨x, rfl⟩
+
+/-- 6.70 (b) Among the minimizers of {lit}`‖T x − b‖`, the solution {lit}`T† b`
+has the smallest norm: if {lit}`T x` also equals the best approximation
+{lit}`P_(range T) b` and {lit}`x ≠ T† b`, then {lit}`‖T† b‖ < ‖x‖`. -/
+theorem pinv_minimal_norm (T : V →ₗ[𝕜] W) (b : W) (x : V)
+    (hx : T x = T (pinv T b)) (hne : x ≠ pinv T b) : ‖pinv T b‖ < ‖x‖ := by
+  -- T† b ∈ (null T)⟂ and x − T† b ∈ null T, so they are orthogonal
+  have hpinv_mem : pinv T b ∈ Submodule.orthogonal (LinearMap.ker T) := by
+    show ((restrEquiv T).symm ((LinearMap.range T).orthogonalProjection b) : V) ∈ _
+    exact SetLike.coe_mem _
+  have hsub_mem : x - pinv T b ∈ LinearMap.ker T := by
+    rw [LinearMap.mem_ker, map_sub, hx, sub_self]
+  have horth : ⟪pinv T b, x - pinv T b⟫_𝕜 = 0 := by
+    rw [inner_eq_zero_symm]
+    exact (Submodule.mem_orthogonal _ _).mp hpinv_mem _ hsub_mem
+  have hadd : pinv T b + (x - pinv T b) = x := by abel
+  have hnorm : ‖x‖ ^ 2 = ‖pinv T b‖ ^ 2 + ‖x - pinv T b‖ ^ 2 := by
+    rw [pow_two, pow_two, pow_two]
+    conv_lhs => rw [← hadd]
+    exact norm_add_sq_eq_norm_sq_add_norm_sq_of_inner_eq_zero (pinv T b) (x - pinv T b) horth
+  have hpos : 0 < ‖x - pinv T b‖ ^ 2 := by
+    have : x - pinv T b ≠ 0 := sub_ne_zero.mpr hne
+    positivity
+  have hlt : ‖pinv T b‖ ^ 2 < ‖x‖ ^ 2 := by rw [hnorm]; linarith
+  exact lt_of_pow_lt_pow_left₀ 2 (norm_nonneg _) hlt
 
 end Pseudoinverse
 
