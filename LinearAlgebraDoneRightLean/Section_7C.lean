@@ -53,14 +53,21 @@ theorem adjoint_comp_self_isPositive (R : V →ₗ[𝕜] V) :
 /-- (a) ⟹ (b): every eigenvalue of a positive operator is a nonnegative real. -/
 theorem eigenvalue_nonneg {T : V →ₗ[𝕜] V} (hT : T.IsPositive) {μ : 𝕜}
     (hμ : HasEigenvalue T μ) : 0 ≤ RCLike.re μ ∧ conj μ = μ := by
-  sorry
+  refine ⟨?_, hT.isSymmetric.conj_eigenvalue_eq_self hμ⟩
+  obtain ⟨v, hTv, hv⟩ := hμ.exists_hasEigenvector
+  have hmem : T v = μ • v := Module.End.mem_eigenspace_iff.mp hTv
+  have hpos : 0 ≤ RCLike.re ⟪T v, v⟫_𝕜 := hT.2 v
+  rw [hmem, inner_smul_left, inner_self_eq_norm_sq_to_K,
+    hT.isSymmetric.conj_eigenvalue_eq_self hμ, ← RCLike.ofReal_pow, mul_comm,
+    RCLike.re_ofReal_mul] at hpos
+  have hvnorm : 0 < ‖v‖ ^ 2 := by positivity
+  exact (mul_nonneg_iff_of_pos_left hvnorm).mp hpos
 
 /-! 7.39 Each positive operator has a unique positive square root.
 
-The existence of the positive square root (7.38 (d)) and its uniqueness (7.39)
-run through the spectral theorem applied to {lit}`R`; in this pin the cleanest
-route uses the continuous functional calculus, and their formalization here is
-deferred. -/
+The full existence-and-uniqueness of the positive square root (7.38 (d) and
+7.39) — which builds an operator {lit}`R` acting as {lit}`√λ` on each
+{lit}`T`-eigenvector — is not developed here; its formalization is deferred. -/
 
 /-! # Exercises 7C -/
 
@@ -69,7 +76,8 @@ For an orthogonal projection {lit}`P` (self-adjoint idempotent), {lit}`P` is
 positive. -/
 theorem exercise_projection_isPositive (P : V →ₗ[𝕜] V)
     (hsa : LinearMap.adjoint P = P) (hidem : P ∘ₗ P = P) : P.IsPositive := by
-  sorry
+  have h : LinearMap.adjoint P ∘ₗ P = P := by rw [hsa, hidem]
+  rw [← h]; exact adjoint_comp_self_isPositive P
 
 omit [FiniteDimensional 𝕜 V] in
 /-- 7C.1-style: a positive operator {lit}`T` satisfies {lit}`⟨Tv, v⟩ = 0 ⟹ Tv = 0`

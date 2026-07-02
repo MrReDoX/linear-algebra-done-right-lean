@@ -93,10 +93,11 @@ mathlib); and Section 7B proves the real spectral theorem's core (self-adjoint o
 are orthonormally diagonalizable, via mathlib), the invertible-quadratic lemma
 7.26, and that a self-adjoint operator's minimal polynomial splits (7.27), but
 defers the complex spectral theorem 7.31 (whose textbook proof runs through Schur); and Section 7C
-defines positive operators (mathlib `LinearMap.IsPositive`) and proves that
-`R*R` is positive, but defers the full characterization 7.38 and the unique
-positive square root 7.39 (cleanest via the continuous functional calculus).
-Every other numbered result in these sections is stated and proved.
+defines positive operators (mathlib `LinearMap.IsPositive`), proves that `R*R`
+and orthogonal projections are positive and that a positive operator's
+eigenvalues are nonnegative (7.38 (a)⟹(b), (f)⟹(a)), but defers the positive
+square root (7.38 (d)/(e) and 7.39). Every other numbered result in these
+sections is stated and proved.
 
 ## Building
 
