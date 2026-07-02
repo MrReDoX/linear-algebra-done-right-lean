@@ -1,5 +1,8 @@
 import Mathlib.Analysis.InnerProductSpace.Adjoint
 import Mathlib.Analysis.InnerProductSpace.Spectrum
+import Mathlib.Analysis.InnerProductSpace.Symmetric
+import Mathlib.FieldTheory.Minpoly.Field
+import Mathlib.Algebra.Polynomial.Splits
 import Mathlib.Tactic.Linarith
 import Mathlib.Tactic.Linter.Style
 import CompanionHelper
@@ -29,11 +32,56 @@ theorem quadratic_pos (T : V →ₗ[𝕜] V) (hT : LinearMap.IsSymmetric T) (b c
     (hbc : b ^ 2 < 4 * c) (v : V) (hv : v ≠ 0) :
     0 < RCLike.re ⟪(T ∘ₗ T + (b : 𝕜) • T + (c : 𝕜) • (LinearMap.id : V →ₗ[𝕜] V)) v,
       v⟫_𝕜 := by
-  sorry
+  have hinner : ⟪(T ∘ₗ T + (b : 𝕜) • T + (c : 𝕜) • (LinearMap.id : V →ₗ[𝕜] V)) v, v⟫_𝕜
+      = ((‖T v‖ ^ 2 : ℝ) : 𝕜) + (b : 𝕜) * ⟪T v, v⟫_𝕜 + ((c * ‖v‖ ^ 2 : ℝ) : 𝕜) := by
+    rw [LinearMap.add_apply, LinearMap.add_apply, inner_add_left, inner_add_left,
+      LinearMap.comp_apply, LinearMap.smul_apply, LinearMap.smul_apply, LinearMap.id_apply,
+      inner_smul_left, inner_smul_left, hT (T v) v, inner_self_eq_norm_sq_to_K,
+      inner_self_eq_norm_sq_to_K, RCLike.conj_ofReal, RCLike.conj_ofReal]
+    push_cast
+    ring
+  rw [hinner, map_add, map_add, RCLike.ofReal_re, RCLike.re_ofReal_mul, RCLike.ofReal_re]
+  have hcs : RCLike.re ⟪T v, v⟫_𝕜 ^ 2 ≤ ‖T v‖ ^ 2 * ‖v‖ ^ 2 := by
+    have h1 : ‖⟪T v, v⟫_𝕜‖ ≤ ‖T v‖ * ‖v‖ := norm_inner_le_norm (T v) v
+    have h2 : |RCLike.re ⟪T v, v⟫_𝕜| ≤ ‖T v‖ * ‖v‖ :=
+      le_trans (RCLike.abs_re_le_norm _) h1
+    nlinarith [sq_abs (RCLike.re ⟪T v, v⟫_𝕜), norm_nonneg (T v), norm_nonneg v,
+      abs_nonneg (RCLike.re ⟪T v, v⟫_𝕜)]
+  have hs : 0 < ‖v‖ ^ 2 := by positivity
+  nlinarith [hcs, hbc, hs, sq_nonneg (‖v‖ ^ 2 * b + 2 * RCLike.re ⟪T v, v⟫_𝕜),
+    mul_pos hs hs]
 
-/-! 7.27 The minimal polynomial of a self-adjoint operator is a product of the
-linear factors {lit}`(z − λ₁) ⋯ (z − λₘ)` with each {lit}`λⱼ ∈ ℝ`. This is used
-to prove the real spectral theorem below; its formalization here is deferred. -/
+/-! 7.27 The minimal polynomial of a self-adjoint operator (over {lit}`ℝ`) is a
+product of the linear factors {lit}`(z − λ₁) ⋯ (z − λₘ)` — i.e. it splits over
+{lit}`ℝ`. -/
+
+open Polynomial in
+theorem minpoly_symmetric_splits {V : Type*} [NormedAddCommGroup V]
+    [InnerProductSpace ℝ V] [FiniteDimensional ℝ V] (T : V →ₗ[ℝ] V)
+    (hT : T.IsSymmetric) :
+    (minpoly ℝ T).Splits := by
+  set b := hT.eigenvectorBasis (rfl : Module.finrank ℝ V = Module.finrank ℝ V) with hb
+  set μ := hT.eigenvalues (rfl : Module.finrank ℝ V = Module.finrank ℝ V) with hμ
+  set S := Finset.image μ Finset.univ with hS
+  set p := ∏ lam ∈ S, (X - C lam) with hp
+  have hp0 : p ≠ 0 := by
+    rw [hp]; exact Finset.prod_ne_zero_iff.mpr fun lam _ => X_sub_C_ne_zero lam
+  have hpsplit : p.Splits :=
+    Polynomial.Splits.prod (fun lam _ => Polynomial.Splits.X_sub_C lam)
+  have haeval : (aeval T) p = 0 := by
+    apply b.toBasis.ext
+    intro i
+    simp only [LinearMap.zero_apply]
+    have hiS : μ i ∈ S := Finset.mem_image_of_mem μ (Finset.mem_univ i)
+    rw [hp, ← Finset.prod_erase_mul S _ hiS, map_mul, Module.End.mul_apply]
+    have hkill : (aeval T) (X - C (μ i)) (b.toBasis i) = 0 := by
+      simp only [OrthonormalBasis.coe_toBasis]
+      simp only [map_sub, aeval_X, aeval_C, LinearMap.sub_apply,
+        Algebra.algebraMap_eq_smul_one, LinearMap.smul_apply, Module.End.one_apply]
+      rw [hT.apply_eigenvectorBasis (rfl : Module.finrank ℝ V = Module.finrank ℝ V) i]
+      simp [hb, hμ]
+    rw [hkill, map_zero]
+  exact Polynomial.Splits.of_dvd hpsplit hp0 (minpoly.dvd ℝ T haeval)
 
 /-! 7.29 Real spectral theorem
 

@@ -89,9 +89,10 @@ the section's exercises.
 \* Section 6B currently defers Schur's theorem and the orthonormal
 upper-triangularization result (Axler 6.37–6.38); Section 6C defers the
 pseudoinverse (Axler 6.67–6.72, which has no linear-map form in the pinned
-mathlib); and Section 7B proves the real spectral theorem's core (self-adjoint operators are
-orthonormally diagonalizable, via mathlib) but defers 7.27 and the complex
-spectral theorem 7.31 (whose textbook proof runs through Schur); and Section 7C
+mathlib); and Section 7B proves the real spectral theorem's core (self-adjoint operators
+are orthonormally diagonalizable, via mathlib), the invertible-quadratic lemma
+7.26, and that a self-adjoint operator's minimal polynomial splits (7.27), but
+defers the complex spectral theorem 7.31 (whose textbook proof runs through Schur); and Section 7C
 defines positive operators (mathlib `LinearMap.IsPositive`) and proves that
 `R*R` is positive, but defers the full characterization 7.38 and the unique
 positive square root 7.39 (cleanest via the continuous functional calculus).
