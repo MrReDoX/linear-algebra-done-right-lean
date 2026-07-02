@@ -32,10 +32,10 @@ status:
     the mathlib conversions. 
 
     Currently covers Chapters 1-3 (drafted and human-reviewed), Chapters 4
-    and 5 (drafted), Chapter 6 (drafted), and Section 7A (partial draft). The
-    `sorry`s are intentional exercises, not gaps in the formalization of the
+    and 5 (drafted), Chapter 6 (drafted), and Sections 7A–7B (partial drafts).
+    The `sorry`s are intentional exercises, not gaps in the formalization of the
     textbook's own results.
-  sorry_count: 582              # intentional exercise placeholders (warn.sorry disabled)
+  sorry_count: 585              # intentional exercise placeholders (warn.sorry disabled)
   sorry_in_definitions: 0
   axioms:
     - "propext"
