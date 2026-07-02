@@ -80,6 +80,11 @@ the section's exercises.
 | 5D. Diagonalizable Operators | ✓ | — | — |
 | 5E. Commuting Operators | ✓ | — | — |
 | 6A. Inner Products and Norms | ✓ | — | — |
+| 6B. Orthonormal Bases | ✓* | — | — |
+
+\* Section 6B currently defers Schur's theorem and the orthonormal
+upper-triangularization result (Axler 6.37–6.38); every other numbered result is
+stated and proved.
 
 ## Building
 
