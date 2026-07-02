@@ -31,10 +31,10 @@ status:
     text to the companion, but some additional narrative is added to explain
     the mathlib conversions. 
 
-    Currently covers Chapters 1-3 (drafted and human-reviewed) and Chapters 4
-    and 5 (drafted). The `sorry`s are intentional exercises, not gaps in the
-    formalization of the textbook's own results.
-  sorry_count: 532              # intentional exercise placeholders (warn.sorry disabled)
+    Currently covers Chapters 1-3 (drafted and human-reviewed), Chapters 4
+    and 5 (drafted), and Section 6A (drafted). The `sorry`s are intentional
+    exercises, not gaps in the formalization of the textbook's own results.
+  sorry_count: 555              # intentional exercise placeholders (warn.sorry disabled)
   sorry_in_definitions: 0
   axioms:
     - "propext"
