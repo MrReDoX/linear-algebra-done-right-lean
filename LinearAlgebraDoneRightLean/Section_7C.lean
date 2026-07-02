@@ -63,11 +63,67 @@ theorem eigenvalue_nonneg {T : V →ₗ[𝕜] V} (hT : T.IsPositive) {μ : 𝕜}
   have hvnorm : 0 < ‖v‖ ^ 2 := by positivity
   exact (mul_nonneg_iff_of_pos_left hvnorm).mp hpos
 
-/-! 7.39 Each positive operator has a unique positive square root.
+/-! 7.38 (b) ⟹ (d) Every positive operator has a positive square root.
 
-The full existence-and-uniqueness of the positive square root (7.38 (d) and
-7.39) — which builds an operator {lit}`R` acting as {lit}`√λ` on each
-{lit}`T`-eigenvector — is not developed here; its formalization is deferred. -/
+We build {lit}`R` acting as {lit}`√λ` on each {lit}`T`-eigenvector (from the
+spectral theorem's orthonormal eigenbasis), and check {lit}`R` is positive and
+{lit}`R² = T`. -/
+
+theorem exists_positive_sqrt {T : V →ₗ[𝕜] V} (hT : T.IsPositive) :
+    ∃ R : V →ₗ[𝕜] V, R.IsPositive ∧ R ∘ₗ R = T := by
+  set n := Module.finrank 𝕜 V
+  set hs := hT.isSymmetric
+  set b := hs.eigenvectorBasis (rfl : Module.finrank 𝕜 V = n) with hb
+  set μ := hs.eigenvalues (rfl : Module.finrank 𝕜 V = n) with hμ
+  have hμnn : ∀ i, 0 ≤ μ i := by
+    intro i
+    have hev : HasEigenvalue T ((μ i : ℝ) : 𝕜) :=
+      hs.hasEigenvalue_eigenvalues (rfl : Module.finrank 𝕜 V = n) i
+    have := (eigenvalue_nonneg hT hev).1
+    rwa [RCLike.ofReal_re] at this
+  set R := b.toBasis.constr 𝕜 (fun i => (Real.sqrt (μ i) : 𝕜) • b i) with hR
+  have hRb : ∀ i, R (b i) = (Real.sqrt (μ i) : 𝕜) • b i := by
+    intro i
+    have h1 : R (b.toBasis i) = (Real.sqrt (μ i) : 𝕜) • b i := by
+      rw [hR]; simp only [Module.Basis.constr_basis]
+    rwa [OrthonormalBasis.coe_toBasis] at h1
+  have hRsym : LinearMap.IsSymmetric R := by
+    rw [LinearMap.isSymmetric_iff_isSelfAdjoint, isSelfAdjoint_iff, LinearMap.star_eq_adjoint,
+      eq_comm, LinearMap.eq_adjoint_iff_basis b.toBasis b.toBasis]
+    intro i j
+    simp only [OrthonormalBasis.coe_toBasis, hRb, inner_smul_left, inner_smul_right,
+      RCLike.conj_ofReal]
+    rcases eq_or_ne i j with h | h
+    · subst h; rfl
+    · rw [b.orthonormal.2 h]; ring
+  refine ⟨R, ⟨hRsym, ?_⟩, ?_⟩
+  · intro x
+    have hRx : R x = ∑ i, (⟪b i, x⟫_𝕜 * (Real.sqrt (μ i) : 𝕜)) • b i := by
+      conv_lhs => rw [← b.sum_repr' x]
+      rw [map_sum]
+      refine Finset.sum_congr rfl fun i _ => ?_
+      rw [map_smul, hRb, smul_smul]
+    rw [hRx, sum_inner, map_sum]
+    refine Finset.sum_nonneg fun i _ => ?_
+    have hterm : ⟪(⟪b i, x⟫_𝕜 * (Real.sqrt (μ i) : 𝕜)) • b i, x⟫_𝕜
+        = ((Real.sqrt (μ i) * ‖⟪b i, x⟫_𝕜‖ ^ 2 : ℝ) : 𝕜) := by
+      rw [inner_smul_left,
+        show conj (⟪b i, x⟫_𝕜 * (Real.sqrt (μ i) : 𝕜)) = conj ⟪b i, x⟫_𝕜 * (Real.sqrt (μ i) : 𝕜) by
+          rw [map_mul, RCLike.conj_ofReal],
+        mul_right_comm, RCLike.conj_mul]
+      push_cast; ring
+    rw [hterm, RCLike.ofReal_re]
+    positivity
+  · apply b.toBasis.ext
+    intro i
+    simp only [LinearMap.comp_apply, OrthonormalBasis.coe_toBasis]
+    rw [hRb, map_smul, hRb, smul_smul]
+    rw [show (Real.sqrt (μ i) : 𝕜) * (Real.sqrt (μ i) : 𝕜) = ((μ i : ℝ) : 𝕜) by
+      rw [← RCLike.ofReal_mul, Real.mul_self_sqrt (hμnn i)]]
+    rw [← hs.apply_eigenvectorBasis (rfl : Module.finrank 𝕜 V = n) i]
+
+/-! 7.39 The positive square root is unique. Its formalization (Axler's argument
+via the spectral decomposition of the square root) is deferred. -/
 
 /-! # Exercises 7C -/
 

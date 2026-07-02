@@ -95,9 +95,10 @@ are orthonormally diagonalizable, via mathlib), the invertible-quadratic lemma
 defers the complex spectral theorem 7.31 (whose textbook proof runs through Schur); and Section 7C
 defines positive operators (mathlib `LinearMap.IsPositive`), proves that `R*R`
 and orthogonal projections are positive and that a positive operator's
-eigenvalues are nonnegative (7.38 (a)⟹(b), (f)⟹(a)), but defers the positive
-square root (7.38 (d)/(e) and 7.39). Every other numbered result in these
-sections is stated and proved.
+eigenvalues are nonnegative (7.38 (a)⟹(b), (f)⟹(a)), and constructs the positive
+square root (7.38 (d)/(e)) via the spectral eigenbasis, but defers only its
+uniqueness (7.39). Every other numbered result in these sections is stated and
+proved.
 
 ## Building
 
