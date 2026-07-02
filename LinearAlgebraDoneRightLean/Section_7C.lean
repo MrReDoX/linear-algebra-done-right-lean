@@ -122,8 +122,81 @@ theorem exists_positive_sqrt {T : V →ₗ[𝕜] V} (hT : T.IsPositive) :
       rw [← RCLike.ofReal_mul, Real.mul_self_sqrt (hμnn i)]]
     rw [← hs.apply_eigenvectorBasis (rfl : Module.finrank 𝕜 V = n) i]
 
-/-! 7.39 The positive square root is unique. Its formalization (Axler's argument
-via the spectral decomposition of the square root) is deferred. -/
+/-! 7.39 Each positive operator has a *unique* positive square root.
+
+Key step: a positive square root {lit}`S` of {lit}`T` sends each
+{lit}`c`-eigenvector {lit}`w` of {lit}`T` to {lit}`√c · w`, because writing
+{lit}`w` in {lit}`S`'s orthonormal eigenbasis forces every contributing
+{lit}`S`-eigenvalue {lit}`σ` to satisfy {lit}`σ² = c`. -/
+
+theorem sqrt_eigenvector {S : V →ₗ[𝕜] V} (hS : S.IsPositive) {w : V} {c : ℝ} (_hc : 0 ≤ c)
+    (hw : (S ∘ₗ S) w = (c : 𝕜) • w) : S w = (Real.sqrt c : 𝕜) • w := by
+  set n := Module.finrank 𝕜 V
+  set hSs := hS.isSymmetric
+  set e := hSs.eigenvectorBasis (rfl : Module.finrank 𝕜 V = n) with he
+  set σ := hSs.eigenvalues (rfl : Module.finrank 𝕜 V = n) with hσ
+  have hσnn : ∀ i, 0 ≤ σ i := by
+    intro i
+    have hev : HasEigenvalue S ((σ i : ℝ) : 𝕜) :=
+      hSs.hasEigenvalue_eigenvalues (rfl : Module.finrank 𝕜 V = n) i
+    have := (eigenvalue_nonneg hS hev).1
+    rwa [RCLike.ofReal_re] at this
+  have hSe : ∀ i, S (e i) = (σ i : 𝕜) • e i :=
+    fun i => hSs.apply_eigenvectorBasis (rfl : Module.finrank 𝕜 V = n) i
+  apply e.repr.injective
+  ext i
+  rw [OrthonormalBasis.repr_apply_apply, OrthonormalBasis.repr_apply_apply]
+  have hSw : ⟪e i, S w⟫_𝕜 = (σ i : 𝕜) * ⟪e i, w⟫_𝕜 := by
+    rw [← hSs (e i) w, hSe, inner_smul_left, RCLike.conj_ofReal]
+  have hSSw : (σ i : 𝕜) ^ 2 * ⟪e i, w⟫_𝕜 = (c : 𝕜) * ⟪e i, w⟫_𝕜 := by
+    have h1 : ⟪e i, (S ∘ₗ S) w⟫_𝕜 = (σ i : 𝕜) ^ 2 * ⟪e i, w⟫_𝕜 := by
+      rw [LinearMap.comp_apply, ← hSs (e i) (S w), hSe, inner_smul_left, RCLike.conj_ofReal, hSw]
+      ring
+    rw [hw, inner_smul_right] at h1
+    linear_combination -h1
+  have hcoef : (σ i : 𝕜) * ⟪e i, w⟫_𝕜 = (Real.sqrt c : 𝕜) * ⟪e i, w⟫_𝕜 := by
+    rcases eq_or_ne (⟪e i, w⟫_𝕜) 0 with h0 | h0
+    · rw [h0, mul_zero, mul_zero]
+    · have hsq : (σ i) ^ 2 = c := by
+        have hz : ((σ i : 𝕜) ^ 2 - (c : 𝕜)) * ⟪e i, w⟫_𝕜 = 0 := by
+          rw [sub_mul]; linear_combination hSSw
+        rcases mul_eq_zero.mp hz with h | h
+        · have : ((σ i) ^ 2 : 𝕜) = (c : 𝕜) := by linear_combination h
+          exact_mod_cast this
+        · exact absurd h h0
+      rw [show Real.sqrt c = σ i by rw [← hsq, Real.sqrt_sq (hσnn i)]]
+  rw [hSw, inner_smul_right, hcoef]
+
+theorem positive_sqrt_unique {T R S : V →ₗ[𝕜] V} (hR : R.IsPositive) (hRT : R ∘ₗ R = T)
+    (hS : S.IsPositive) (hST : S ∘ₗ S = T) : R = S := by
+  have hTs : T.IsSymmetric := by
+    rw [← hRT]; intro x y
+    simp only [LinearMap.comp_apply]
+    rw [hR.isSymmetric, hR.isSymmetric]
+  have hTpos : T.IsPositive := by
+    rw [← hRT]
+    refine ⟨?_, fun x => ?_⟩
+    · intro x y; simp only [LinearMap.comp_apply]; rw [hR.isSymmetric, hR.isSymmetric]
+    · simp only [LinearMap.comp_apply]
+      rw [hR.isSymmetric (R x) x, inner_self_eq_norm_sq_to_K, ← RCLike.ofReal_pow, RCLike.ofReal_re]
+      positivity
+  set n := Module.finrank 𝕜 V
+  set b := hTs.eigenvectorBasis (rfl : Module.finrank 𝕜 V = n) with hb
+  set μ := hTs.eigenvalues (rfl : Module.finrank 𝕜 V = n) with hμ
+  have hμnn : ∀ i, 0 ≤ μ i := by
+    intro i
+    have hev : HasEigenvalue T ((μ i : ℝ) : 𝕜) :=
+      hTs.hasEigenvalue_eigenvalues (rfl : Module.finrank 𝕜 V = n) i
+    have := (eigenvalue_nonneg hTpos hev).1
+    rwa [RCLike.ofReal_re] at this
+  apply b.toBasis.ext
+  intro i
+  simp only [OrthonormalBasis.coe_toBasis]
+  have hwR : (R ∘ₗ R) (b i) = ((μ i : ℝ) : 𝕜) • b i := by
+    rw [hRT]; exact hTs.apply_eigenvectorBasis (rfl : Module.finrank 𝕜 V = n) i
+  have hwS : (S ∘ₗ S) (b i) = ((μ i : ℝ) : 𝕜) • b i := by
+    rw [hST]; exact hTs.apply_eigenvectorBasis (rfl : Module.finrank 𝕜 V = n) i
+  rw [sqrt_eigenvector hR (hμnn i) hwR, sqrt_eigenvector hS (hμnn i) hwS]
 
 /-! # Exercises 7C -/
 

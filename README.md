@@ -84,7 +84,7 @@ the section's exercises.
 | 6C. Orthogonal Complements and Minimization Problems | ✓* | — | — |
 | 7A. Self-Adjoint and Normal Operators | ✓ | — | — |
 | 7B. Spectral Theorem | ✓* | — | — |
-| 7C. Positive Operators | ✓* | — | — |
+| 7C. Positive Operators | ✓ | — | — |
 
 \* Section 6B currently defers Schur's theorem and the orthonormal
 upper-triangularization result (Axler 6.37–6.38); Section 6C defers the
@@ -92,13 +92,8 @@ pseudoinverse (Axler 6.67–6.72, which has no linear-map form in the pinned
 mathlib); and Section 7B proves the real spectral theorem's core (self-adjoint operators
 are orthonormally diagonalizable, via mathlib), the invertible-quadratic lemma
 7.26, and that a self-adjoint operator's minimal polynomial splits (7.27), but
-defers the complex spectral theorem 7.31 (whose textbook proof runs through Schur); and Section 7C
-defines positive operators (mathlib `LinearMap.IsPositive`), proves that `R*R`
-and orthogonal projections are positive and that a positive operator's
-eigenvalues are nonnegative (7.38 (a)⟹(b), (f)⟹(a)), and constructs the positive
-square root (7.38 (d)/(e)) via the spectral eigenbasis, but defers only its
-uniqueness (7.39). Every other numbered result in these sections is stated and
-proved.
+defers the complex spectral theorem 7.31 (whose textbook proof runs through
+Schur). Every other numbered result in these sections is stated and proved.
 
 ## Building
 
