@@ -83,14 +83,11 @@ the section's exercises.
 | 6B. Orthonormal Bases | ✓ | — | — |
 | 6C. Orthogonal Complements and Minimization Problems | ✓ | — | — |
 | 7A. Self-Adjoint and Normal Operators | ✓ | — | — |
-| 7B. Spectral Theorem | ✓* | — | — |
+| 7B. Spectral Theorem | ✓ | — | — |
 | 7C. Positive Operators | ✓ | — | — |
 
-\* Section 7B proves the real spectral theorem's core (self-adjoint operators
-are orthonormally diagonalizable, via mathlib), the invertible-quadratic lemma
-7.26, and that a self-adjoint operator's minimal polynomial splits (7.27), but
-defers the complex spectral theorem 7.31. Every other numbered result in these
-sections is stated and proved.
+Every numbered Axler result in the drafted sections (through Chapter 7C) is
+stated and proved; exercises remain as `sorry`.
 
 ## Building
 

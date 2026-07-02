@@ -1,8 +1,11 @@
 import Mathlib.Analysis.InnerProductSpace.Adjoint
 import Mathlib.Analysis.InnerProductSpace.Spectrum
 import Mathlib.Analysis.InnerProductSpace.Symmetric
+import Mathlib.Analysis.InnerProductSpace.PiL2
 import Mathlib.FieldTheory.Minpoly.Field
 import Mathlib.Algebra.Polynomial.Splits
+import LinearAlgebraDoneRightLean.Section_7A
+import LinearAlgebraDoneRightLean.Section_6B
 import Mathlib.Tactic.Linarith
 import Mathlib.Tactic.Linter.Style
 import CompanionHelper
@@ -115,9 +118,96 @@ theorem spectral_eigenvalues_real (T : V →ₗ[𝕜] V) (hT : LinearMap.IsSymme
 
 For {lit}`𝔽 = ℂ`, an operator {lit}`T` is normal if and only if {lit}`V` has an
 orthonormal basis consisting of eigenvectors of {lit}`T`. Axler's proof runs
-through Schur's theorem (6.38), which is deferred (see
-{module -checked}`LinearAlgebraDoneRightLean.Section_6B`); this result is
-therefore also deferred here. -/
+through Schur's theorem (6.38, from
+{module -checked}`LinearAlgebraDoneRightLean.Section_6B`): a normal operator that
+is upper-triangular with respect to an orthonormal basis is in fact diagonal. -/
+
+/-- A normal operator that is upper-triangular with respect to an orthonormal
+basis {lit}`e` is diagonal: each {lit}`eₖ` is an eigenvector. The proof compares
+{lit}`‖T eₖ‖² = ∑ᵢ ‖⟨eᵢ, T eₖ⟩‖²` (column {lit}`k`) with
+{lit}`‖T* eₖ‖² = ∑ᵢ ‖⟨eₖ, T eᵢ⟩‖²` (row {lit}`k`); equality (7.20) plus an
+induction from the top row forces every strictly-upper entry to vanish. -/
+theorem normal_ut_diagonal {n : ℕ} (T : V →ₗ[𝕜] V) (hN : IsStarNormal T)
+    (e : OrthonormalBasis (Fin n) 𝕜 V)
+    (hUT : ∀ k, T (e k) ∈ Submodule.span 𝕜 (e '' {i | i ≤ k})) :
+    ∀ k, T (e k) = ⟪e k, T (e k)⟫_𝕜 • e k := by
+  set a : Fin n → Fin n → 𝕜 := fun i j => ⟪e i, T (e j)⟫_𝕜 with ha
+  have hUTz : ∀ i j : Fin n, j < i → a i j = 0 := by
+    intro i j hji
+    have hmem : T (e j) ∈ Submodule.span 𝕜 (e '' {l | l ≤ j}) := hUT j
+    have horth : e i ∈ (Submodule.span 𝕜 (e '' {l | l ≤ j}))ᗮ := by
+      rw [Submodule.mem_orthogonal']
+      intro y hy
+      have hle : Submodule.span 𝕜 (e '' {l | l ≤ j}) ≤ (𝕜 ∙ e i)ᗮ := by
+        rw [Submodule.span_le]
+        rintro _ ⟨l, hlj, rfl⟩
+        rw [SetLike.mem_coe, Submodule.mem_orthogonal_singleton_iff_inner_left]
+        exact e.orthonormal.2 (fun h => absurd (h ▸ hlj) (not_le.mpr hji))
+      have hyi := hle hy
+      rw [Submodule.mem_orthogonal_singleton_iff_inner_right] at hyi
+      exact hyi
+    simp only [ha]
+    exact inner_eq_zero_symm.mpr (Submodule.inner_right_of_mem_orthogonal hmem horth)
+  have hParsT : ∀ k, ‖T (e k)‖ ^ 2 = ∑ i, ‖a i k‖ ^ 2 := by
+    intro k
+    simp only [ha]
+    exact (OrthonormalBasis.sum_sq_norm_inner_right e (T (e k))).symm
+  have hParsA : ∀ k, ‖LinearMap.adjoint T (e k)‖ ^ 2 = ∑ i, ‖a k i‖ ^ 2 := by
+    intro k
+    rw [← OrthonormalBasis.sum_sq_norm_inner_right e (LinearMap.adjoint T (e k))]
+    refine Finset.sum_congr rfl fun i _ => ?_
+    simp only [ha]
+    rw [LinearMap.adjoint_inner_right]
+    congr 1
+    exact norm_inner_symm (T (e i)) (e k)
+  have hN2 : ∀ v, ‖T v‖ = ‖LinearMap.adjoint T v‖ := (LADR.Section_7A.normal_iff_norm T).mp hN
+  have hQaux : ∀ m : ℕ, ∀ k : Fin n, k.val = m → ∀ j : Fin n, k < j → a k j = 0 := by
+    intro m
+    induction m using Nat.strong_induction_on with
+    | _ m IH =>
+      intro k hk j hkj
+      have IHk : ∀ i : Fin n, i < k → a i k = 0 := fun i hik =>
+        IH i.val (by rw [← hk]; exact Fin.lt_def.mp hik) i rfl k hik
+      have hcol : ∑ i, ‖a i k‖ ^ 2 = ‖a k k‖ ^ 2 := by
+        rw [Finset.sum_eq_single k]
+        · intro i _ hik
+          rcases lt_or_gt_of_ne hik with h | h
+          · rw [IHk i h, norm_zero]; ring
+          · rw [hUTz i k h, norm_zero]; ring
+        · intro h; exact absurd (Finset.mem_univ k) h
+      have hnorm_eq : ∑ i, ‖a i k‖ ^ 2 = ∑ i, ‖a k i‖ ^ 2 := by
+        rw [← hParsT k, ← hParsA k, hN2 (e k)]
+      have hsum_eq : ∑ i, ‖a k i‖ ^ 2 = ‖a k k‖ ^ 2 := by rw [← hnorm_eq, hcol]
+      have hzero : ∑ i ∈ Finset.univ.erase k, ‖a k i‖ ^ 2 = 0 := by
+        have hae := Finset.add_sum_erase Finset.univ (fun i => ‖a k i‖ ^ 2) (Finset.mem_univ k)
+        rw [hsum_eq] at hae
+        linarith
+      have hjmem : j ∈ Finset.univ.erase k :=
+        Finset.mem_erase.mpr ⟨(ne_of_lt hkj).symm, Finset.mem_univ j⟩
+      have hj0 : ‖a k j‖ ^ 2 = 0 :=
+        (Finset.sum_eq_zero_iff_of_nonneg (fun i _ => by positivity)).mp hzero j hjmem
+      have hjn : ‖a k j‖ = 0 := by nlinarith [norm_nonneg (a k j)]
+      rwa [norm_eq_zero] at hjn
+  have hQ : ∀ k : Fin n, ∀ j : Fin n, k < j → a k j = 0 := fun k => hQaux k.val k rfl
+  intro k
+  have hexp : T (e k) = ∑ i, a i k • e i := by
+    simp only [ha]
+    exact (e.sum_repr' (T (e k))).symm
+  conv_lhs => rw [hexp]
+  rw [Finset.sum_eq_single k (fun i _ hik => by
+        rcases lt_or_gt_of_ne hik with h | h
+        · rw [hQ i k h, zero_smul]
+        · rw [hUTz i k h, zero_smul])
+      (fun h => absurd (Finset.mem_univ k) h)]
+
+/-- 7.31 (Complex spectral theorem) Every normal operator on a finite-dimensional
+complex inner product space has an orthonormal basis of eigenvectors. -/
+theorem complex_spectral {W : Type*} [NormedAddCommGroup W] [InnerProductSpace ℂ W]
+    [FiniteDimensional ℂ W] (T : W →ₗ[ℂ] W) (hN : IsStarNormal T) :
+    ∃ (n : ℕ) (e : OrthonormalBasis (Fin n) ℂ W),
+      ∀ k, T (e k) = ⟪e k, T (e k)⟫_ℂ • e k := by
+  obtain ⟨n, e, hUT⟩ := LADR.Section_6B.exists_orthonormal_upperTriangular_complex T
+  exact ⟨n, e, normal_ut_diagonal T hN e hUT⟩
 
 /-! # Exercises 7B -/
 
