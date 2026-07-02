@@ -81,10 +81,12 @@ the section's exercises.
 | 5E. Commuting Operators | ✓ | — | — |
 | 6A. Inner Products and Norms | ✓ | — | — |
 | 6B. Orthonormal Bases | ✓* | — | — |
+| 6C. Orthogonal Complements and Minimization Problems | ✓* | — | — |
 
 \* Section 6B currently defers Schur's theorem and the orthonormal
-upper-triangularization result (Axler 6.37–6.38); every other numbered result is
-stated and proved.
+upper-triangularization result (Axler 6.37–6.38), and Section 6C defers the
+pseudoinverse (Axler 6.67–6.72, which has no linear-map form in the pinned
+mathlib); every other numbered result in these sections is stated and proved.
 
 ## Building
 
