@@ -1,6 +1,7 @@
 import Mathlib.Analysis.InnerProductSpace.GramSchmidtOrtho
 import Mathlib.Analysis.InnerProductSpace.PiL2
 import Mathlib.Analysis.InnerProductSpace.Dual
+import LinearAlgebraDoneRightLean.Section_5C
 import Mathlib.Tactic.Linarith
 import Mathlib.Tactic.Linter.Style
 import Mathlib.Tactic.Recall
@@ -149,14 +150,104 @@ theorem orthonormal_extends [FiniteDimensional 𝕜 V] {s : Set V}
 /-! 6.37 / 6.38 Upper-triangular matrix with respect to an orthonormal basis,
 and Schur's theorem.
 
-These state that {lit}`T` has an upper-triangular matrix with respect to some
-*orthonormal* basis iff its minimal polynomial is a product of linear factors
-(6.37), and — as a consequence over {lit}`ℂ` — that every operator on a
-finite-dimensional complex inner product space is upper-triangularizable in an
-orthonormal basis (6.38, Schur). They build on the Gram–Schmidt span-preservation
-above (which turns any triangularizing basis into an orthonormal one) together
-with 5.44 from {module -checked}`LinearAlgebraDoneRightLean.Section_5C`. Their
-formalization is deferred. -/
+An operator is *upper-triangular* with respect to an orthonormal basis
+{lit}`e₀, …, eₙ₋₁` when {lit}`T eₖ ∈ span(e₀, …, eₖ)` for each {lit}`k`. Gram–
+Schmidt turns any triangularizing basis (from 5.44 in
+{module -checked}`LinearAlgebraDoneRightLean.Section_5C`) into an orthonormal one
+with the same flag, which stays upper-triangular. -/
+
+section Schur
+
+open Submodule Set InnerProductSpace
+open LADR.Section_2B (IsBasis)
+open LADR.Section_3C (matrixOf)
+open LADR.Section_5C
+
+variable [FiniteDimensional 𝕜 V]
+
+/-- Gram–Schmidt turns a basis into an orthonormal basis with the same flag:
+{lit}`span(e₀, …, eₖ) = span(v₀, …, vₖ)` for every {lit}`k`. -/
+theorem exists_gramSchmidt_flag {n : ℕ} (v : Fin n → V) (hli : LinearIndependent 𝕜 v)
+    (hcard : Module.finrank 𝕜 V = Fintype.card (Fin n)) :
+    ∃ e : OrthonormalBasis (Fin n) 𝕜 V,
+      ∀ k, span 𝕜 (e '' {i | i ≤ k}) = span 𝕜 (v '' {i | i ≤ k}) := by
+  classical
+  have hg_ne : ∀ i, gramSchmidt 𝕜 v i ≠ 0 := fun i => gramSchmidt_ne_zero i hli
+  have hne : ∀ i, gramSchmidtNormed 𝕜 v i ≠ 0 := by
+    intro i
+    rw [gramSchmidtNormed]
+    exact smul_ne_zero (inv_ne_zero (RCLike.ofReal_ne_zero.mpr (norm_ne_zero_iff.mpr (hg_ne i))))
+      (hg_ne i)
+  obtain ⟨e, he_eq⟩ : ∃ e : OrthonormalBasis (Fin n) 𝕜 V,
+      ∀ i, e i = (‖gramSchmidt 𝕜 v i‖⁻¹ : 𝕜) • gramSchmidt 𝕜 v i := by
+    refine ⟨gramSchmidtOrthonormalBasis hcard v, fun i => ?_⟩
+    rw [gramSchmidtOrthonormalBasis_apply hcard (hne i), gramSchmidtNormed]
+  refine ⟨e, fun k => ?_⟩
+  have hspan_e_g : span 𝕜 (e '' {i | i ≤ k}) = span 𝕜 (gramSchmidt 𝕜 v '' {i | i ≤ k}) := by
+    apply le_antisymm <;> rw [span_le]
+    · rintro _ ⟨i, hik, rfl⟩
+      rw [he_eq i]; exact smul_mem _ _ (subset_span ⟨i, hik, rfl⟩)
+    · rintro _ ⟨i, hik, rfl⟩
+      have hgi : gramSchmidt 𝕜 v i = (‖gramSchmidt 𝕜 v i‖ : 𝕜) • e i := by
+        rw [he_eq i, smul_smul, mul_inv_cancel₀
+          (RCLike.ofReal_ne_zero.mpr (norm_ne_zero_iff.mpr (hg_ne i))), one_smul]
+      rw [hgi]; exact smul_mem _ _ (subset_span ⟨i, hik, rfl⟩)
+  rw [hspan_e_g]; exact span_gramSchmidt_Iic (𝕜 := 𝕜) (f := v) (c := k)
+
+/-- A flag {lit}`span(v₀, …, vₖ)` on which {lit}`T` acts triangularly is
+{lit}`T`-invariant. -/
+theorem flag_invariant {n : ℕ} (v : Fin n → V) (T : V →ₗ[𝕜] V)
+    (hflag : ∀ k, T (v k) ∈ span 𝕜 (v '' {i | i ≤ k})) (k : Fin n) :
+    ∀ x ∈ span 𝕜 (v '' {i | i ≤ k}), T x ∈ span 𝕜 (v '' {i | i ≤ k}) := by
+  have hle : span 𝕜 (v '' {i | i ≤ k}) ≤ (span 𝕜 (v '' {i | i ≤ k})).comap T := by
+    rw [span_le]
+    rintro _ ⟨j, hjk, rfl⟩
+    rw [SetLike.mem_coe, Submodule.mem_comap]
+    have hsub : (v '' {i : Fin n | i ≤ j}) ⊆ (v '' {i | i ≤ k}) :=
+      Set.image_mono fun i (hi : i ≤ j) => le_trans hi hjk
+    exact Submodule.span_mono hsub (hflag j)
+  exact fun x hx => hle hx
+
+/-- Schur's theorem (6.38, core form): if {lit}`T` has an upper-triangular matrix
+with respect to some basis, then it has one with respect to an orthonormal basis. -/
+theorem exists_orthonormal_upperTriangular (T : V →ₗ[𝕜] V)
+    (h : ∃ (n : ℕ) (v : Fin n → V) (hv : IsBasis 𝕜 v), IsUpperTriangular (matrixOf hv hv T)) :
+    ∃ (n : ℕ) (e : OrthonormalBasis (Fin n) 𝕜 V),
+      ∀ k, T (e k) ∈ Submodule.span 𝕜 (e '' {i | i ≤ k}) := by
+  classical
+  obtain ⟨n, v, hv, hA⟩ := h
+  have hcoe : (⇑hv.toModuleBasis) = v := funext (IsBasis.toModuleBasis_apply hv)
+  have hli : LinearIndependent 𝕜 v := hcoe ▸ hv.toModuleBasis.linearIndependent
+  have hcard : Module.finrank 𝕜 V = Fintype.card (Fin n) := by
+    rw [Module.finrank_eq_card_basis hv.toModuleBasis, Fintype.card_fin]
+  obtain ⟨e, hspan_gs⟩ := exists_gramSchmidt_flag v hli hcard
+  have hflag : ∀ k, T (v k) ∈ span 𝕜 (v '' {i | i ≤ k}) :=
+    ((tfae_upperTriangular hv T).out 0 2).mp hA
+  have hek_mem : ∀ (k : Fin n), e k ∈ span 𝕜 (v '' {i | i ≤ k}) := by
+    intro k; rw [← hspan_gs k]; exact subset_span ⟨k, le_refl k, rfl⟩
+  refine ⟨n, e, fun k => ?_⟩
+  rw [hspan_gs k]
+  exact flag_invariant v T hflag k (e k) (hek_mem k)
+
+/-- 6.37 (Schur, one direction): if {lit}`minpoly 𝕜 T` is a product of linear
+factors, then {lit}`T` is upper-triangular with respect to an orthonormal basis. -/
+theorem exists_orthonormal_upperTriangular_of_minpoly (T : V →ₗ[𝕜] V)
+    (h : ∃ (m : ℕ) (γ : Fin m → 𝕜),
+      minpoly 𝕜 T = ∏ k, (Polynomial.X - Polynomial.C (γ k))) :
+    ∃ (n : ℕ) (e : OrthonormalBasis (Fin n) 𝕜 V),
+      ∀ k, T (e k) ∈ Submodule.span 𝕜 (e '' {i | i ≤ k}) :=
+  exists_orthonormal_upperTriangular T
+    ((exists_upperTriangular_iff_minpoly_eq_prod T).mpr h)
+
+end Schur
+
+/-- 6.38 (Schur's theorem) Every operator on a finite-dimensional complex inner
+product space is upper-triangular with respect to some orthonormal basis. -/
+theorem exists_orthonormal_upperTriangular_complex {V : Type*} [NormedAddCommGroup V]
+    [InnerProductSpace ℂ V] [FiniteDimensional ℂ V] (T : V →ₗ[ℂ] V) :
+    ∃ (n : ℕ) (e : OrthonormalBasis (Fin n) ℂ V),
+      ∀ k, T (e k) ∈ Submodule.span ℂ (e '' {i | i ≤ k}) :=
+  exists_orthonormal_upperTriangular T (LADR.Section_5C.exists_upperTriangular_complex T)
 
 /-! # Linear Functionals on Inner Product Spaces -/
 

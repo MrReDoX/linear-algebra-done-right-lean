@@ -80,18 +80,17 @@ the section's exercises.
 | 5D. Diagonalizable Operators | ✓ | — | — |
 | 5E. Commuting Operators | ✓ | — | — |
 | 6A. Inner Products and Norms | ✓ | — | — |
-| 6B. Orthonormal Bases | ✓* | — | — |
+| 6B. Orthonormal Bases | ✓ | — | — |
 | 6C. Orthogonal Complements and Minimization Problems | ✓ | — | — |
 | 7A. Self-Adjoint and Normal Operators | ✓ | — | — |
 | 7B. Spectral Theorem | ✓* | — | — |
 | 7C. Positive Operators | ✓ | — | — |
 
-\* Section 6B currently defers Schur's theorem and the orthonormal
-upper-triangularization result (Axler 6.37–6.38); and Section 7B proves the real spectral theorem's core (self-adjoint operators
+\* Section 7B proves the real spectral theorem's core (self-adjoint operators
 are orthonormally diagonalizable, via mathlib), the invertible-quadratic lemma
 7.26, and that a self-adjoint operator's minimal polynomial splits (7.27), but
-defers the complex spectral theorem 7.31 (whose textbook proof runs through
-Schur). Every other numbered result in these sections is stated and proved.
+defers the complex spectral theorem 7.31. Every other numbered result in these
+sections is stated and proved.
 
 ## Building
 
