@@ -82,11 +82,14 @@ the section's exercises.
 | 6A. Inner Products and Norms | ✓ | — | — |
 | 6B. Orthonormal Bases | ✓* | — | — |
 | 6C. Orthogonal Complements and Minimization Problems | ✓* | — | — |
+| 7A. Self-Adjoint and Normal Operators | ✓* | — | — |
 
 \* Section 6B currently defers Schur's theorem and the orthonormal
-upper-triangularization result (Axler 6.37–6.38), and Section 6C defers the
+upper-triangularization result (Axler 6.37–6.38); Section 6C defers the
 pseudoinverse (Axler 6.67–6.72, which has no linear-map form in the pinned
-mathlib); every other numbered result in these sections is stated and proved.
+mathlib); and Section 7A develops the adjoint and self-adjoint basics but defers
+the deeper normal-operator results (Axler 7.9, 7.14, 7.16, 7.20–7.23). Every
+other numbered result in these sections is stated and proved.
 
 ## Building
 

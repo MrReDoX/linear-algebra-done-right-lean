@@ -19,6 +19,7 @@ import LinearAlgebraDoneRightLean.Section_5E
 import LinearAlgebraDoneRightLean.Section_6A
 import LinearAlgebraDoneRightLean.Section_6B
 import LinearAlgebraDoneRightLean.Section_6C
+import LinearAlgebraDoneRightLean.Section_7A
 
 /-!
 # Lean Companion to Axler's *Linear Algebra Done Right* (4e)
@@ -56,4 +57,5 @@ point of an exercise, the exercise is marked with {lit}`@[avoiding …]` from
 - {module}`LinearAlgebraDoneRightLean.Section_6A` — Inner Products and Norms
 - {module}`LinearAlgebraDoneRightLean.Section_6B` — Orthonormal Bases
 - {module}`LinearAlgebraDoneRightLean.Section_6C` — Orthogonal Complements and Minimization Problems
+- {module}`LinearAlgebraDoneRightLean.Section_7A` — Self-Adjoint and Normal Operators
 -/
