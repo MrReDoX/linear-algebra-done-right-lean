@@ -90,6 +90,7 @@ the section's exercises.
 | 7F. Consequences of Singular Value Decomposition | ✓* | — | — |
 | 8A. Generalized Eigenvectors and Nilpotent Operators | ✓* | — | — |
 | 8B. Generalized Eigenspace Decomposition | ✓* | — | — |
+| 8C. Consequences of Generalized Eigenspace Decomposition | ✓* | — | — |
 | 8D. Trace | ✓ | — | — |
 | 9A. Bilinear Forms and Quadratic Forms | ✓ | — | — |
 | 9B. Alternating Multilinear Forms | ✓ | — | — |
