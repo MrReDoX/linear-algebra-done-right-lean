@@ -97,8 +97,23 @@ the section's exercises.
 | 9C. Determinants | ✓* | — | — |
 | 9D. Tensor Products | ✓* | — | — |
 
-Every numbered Axler result in the drafted sections (through Chapter 7C) is
-stated and proved; exercises remain as `sorry`.
+The whole book (Chapters 1–9) is now drafted. In every section, exercises
+remain as `sorry` and each numbered Axler result is either stated and proved or,
+where it needs machinery genuinely absent from the pinned mathlib, stated with
+an explicit prose note explaining the deferral — there are no silent `sorry`s on
+numbered results.
+
+\* A `✓*` marks a section that prose-defers one or more numbered results. These
+deferrals cluster around a few missing pieces: the *matrix-of-a-basis normal-form
+theory* (strictly-upper-triangular nilpotents, block-diagonal and Jordan forms —
+8A 8.18(c), 8B 8.31/8.35–8.38, 8C 8.41/8.44–8.46); *matrix factorizations* (QR
+and Cholesky in 7D, the matrix SVD `A = B D C*` and pseudoinverse SVD in 7E, best
+rank-`k` approximation and the operator-norm ↔ largest-singular-value bridge in
+7F); *inner products on tensor products* and the dimension theory of
+`PiTensorProduct` (9D 9.80–9.83, 9.87/9.89/9.90); *measure-theoretic volume*
+(7F 7.108–7.111, and the volume/determinant results in 9C 9.58–9.61); and a
+handful of purely numeric worked examples. The Chapters 1–7C sections carry no
+`✓*` — every numbered result there is fully proved.
 
 ## Building
 
