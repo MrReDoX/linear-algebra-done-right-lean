@@ -88,6 +88,7 @@ the section's exercises.
 | 7D. Isometries, Unitary Operators, and Matrix Factorization | ✓* | — | — |
 | 8A. Generalized Eigenvectors and Nilpotent Operators | ✓* | — | — |
 | 8D. Trace | ✓ | — | — |
+| 9A. Bilinear Forms and Quadratic Forms | ✓ | — | — |
 | 9B. Alternating Multilinear Forms | ✓ | — | — |
 | 9C. Determinants | ✓* | — | — |
 
