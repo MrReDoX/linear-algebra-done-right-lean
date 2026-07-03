@@ -91,6 +91,7 @@ the section's exercises.
 | 9A. Bilinear Forms and Quadratic Forms | ✓ | — | — |
 | 9B. Alternating Multilinear Forms | ✓ | — | — |
 | 9C. Determinants | ✓* | — | — |
+| 9D. Tensor Products | ✓* | — | — |
 
 Every numbered Axler result in the drafted sections (through Chapter 7C) is
 stated and proved; exercises remain as `sorry`.

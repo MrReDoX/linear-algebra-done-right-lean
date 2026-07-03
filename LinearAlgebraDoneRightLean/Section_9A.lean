@@ -50,7 +50,7 @@ Axler's definition are exactly the linearity of {lit}`B` (first slot) and of eac
 
 example : LinearMap.BilinForm F V = (V →ₗ[F] V →ₗ[F] F) := rfl
 
-/-- Linearity in the first slot: {lit}`v ↦ β(v, u)`. -/
+/-! Linearity in the first slot: {lit}`v ↦ β(v, u)`. -/
 example (B : BilinForm F V) (u : V) (v w : V) (a : F) :
     B (v + w) u = B v u + B w u ∧ B (a • v) u = a • B v u := by
   constructor
@@ -224,10 +224,11 @@ simultaneously); and (a) ⟺ (d) as the existence of a diagonalizing basis. -/
 section Matrix
 variable {ι : Type*} [Fintype ι] [DecidableEq ι]
 
-/-- (a) ⟺ (b) ⟺ (c): {lit}`ρ` is a symmetric bilinear form iff its matrix with
+/-! (a) ⟺ (b) ⟺ (c): {lit}`ρ` is a symmetric bilinear form iff its matrix with
 respect to a basis {lit}`b` is a symmetric matrix. Since {lit}`b` is arbitrary,
 this gives the equivalence of "symmetric with respect to every basis" and
 "symmetric with respect to some basis". -/
+
 omit [Invertible (2 : F)] in
 theorem isSymm_iff_toMatrix_isSymm (b : Basis ι F V) (B : BilinForm F V) :
     B.IsSymm ↔ (LinearMap.BilinForm.toMatrix b B).IsSymm := by
@@ -302,12 +303,14 @@ For {lit}`φ, τ ∈ V'`, the form {lit}`α(u, w) = φ(u)τ(w) − φ(w)τ(u)` i
 def altOfDualPair (φ τ : Module.Dual F V) : BilinForm F V :=
   bilinOfDualPair φ τ - bilinOfDualPair τ φ
 
+omit [Invertible (2 : F)] in
 theorem altOfDualPair_apply (φ τ : Module.Dual F V) (u w : V) :
     altOfDualPair φ τ u w = φ u * τ w - φ w * τ u := by
   rw [altOfDualPair, LinearMap.sub_apply, LinearMap.sub_apply, bilinOfDualPair_apply,
     bilinOfDualPair_apply]
   ring
 
+omit [Invertible (2 : F)] in
 theorem altOfDualPair_isAlt (φ τ : Module.Dual F V) : (altOfDualPair φ τ).IsAlt := by
   intro v
   rw [altOfDualPair_apply, sub_self]

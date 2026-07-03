@@ -119,6 +119,7 @@ theorem isometry_iff_adjoint_comp (S : V →ₗ[𝕜] W) :
     IsIsometry S ↔ LinearMap.adjoint S ∘ₗ S = 1 :=
   (isometry_iff_inner S).trans (inner_iff_adjoint_comp S)
 
+omit [FiniteDimensional 𝕜 V] [FiniteDimensional 𝕜 W] in
 /-- (a) ⟺ (d): {lit}`S` is an isometry iff it carries some (hence any) orthonormal
 basis to an orthonormal list. -/
 theorem isometry_iff_orthonormal_image {ι : Type*} [Fintype ι] [DecidableEq ι]
@@ -315,7 +316,7 @@ theorem isUnitaryMatrix_iff_conjTranspose (Q : Matrix n n 𝕜) :
 If {lit}`A` is a square matrix with linearly independent columns, then
 {lit}`A = QR` with {lit}`Q` unitary and {lit}`R` upper triangular with positive
 diagonal, uniquely. The existence uses Gram–Schmidt applied to the columns of
-{lit}`A` (mathlib: {name}`gramSchmidtOrthonormalBasis`), reading off
+{lit}`A` (mathlib: {lit}`gramSchmidtOrthonormalBasis`), reading off
 {lit}`Rⱼₖ = ⟨vₖ, eⱼ⟩`; uniqueness uses the uniqueness of the Gram–Schmidt lists.
 
 This result is **deferred**: mathlib pins no packaged QR factorization, and

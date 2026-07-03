@@ -43,7 +43,7 @@ open Polynomial (aeval)
 variable {F : Type*} [Field F]
   {V : Type*} [AddCommGroup V] [Module F V]
 
-/-! ## Null Spaces of Powers of an Operator -/
+/-! # Null Spaces of Powers of an Operator -/
 
 /-! 8.1 Sequence of increasing null spaces.
 
@@ -147,7 +147,7 @@ example : IsCompl (ker ((T_8_6 ℝ) ^ 3)) (range ((T_8_6 ℝ) ^ 3)) := by
   have hdim : finrank ℝ (Fin 3 → ℝ) = 3 := by simp
   rwa [hdim] at h
 
-/-! ## Generalized Eigenvectors -/
+/-! # Generalized Eigenvectors -/
 
 /-! 8.8 Definition: generalized eigenvector.
 
@@ -267,7 +267,7 @@ theorem generalizedEigenvectors_linearIndependent (T : V →ₗ[F] V) {m : ℕ}
   have hcomp := (independent_genEigenspace T ⊤).comp hlam
   exact hcomp.linearIndependent _ hv_mem hv_ne
 
-/-! ## Nilpotent Operators -/
+/-! # Nilpotent Operators -/
 
 /-! 8.14 Definition: nilpotent.
 
