@@ -85,7 +85,9 @@ the section's exercises.
 | 7A. Self-Adjoint and Normal Operators | ✓ | — | — |
 | 7B. Spectral Theorem | ✓ | — | — |
 | 7C. Positive Operators | ✓ | — | — |
+| 8D. Trace | ✓ | — | — |
 | 9B. Alternating Multilinear Forms | ✓ | — | — |
+| 9C. Determinants | ✓* | — | — |
 
 Every numbered Axler result in the drafted sections (through Chapter 7C) is
 stated and proved; exercises remain as `sorry`.
