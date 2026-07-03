@@ -85,6 +85,7 @@ the section's exercises.
 | 7A. Self-Adjoint and Normal Operators | ✓ | — | — |
 | 7B. Spectral Theorem | ✓ | — | — |
 | 7C. Positive Operators | ✓ | — | — |
+| 7D. Isometries, Unitary Operators, and Matrix Factorization | ✓* | — | — |
 | 8A. Generalized Eigenvectors and Nilpotent Operators | ✓* | — | — |
 | 8D. Trace | ✓ | — | — |
 | 9B. Alternating Multilinear Forms | ✓ | — | — |

@@ -22,6 +22,7 @@ import LinearAlgebraDoneRightLean.Section_6C
 import LinearAlgebraDoneRightLean.Section_7A
 import LinearAlgebraDoneRightLean.Section_7B
 import LinearAlgebraDoneRightLean.Section_7C
+import LinearAlgebraDoneRightLean.Section_7D
 import LinearAlgebraDoneRightLean.Section_8A
 import LinearAlgebraDoneRightLean.Section_8D
 import LinearAlgebraDoneRightLean.Section_9B
