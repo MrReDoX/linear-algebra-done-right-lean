@@ -67,59 +67,99 @@ example (S T : V →ₗ[F] V) : (S ∘ₗ T = T ∘ₗ S) ↔ Commute S T := by
   rw [Commute, SemiconjBy]
   exact Iff.rfl
 
+-- Likewise for square matrices: {lit}`A, B` commute iff {lit}`AB = BA`.
+example {n : Type*} [Fintype n] [DecidableEq n] (A B : Matrix n n F) :
+    (A * B = B * A) ↔ Commute A B := by
+  rw [Commute, SemiconjBy]
+
 -- {lit}`λI` commutes with every operator, and {lit}`p(T)` commutes with
 -- {lit}`q(T)` (5.17).
 example (T : V →ₗ[F] V) (lam : F) :
-    (lam • LinearMap.id : V →ₗ[F] V) ∘ₗ T = T ∘ₗ (lam • LinearMap.id) := by
+    Commute (lam • LinearMap.id : V →ₗ[F] V) T := by
+  rw [Commute, SemiconjBy]
   ext v
   simp
 
 example (T : V →ₗ[F] V) (p q : Polynomial F) :
-    aeval T p ∘ₗ aeval T q = aeval T q ∘ₗ aeval T p :=
+    Commute (aeval T p) (aeval T q) :=
   LADR.Section_5A.aeval_comp_comm T p q
 
-/-! 5.72/5.73 Example (not formalized): the partial differentiation
-operators {lit}`∂/∂x` and {lit}`∂/∂y` on {lit}`𝒫ₘ(ℝ²)` commute, since mixed
-partial derivatives of polynomials agree. (See Exercise 5E.8.) -/
+/-! 5.72/5.73 Example: the partial differentiation operators {lit}`∂/∂x` and
+{lit}`∂/∂y` commute, since mixed partial derivatives of polynomials agree
+(equality of mixed partials, Clairaut). We formalize this on the full
+polynomial ring {lit}`ℝ[x, y]` (indices {lit}`0, 1` of
+{lit}`MvPolynomial (Fin 2) ℝ`), which subsumes the claim on each finite-degree
+subspace {lit}`𝒫ₘ(ℝ²)`. (See Exercise 5E.8.) -/
+
+theorem pderiv_comm {σ : Type*} {R : Type*} [CommSemiring R] (i j : σ)
+    (p : MvPolynomial σ R) :
+    MvPolynomial.pderiv i (MvPolynomial.pderiv j p)
+      = MvPolynomial.pderiv j (MvPolynomial.pderiv i p) := by
+  induction p using MvPolynomial.induction_on with
+  | C a => simp
+  | add p q hp hq => simp [hp, hq]
+  | mul_X p n ih =>
+    -- The second partial derivative of a single variable {lit}`Xₙ` vanishes.
+    have hX : ∀ a b : σ,
+        MvPolynomial.pderiv a (MvPolynomial.pderiv b (MvPolynomial.X n))
+          = (0 : MvPolynomial σ R) := by
+      intro a b
+      rcases eq_or_ne n b with rfl | h
+      · rw [MvPolynomial.pderiv_X_self]; simp
+      · rw [MvPolynomial.pderiv_X_of_ne h]; simp
+    simp only [map_add, MvPolynomial.pderiv_mul, hX, ih, mul_zero, add_zero]
+    ring
+
+-- {lit}`∂/∂x` and {lit}`∂/∂y` on {lit}`ℝ[x, y]` commute as operators.
+example : Commute
+    ((MvPolynomial.pderiv (0 : Fin 2)).toLinearMap :
+      MvPolynomial (Fin 2) ℝ →ₗ[ℝ] MvPolynomial (Fin 2) ℝ)
+    (MvPolynomial.pderiv (1 : Fin 2)).toLinearMap := by
+  rw [Commute, SemiconjBy]
+  apply LinearMap.ext
+  intro p
+  simpa using pderiv_comm (0 : Fin 2) 1 p
 
 /-! 5.74 Commuting operators correspond to commuting matrices. -/
 
 theorem commute_iff_matrixOf_commute {n : ℕ} {v : Fin n → V}
     (hv : IsBasis F v) (S T : V →ₗ[F] V) :
-    S ∘ₗ T = T ∘ₗ S ↔
-      matrixOf hv hv S * matrixOf hv hv T =
-        matrixOf hv hv T * matrixOf hv hv S := by
+    Commute S T ↔
+      Commute (matrixOf hv hv S) (matrixOf hv hv T) := by
+  repeat rw [Commute, SemiconjBy]
   constructor
   · intro h
-    rw [← matrixOf_comp hv hv hv S T, ← matrixOf_comp hv hv hv T S, h]
+    rw [← matrixOf_comp hv hv hv S T, ← matrixOf_comp hv hv hv T S]
+    have : S ∘ₗ T = T ∘ₗ S := by exact h
+    rw [this]
   · intro h
     have hinj : Function.Injective
         (LinearMap.toMatrix hv.toModuleBasis hv.toModuleBasis) :=
       (LinearMap.toMatrix hv.toModuleBasis hv.toModuleBasis).injective
     apply hinj
-    have h1 : LinearMap.toMatrix hv.toModuleBasis hv.toModuleBasis (S ∘ₗ T) =
+    have h1 : LinearMap.toMatrix hv.toModuleBasis hv.toModuleBasis (S * T) =
         matrixOf hv hv S * matrixOf hv hv T := matrixOf_comp hv hv hv S T
-    have h2 : LinearMap.toMatrix hv.toModuleBasis hv.toModuleBasis (T ∘ₗ S) =
+    have h2 : LinearMap.toMatrix hv.toModuleBasis hv.toModuleBasis (T * S) =
         matrixOf hv hv T * matrixOf hv hv S := matrixOf_comp hv hv hv T S
     rw [h1, h2, h]
 
 /-! 5.75 Eigenspaces are invariant under commuting operators. -/
 
 theorem eigenspace_invariant_of_commute (S T : V →ₗ[F] V)
-    (hcomm : S ∘ₗ T = T ∘ₗ S) (lam : F) :
+    (hcomm : Commute S T) (lam : F) :
     InvariantUnder T (Module.End.eigenspace S lam) := by
   intro v hv
   rw [Module.End.mem_eigenspace_iff] at hv ⊢
   -- {lit}`S(Tv) = T(Sv) = T(λv) = λ(Tv)`.
   have h := LinearMap.congr_fun hcomm v
-  rw [LinearMap.comp_apply, LinearMap.comp_apply, hv, map_smul] at h
+  rw [Module.End.mul_apply, Module.End.mul_apply, hv, map_smul] at h
   exact h
 
 /-! 5.76 Simultaneous diagonalizability is equivalent to commutativity (for
 two diagonalizable operators). -/
 
 private lemma mul_comm_of_isDiag {n : ℕ} {A B : Matrix (Fin n) (Fin n) F}
-    (hA : A.IsDiag) (hB : B.IsDiag) : A * B = B * A := by
+    (hA : A.IsDiag) (hB : B.IsDiag) : Commute A B := by
   ext i j
   rw [Matrix.mul_apply, Matrix.mul_apply]
   rcases eq_or_ne i j with rfl | hij
@@ -141,7 +181,7 @@ private lemma mul_comm_of_isDiag {n : ℕ} {A B : Matrix (Fin n) (Fin n) F}
 
 theorem commute_iff_simultaneously_diagonalizable [Finite F V]
     (S T : V →ₗ[F] V) (hS : IsDiagonalizable S) (hT : IsDiagonalizable T) :
-    S ∘ₗ T = T ∘ₗ S ↔
+    Commute S T ↔
       ∃ (n : ℕ) (v : Fin n → V) (hv : IsBasis F v),
         (matrixOf hv hv S).IsDiag ∧ (matrixOf hv hv T).IsDiag := by
   constructor
@@ -226,9 +266,9 @@ has a common eigenvector. -/
 
 theorem exists_common_eigenvector {V : Type*} [AddCommGroup V] [Module ℂ V]
     [Finite ℂ V] [Nontrivial V] (S T : V →ₗ[ℂ] V)
-    (hcomm : S ∘ₗ T = T ∘ₗ S) :
-    ∃ v : V, v ≠ 0 ∧ (∃ lam : ℂ, S v = lam • v) ∧
-      ∃ mu : ℂ, T v = mu • v := by
+    (hcomm : Commute S T) :
+    ∃ v : V, (∃ lam : ℂ, HasEigenvector S lam v) ∧
+      ∃ mu : ℂ, HasEigenvector T mu v := by
   -- {lit}`S` has an eigenvalue {lit}`λ` (5.19); the eigenspace
   -- {lit}`E(λ, S)` is invariant under {lit}`T` (5.75), so {lit}`T`
   -- restricted to it has an eigenvector (5.19 again).
@@ -241,14 +281,25 @@ theorem exists_common_eigenvector {V : Type*} [AddCommGroup V] [Module ℂ V]
     eigenspace_invariant_of_commute S T hcomm lam
   obtain ⟨nu, hnu⟩ := LADR.Section_5B.exists_eigenvalue hinv.restrict
   obtain ⟨u, hu_ne, hu_eq⟩ := Module.End.hasEigenvalue_iff_exists.mp hnu
-  refine ⟨(u : V), fun h => hu_ne (Subtype.ext h),
-    ⟨lam, Module.End.mem_eigenspace_iff.mp u.2⟩, ⟨nu, ?_⟩⟩
-  have h := congrArg Subtype.val hu_eq
-  rwa [Submodule.coe_smul, hinv.restrict_apply] at h
+  have hv_ne : (u : V) ≠ 0 := fun h => hu_ne (Subtype.ext h)
+  have hTu : T (u : V) = nu • (u : V) := by
+    have h := congrArg Subtype.val hu_eq
+    rwa [Submodule.coe_smul, hinv.restrict_apply] at h
+  exact ⟨(u : V), ⟨lam, u.2, hv_ne⟩,
+    ⟨nu, Module.End.mem_eigenspace_iff.mpr hTu, hv_ne⟩⟩
 
-/-! 5.79 Example (not formalized): the partial differentiation operators on
-{lit}`𝒫ₘ(ℝ², ℂ)` have the nonzero constant functions as their common
-eigenvectors, as promised by 5.78. -/
+/-! 5.79 Example: the partial differentiation operators on {lit}`𝒫ₘ(ℝ², ℂ)`
+have the nonzero constant functions as their common eigenvectors, as promised by
+5.78. Each {lit}`∂/∂xᵢ` annihilates a constant, so a nonzero constant is a
+common eigenvector with eigenvalue {lit}`0`. -/
+
+example (c : ℂ) (hc : c ≠ 0) :
+    HasEigenvector (MvPolynomial.pderiv (0 : Fin 2)).toLinearMap 0
+        (MvPolynomial.C c : MvPolynomial (Fin 2) ℂ) ∧
+      HasEigenvector (MvPolynomial.pderiv (1 : Fin 2)).toLinearMap 0
+        (MvPolynomial.C c : MvPolynomial (Fin 2) ℂ) := by
+  constructor <;>
+    exact ⟨Module.End.mem_eigenspace_iff.mpr (by simp), by simpa using hc⟩
 
 /-! 5.80 Commuting operators are simultaneously upper triangularizable
 (over {lit}`ℂ`). Proof by induction on {lit}`dim V`, using a common
@@ -257,7 +308,7 @@ eigenvector (5.78) and the quotient by its span. -/
 private lemma simul_upperTriangular_aux :
     ∀ (N : ℕ) (W : Type u) (_ : AddCommGroup W),
       ∀ (_ : Module ℂ W) (_ : Module.Finite ℂ W), finrank ℂ W = N →
-      ∀ S T : W →ₗ[ℂ] W, S ∘ₗ T = T ∘ₗ S →
+      ∀ S T : W →ₗ[ℂ] W, Commute S T →
       ∃ (n : ℕ) (v : Fin n → W) (hv : IsBasis ℂ v),
         IsUpperTriangular (matrixOf hv hv S) ∧
           IsUpperTriangular (matrixOf hv hv T) := by
@@ -282,8 +333,11 @@ private lemma simul_upperTriangular_aux :
         exact j.elim0
     · have : Nontrivial W :=
         Module.nontrivial_of_finrank_pos (R := ℂ) (by omega)
-      obtain ⟨v₁, hv₁_ne, ⟨lamS, hlamS⟩, ⟨lamT, hlamT⟩⟩ :=
+      obtain ⟨v₁, ⟨lamS, hSv⟩, ⟨lamT, hTv⟩⟩ :=
         exists_common_eigenvector S T hcomm
+      have hv₁_ne : v₁ ≠ 0 := hSv.2
+      have hlamS : S v₁ = lamS • v₁ := Module.End.mem_eigenspace_iff.mp hSv.1
+      have hlamT : T v₁ = lamT • v₁ := Module.End.mem_eigenspace_iff.mp hTv.1
       set U : Submodule ℂ W := Submodule.span ℂ {v₁} with hU_def
       have hU_rank : finrank ℂ U = 1 := finrank_span_singleton hv₁_ne
       have hUS_inv : InvariantUnder S U := by
@@ -305,7 +359,7 @@ private lemma simul_upperTriangular_aux :
         rw [LinearMap.comp_apply, LinearMap.comp_apply, quotOp_mkQ,
           quotOp_mkQ, quotOp_mkQ, quotOp_mkQ]
         have h := LinearMap.congr_fun hcomm y
-        simp only [LinearMap.comp_apply] at h
+        simp only [Module.End.mul_apply] at h
         rw [h]
       have hquot_rank : finrank ℂ (W ⧸ U) = N - 1 := by
         rw [LADR.Section_3E.finrank_quotient U, hW, hU_rank]
@@ -404,7 +458,7 @@ private lemma simul_upperTriangular_aux :
 
 theorem exists_simultaneous_upperTriangular {V : Type u} [AddCommGroup V]
     [Module ℂ V] [Finite ℂ V] (S T : V →ₗ[ℂ] V)
-    (hcomm : S ∘ₗ T = T ∘ₗ S) :
+    (hcomm : Commute S T) :
     ∃ (n : ℕ) (v : Fin n → V) (hv : IsBasis ℂ v),
       IsUpperTriangular (matrixOf hv hv S) ∧
         IsUpperTriangular (matrixOf hv hv T) :=
@@ -453,7 +507,7 @@ private lemma matrixOf_add {n : ℕ} {v : Fin n → V} (hv : IsBasis F v)
 
 theorem eigenvalue_add_of_commute {V : Type u} [AddCommGroup V]
     [Module ℂ V] [Finite ℂ V] (S T : V →ₗ[ℂ] V)
-    (hcomm : S ∘ₗ T = T ∘ₗ S) (alpha : ℂ)
+    (hcomm : Commute S T) (alpha : ℂ)
     (h : HasEigenvalue (S + T) alpha) :
     ∃ lam mu : ℂ, HasEigenvalue S lam ∧ HasEigenvalue T mu ∧
       alpha = lam + mu := by
@@ -469,7 +523,7 @@ theorem eigenvalue_add_of_commute {V : Type u} [AddCommGroup V]
 
 theorem eigenvalue_mul_of_commute {V : Type u} [AddCommGroup V]
     [Module ℂ V] [Finite ℂ V] (S T : V →ₗ[ℂ] V)
-    (hcomm : S ∘ₗ T = T ∘ₗ S) (alpha : ℂ)
+    (hcomm : Commute S T) (alpha : ℂ)
     (h : HasEigenvalue (S ∘ₗ T) alpha) :
     ∃ lam mu : ℂ, HasEigenvalue S lam ∧ HasEigenvalue T mu ∧
       alpha = lam * mu := by
@@ -489,7 +543,7 @@ theorem eigenvalue_mul_of_commute {V : Type u} [AddCommGroup V]
 
 /-- 5E.1 -/
 theorem exercise_5E_1 :
-    ∃ S T : (Fin 4 → ℝ) →ₗ[ℝ] (Fin 4 → ℝ), S ∘ₗ T = T ∘ₗ S ∧
+    ∃ S T : (Fin 4 → ℝ) →ₗ[ℝ] (Fin 4 → ℝ), Commute S T ∧
       (∃ U : Submodule ℝ (Fin 4 → ℝ),
         InvariantUnder S U ∧ ¬ InvariantUnder T U) ∧
       (∃ W : Submodule ℝ (Fin 4 → ℝ),
@@ -497,16 +551,19 @@ theorem exercise_5E_1 :
   sorry
 
 /-- 5E.2 A family of diagonalizable operators is simultaneously
-diagonalizable iff its members pairwise commute. -/
+diagonalizable iff its members pairwise commute. The set {lit}`𝒮` may be
+arbitrary (possibly infinite). We assume {lit}`V` is finite-dimensional,
+matching the standing hypothesis of the neighbouring exercise 5E.9. Extends
+5.76 (the two-operator case). -/
 theorem exercise_5E_2 [Finite F V] (𝒮 : Set (V →ₗ[F] V))
     (hdiag : ∀ E ∈ 𝒮, IsDiagonalizable E) :
     (∃ (n : ℕ) (v : Fin n → V) (hv : IsBasis F v),
       ∀ E ∈ 𝒮, (matrixOf hv hv E).IsDiag) ↔
-    (∀ E ∈ 𝒮, ∀ E' ∈ 𝒮, E ∘ₗ E' = E' ∘ₗ E) := by
+    (∀ E ∈ 𝒮, ∀ E' ∈ 𝒮, Commute E E') := by
   sorry
 
 /-- 5E.3 -/
-theorem exercise_5E_3 (S T : V →ₗ[F] V) (hcomm : S ∘ₗ T = T ∘ₗ S)
+theorem exercise_5E_3 (S T : V →ₗ[F] V) (hcomm : Commute S T)
     (p : Polynomial F) :
     InvariantUnder T (ker (aeval S p)) ∧
       InvariantUnder T (range (aeval S p)) := by
@@ -514,26 +571,25 @@ theorem exercise_5E_3 (S T : V →ₗ[F] V) (hcomm : S ∘ₗ T = T ∘ₗ S)
 
 /-- 5E.4 Prove or give a counterexample: if {lit}`A` is diagonal and
 {lit}`B` is upper triangular (of the same size), then {lit}`A` and {lit}`B`
-commute. (Stated for {lit}`2 × 2` real matrices.) -/
+commute. Stated for real matrices of arbitrary (unspecified) size. -/
 def exercise_5E_4 :
-    Decidable (∀ A B : Matrix (Fin 2) (Fin 2) ℝ,
-      A.IsDiag → IsUpperTriangular B → A * B = B * A) := by
+    Decidable (∀ (n : ℕ) (A B : Matrix (Fin n) (Fin n) ℝ),
+      A.IsDiag → IsUpperTriangular B → Commute A B) := by
   -- first line should be `apply isTrue` or `apply isFalse`
   sorry
 
 /-- 5E.5 A pair of operators commutes iff their dual operators commute. -/
 theorem exercise_5E_5 [Finite F V] (S T : V →ₗ[F] V) :
-    S ∘ₗ T = T ∘ₗ S ↔
-      S.dualMap ∘ₗ T.dualMap = T.dualMap ∘ₗ S.dualMap := by
+    Commute S T ↔ Commute S.dualMap T.dualMap := by
   sorry
 
 /-- 5E.6 -/
 theorem exercise_5E_6 {V : Type*} [AddCommGroup V] [Module ℂ V]
     [Finite ℂ V] [Nontrivial V] (S T : V →ₗ[ℂ] V)
-    (hcomm : S ∘ₗ T = T ∘ₗ S) :
-    ∃ alpha lam : ℂ,
-      range (S - alpha • (LinearMap.id : V →ₗ[ℂ] V)) ⊔
-        range (T - lam • (LinearMap.id : V →ₗ[ℂ] V)) ≠ ⊤ := by
+    (hcomm : Commute S T) :
+    ∃ α γ : ℂ,
+      range (S - α • (LinearMap.id : V →ₗ[ℂ] V)) ⊔
+        range (T - γ • (LinearMap.id : V →ₗ[ℂ] V)) ≠ ⊤ := by
   sorry
 
 /-- 5E.7 If {lit}`S` is diagonalizable and {lit}`T` commutes with {lit}`S`,
@@ -541,7 +597,7 @@ then there is a basis with respect to which {lit}`S` is diagonal and
 {lit}`T` is upper triangular. -/
 theorem exercise_5E_7 {V : Type*} [AddCommGroup V] [Module ℂ V]
     [Finite ℂ V] (S T : V →ₗ[ℂ] V) (hS : IsDiagonalizable S)
-    (hcomm : S ∘ₗ T = T ∘ₗ S) :
+    (hcomm : Commute S T) :
     ∃ (n : ℕ) (v : Fin n → V) (hv : IsBasis ℂ v),
       (matrixOf hv hv S).IsDiag ∧ IsUpperTriangular (matrixOf hv hv T) := by
   sorry
@@ -568,28 +624,28 @@ operators on a finite-dimensional nonzero complex vector space, there is a
 common eigenvector. -/
 theorem exercise_5E_9a {V : Type*} [AddCommGroup V] [Module ℂ V]
     [Finite ℂ V] [Nontrivial V] (𝒮 : Set (V →ₗ[ℂ] V))
-    (hcomm : ∀ S ∈ 𝒮, ∀ T ∈ 𝒮, S ∘ₗ T = T ∘ₗ S) :
-    ∃ v : V, v ≠ 0 ∧ ∀ S ∈ 𝒮, ∃ lam : ℂ, S v = lam • v := by
+    (hcomm : ∀ S ∈ 𝒮, ∀ T ∈ 𝒮, Commute S T) :
+    ∃ v : V, v ≠ 0 ∧ ∀ S ∈ 𝒮, ∃ γ : ℂ, S v = γ • v := by
   sorry
 
 /-- 5E.9 (b) …and a basis with respect to which every member of the family
 has an upper-triangular matrix. -/
 theorem exercise_5E_9b {V : Type*} [AddCommGroup V] [Module ℂ V]
     [Finite ℂ V] (𝒮 : Set (V →ₗ[ℂ] V))
-    (hcomm : ∀ S ∈ 𝒮, ∀ T ∈ 𝒮, S ∘ₗ T = T ∘ₗ S) :
+    (hcomm : ∀ S ∈ 𝒮, ∀ T ∈ 𝒮, Commute S T) :
     ∃ (n : ℕ) (v : Fin n → V) (hv : IsBasis ℂ v),
       ∀ S ∈ 𝒮, IsUpperTriangular (matrixOf hv hv S) := by
   sorry
 
 /-- 5E.10 5.81 fails on real vector spaces. -/
 theorem exercise_5E_10 :
-    ∃ S T : (Fin 2 → ℝ) →ₗ[ℝ] (Fin 2 → ℝ), S ∘ₗ T = T ∘ₗ S ∧
-      (∃ alpha : ℝ, HasEigenvalue (S + T) alpha ∧
-        ¬ ∃ lam mu : ℝ, HasEigenvalue S lam ∧ HasEigenvalue T mu ∧
-          alpha = lam + mu) ∧
-      (∃ beta : ℝ, HasEigenvalue (S ∘ₗ T) beta ∧
-        ¬ ∃ lam mu : ℝ, HasEigenvalue S lam ∧ HasEigenvalue T mu ∧
-          beta = lam * mu) := by
+    ∃ S T : (Fin 2 → ℝ) →ₗ[ℝ] (Fin 2 → ℝ), Commute S T ∧
+      (∃ α : ℝ, HasEigenvalue (S + T) α ∧
+        ¬ ∃ γ μ : ℝ, HasEigenvalue S γ ∧ HasEigenvalue T μ ∧
+          α = γ + μ) ∧
+      (∃ β : ℝ, HasEigenvalue (S ∘ₗ T) β ∧
+        ¬ ∃ γ μ : ℝ, HasEigenvalue S γ ∧ HasEigenvalue T μ ∧
+          β = γ * μ) := by
   sorry
 
 end LADR.Section_5E
