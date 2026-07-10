@@ -115,6 +115,17 @@ theorem isDiag_matrixOf_of_eigenvectors {n : ℕ} {v : Fin n → V}
   rw [Finsupp.smul_apply, Finsupp.single_apply, if_neg (fun h => hij h.symm),
     smul_zero]
 
+/-- If an operator has a diagonal matrix with respect to some basis, then the
+entries on the diagonal are precisely the eigenvalues of the operator. This is
+the diagonal analogue of 5.41 (determination of eigenvalues from an
+upper-triangular matrix) and follows immediately from it, since every diagonal
+matrix is upper triangular. -/
+theorem hasEigenvalue_iff_diag [Finite F V] {n : ℕ} {v : Fin n → V}
+    (hv : IsBasis F v) (T : V →ₗ[F] V) (hA : (matrixOf hv hv T).IsDiag)
+    (lam : F) :
+    HasEigenvalue T lam ↔ ∃ k, matrixOf hv hv T k k = lam :=
+  Section_5C.isEigenvalue_iff_diag hv T (fun _j _k hkj => hA (ne_of_gt hkj)) lam
+
 /-! 5.51 Example: {lit}`T(x, y) = (41x + 7y, −20x + 74y)` is diagonalizable:
 {lit}`T(1, 4) = 69·(1, 4)` and {lit}`T(7, 5) = 46·(7, 5)`, and
 {lit}`(1, 4), (7, 5)` is a basis of {lit}`ℝ²` (so the matrix of {lit}`T`
@@ -387,10 +398,86 @@ theorem tfae_isDiagonalizable [Finite F V] (T : V →ₗ[F] V) {m : ℕ}
     rw [h, ← hdim]
   tfae_finish
 
-/-! 5.57 Example (not formalized here): {lit}`T(a, b, c) = (b, c, 0)` on
-{lit}`F³` has {lit}`0` as its only eigenvalue, with
-{lit}`E(0, T) = {(a, 0, 0)}`, so conditions (b), (c), (d) of 5.55 fail and
-{lit}`T` is not diagonalizable. -/
+/-! 5.57 Example: {lit}`T(a, b, c) = (b, c, 0)` on {lit}`F³` has {lit}`0` as
+its only eigenvalue, with {lit}`E(0, T) = {(a, 0, 0)}`, so conditions (b),
+(c), (d) of 5.55 fail and {lit}`T` is not diagonalizable. -/
+
+noncomputable def T_5_57 : (Fin 3 → F) →ₗ[F] (Fin 3 → F) where
+  toFun x := ![x 1, x 2, 0]
+  map_add' x y := by
+    funext i
+    fin_cases i <;> simp
+  map_smul' c x := by
+    funext i
+    fin_cases i <;> simp
+
+-- {lit}`0` is the only eigenvalue of {lit}`T`.
+theorem hasEigenvalue_T_5_57 (lam : F) :
+    HasEigenvalue (T_5_57 (F := F)) lam ↔ lam = 0 := by
+  constructor
+  · intro hev
+    obtain ⟨w, hw_ne, hw_eq⟩ := Module.End.hasEigenvalue_iff_exists.mp hev
+    have h0 := congrFun hw_eq 0
+    have h1 := congrFun hw_eq 1
+    have h2 := congrFun hw_eq 2
+    simp [T_5_57] at h0 h1 h2
+    by_contra hlam
+    apply hw_ne
+    -- {lit}`h0 : w 1 = lam * w 0`, {lit}`h1 : w 2 = lam * w 1`,
+    -- {lit}`h2 : lam = 0 ∨ w 2 = 0`.
+    have hw2 : w 2 = 0 := h2.resolve_left hlam
+    have hw1 : w 1 = 0 := by
+      have : lam * w 1 = 0 := by rw [← h1]; exact hw2
+      exact (mul_eq_zero.mp this).resolve_left hlam
+    have hw0 : w 0 = 0 := by
+      have : lam * w 0 = 0 := by rw [← h0]; exact hw1
+      exact (mul_eq_zero.mp this).resolve_left hlam
+    funext i
+    fin_cases i <;> simp [hw0, hw1, hw2]
+  · rintro rfl
+    refine Module.End.hasEigenvalue_iff_exists.mpr ⟨![1, 0, 0], ?_, ?_⟩
+    · intro h
+      have := congrFun h 0
+      simp at this
+    · funext i
+      fin_cases i <;> simp [T_5_57]
+
+-- {lit}`E(0, T)` consists exactly of the vectors {lit}`(a, 0, 0)`.
+example (x : Fin 3 → F) :
+    x ∈ Module.End.eigenspace (T_5_57 (F := F)) 0 ↔ x 1 = 0 ∧ x 2 = 0 := by
+  rw [Module.End.mem_eigenspace_iff]
+  constructor
+  · intro h
+    have h0 := congrFun h 0
+    have h1 := congrFun h 1
+    simp [T_5_57] at h0 h1
+    exact ⟨h0, h1⟩
+  · rintro ⟨h1, h2⟩
+    funext i
+    fin_cases i <;> simp [T_5_57, h1, h2]
+
+-- Since {lit}`0` is the only eigenvalue but {lit}`T ≠ 0`, {lit}`T` is not
+-- diagonalizable (a diagonalizable operator whose only eigenvalue is
+-- {lit}`0` would be the zero operator).
+theorem not_isDiagonalizable_T_5_57 :
+    ¬ IsDiagonalizable (T_5_57 (F := F)) := by
+  rintro ⟨n, v, hv, hA⟩
+  have hzero : T_5_57 (F := F) = 0 := by
+    apply hv.toModuleBasis.ext
+    intro j
+    rw [hv.toModuleBasis_apply]
+    have hev : HasEigenvalue (T_5_57 (F := F)) (matrixOf hv hv T_5_57 j j) :=
+      Module.End.hasEigenvalue_iff_exists.mpr
+        ⟨v j, hv.1.ne_zero j, apply_eq_smul_of_isDiag hv T_5_57 hA j⟩
+    have hjj : matrixOf hv hv T_5_57 j j = 0 :=
+      (hasEigenvalue_T_5_57 _).mp hev
+    rw [apply_eq_smul_of_isDiag hv T_5_57 hA j, hjj, zero_smul,
+      LinearMap.zero_apply]
+  have hne : T_5_57 (F := F) ![0, 1, 0] ≠ 0 := by
+    intro h
+    have := congrFun h 0
+    simp [T_5_57] at this
+  exact hne (by rw [hzero]; rfl)
 
 /-! 5.58 Enough eigenvalues implies diagonalizability: an operator with
 {lit}`dim V` distinct eigenvalues is diagonalizable. -/
@@ -412,10 +499,84 @@ theorem isDiagonalizable_of_card_eigenvalues [Finite F V] (T : V →ₗ[F] V)
   exact ⟨_, v, hv, isDiag_matrixOf_of_eigenvectors hv T
     fun j => ⟨lam j, hv_eq j⟩⟩
 
-/-! 5.59–5.61 Examples (not formalized): diagonalization can be used to
-compute powers like {lit}`T¹⁰⁰` (5.59); an operator can be shown
-diagonalizable or not via the minimal-polynomial criterion 5.62 even when
-its eigenvalues are not exactly computable (5.60, 5.61). -/
+/-- If {lit}`v` is an eigenvector of {lit}`T` with eigenvalue {lit}`μ`, then
+{lit}`Tⁿ v = μⁿ v`. This is the identity that makes diagonalization useful for
+computing high powers of an operator. -/
+private lemma apply_pow_of_apply_eq_smul {T : V →ₗ[F] V} {v : V} {mu : F}
+    (h : T v = mu • v) : ∀ n, (T ^ n) v = mu ^ n • v
+  | 0 => by simp
+  | n + 1 => by
+    rw [pow_succ, Module.End.mul_apply, h, map_smul,
+      apply_pow_of_apply_eq_smul h n, smul_smul, ← pow_succ']
+
+/-! 5.59 Example: using diagonalization to compute {lit}`T¹⁰⁰`. Define
+{lit}`T(x, y, z) = (2x + y, 5y + 3z, 8z)` on {lit}`ℝ³`. Its upper-triangular
+matrix has diagonal {lit}`2, 5, 8`, so (5.58) it is diagonalizable with
+eigenvectors {lit}`(1,0,0), (1,3,0), (1,6,6)`. Writing
+{lit}`(0,0,1) = ⅙(1,0,0) − ⅓(1,3,0) + ⅙(1,6,6)` and applying {lit}`Tⁿ` gives a
+closed form for {lit}`Tⁿ(0,0,1)`. -/
+
+noncomputable def T_5_59 : (Fin 3 → ℝ) →ₗ[ℝ] (Fin 3 → ℝ) where
+  toFun x := ![2 * x 0 + x 1, 5 * x 1 + 3 * x 2, 8 * x 2]
+  map_add' x y := by
+    funext i
+    fin_cases i <;> simp <;> ring
+  map_smul' c x := by
+    funext i
+    fin_cases i <;> simp <;> ring
+
+-- The three eigenvectors of {lit}`T` (for eigenvalues {lit}`2, 5, 8`).
+theorem T_5_59_eigen_2 : T_5_59 ![1, 0, 0] = (2 : ℝ) • ![1, 0, 0] := by
+  funext i; fin_cases i <;> simp [T_5_59]
+theorem T_5_59_eigen_5 : T_5_59 ![1, 3, 0] = (5 : ℝ) • ![1, 3, 0] := by
+  funext i; fin_cases i <;> simp [T_5_59]; all_goals norm_num
+theorem T_5_59_eigen_8 : T_5_59 ![1, 6, 6] = (8 : ℝ) • ![1, 6, 6] := by
+  funext i; fin_cases i <;> simp [T_5_59]; all_goals norm_num
+
+example : IsDiagonalizable T_5_59 := by
+  set b : Fin 3 → (Fin 3 → ℝ) := ![![1, 0, 0], ![1, 3, 0], ![1, 6, 6]]
+    with hb_def
+  have hli : LinearIndependent ℝ b := by
+    rw [hb_def, Fintype.linearIndependent_iff]
+    intro g hg
+    have h0 := congrFun hg 0
+    have h1 := congrFun hg 1
+    have h2 := congrFun hg 2
+    simp [Fin.sum_univ_three] at h0 h1 h2
+    -- back-substitute: {lit}`g 2 = 0`, then {lit}`g 1 = 0`, then {lit}`g 0 = 0`
+    have hg2 : g 2 = 0 := by linarith
+    have hg1 : g 1 = 0 := by rw [hg2] at h1; linarith
+    have hg0 : g 0 = 0 := by rw [hg1, hg2] at h0; linarith
+    intro i; fin_cases i <;> assumption
+  have hv : IsBasis ℝ b :=
+    isBasis_of_linearIndependent_of_card_eq b hli (by simp)
+  refine ⟨3, _, hv, isDiag_matrixOf_of_eigenvectors hv T_5_59 ?_⟩
+  intro j
+  fin_cases j
+  · exact ⟨2, T_5_59_eigen_2⟩
+  · exact ⟨5, T_5_59_eigen_5⟩
+  · exact ⟨8, T_5_59_eigen_8⟩
+
+/-- 5.59, the payoff: a closed form for {lit}`Tⁿ(0,0,1)`, obtained by
+decomposing {lit}`(0,0,1)` in the eigenbasis. Specializing to {lit}`n = 100`
+recovers Axler's {lit}`T¹⁰⁰(0,0,1)`. -/
+theorem pow_apply_T_5_59 (n : ℕ) :
+    (T_5_59 ^ n) ![0, 0, 1] =
+      ![((2:ℝ) ^ n - 2 * 5 ^ n + 8 ^ n) / 6, 8 ^ n - 5 ^ n, 8 ^ n] := by
+  have hdecomp : (![0, 0, 1] : Fin 3 → ℝ) =
+      (1/6 : ℝ) • ![1, 0, 0] + (-1/3 : ℝ) • ![1, 3, 0] +
+      (1/6 : ℝ) • ![1, 6, 6] := by
+    funext i; fin_cases i <;> simp; all_goals norm_num
+  rw [hdecomp, map_add, map_add, map_smul, map_smul, map_smul,
+    apply_pow_of_apply_eq_smul T_5_59_eigen_2 n,
+    apply_pow_of_apply_eq_smul T_5_59_eigen_5 n,
+    apply_pow_of_apply_eq_smul T_5_59_eigen_8 n]
+  funext i; fin_cases i <;> simp; all_goals ring
+
+/-! 5.60–5.61 Examples: an operator can be shown diagonalizable or not via
+the minimal-polynomial criterion 5.62 even when its eigenvalues are not
+exactly computable. Because these examples *use* 5.62, they are formalized
+just after it below. -/
 
 /-! 5.62 Necessary and sufficient condition for diagonalizability:
 {lit}`T` is diagonalizable iff its minimal polynomial is
@@ -520,6 +681,153 @@ theorem isDiagonalizable_iff_minpoly_eq_prod_distinct [Finite F V]
     rw [← htop, iSup_subtype']
     exact Equiv.iSup_comp (g := fun a : {x // x ∈ s} =>
       Module.End.eigenspace T (a : F)) s.equivFin.symm
+
+/-- The engine behind Examples 5.60/5.61: over an algebraically closed field,
+if {lit}`T` is annihilated by a *separable* polynomial (one with distinct
+roots), then {lit}`T` is diagonalizable. Indeed the minimal polynomial divides
+that polynomial, so it too is separable; over an algebraically closed field it
+splits, hence equals a product of distinct linear factors, and 5.62 applies. -/
+private lemma isDiagonalizable_of_separable_aeval [Finite F V] [IsAlgClosed F]
+    (T : V →ₗ[F] V) (q : Polynomial F) (hsep : q.Separable)
+    (haeval : aeval T q = 0) : IsDiagonalizable T := by
+  classical
+  rw [isDiagonalizable_iff_minpoly_eq_prod_distinct]
+  have hdvd : minpoly F T ∣ q := (aeval_eq_zero_iff_minpoly_dvd _ _).mp haeval
+  have hmonic : (minpoly F T).Monic :=
+    minpoly.monic (Algebra.IsIntegral.isIntegral _)
+  have hnodup : (minpoly F T).roots.Nodup :=
+    Polynomial.nodup_roots (hsep.of_dvd hdvd)
+  have h := Polynomial.C_leadingCoeff_mul_prod_multiset_X_sub_C
+    (p := minpoly F T)
+    (Polynomial.splits_iff_card_roots.mp (IsAlgClosed.splits _))
+  rw [hmonic.leadingCoeff, Polynomial.C_1, one_mul] at h
+  refine ⟨(minpoly F T).roots.toFinset, ?_⟩
+  rw [Finset.prod_eq_multiset_prod, Multiset.toFinset_val,
+    Multiset.dedup_eq_self.mpr hnodup]
+  exact h.symm
+
+/-! 5.60 Example: diagonalizable, but with no known exact eigenvalues. Define
+{lit}`T(z₁, …, z₅) = (−3z₅, z₁ + 6z₅, z₂, z₃, z₄)` on {lit}`ℂ⁵`. Its minimal
+polynomial is {lit}`z⁵ − 6z + 3` (Example 5.26). No exact expression is known
+for its zeros, but they are distinct (Axler verifies this numerically), i.e.
+the polynomial is separable; so by 5.62 (via the lemma above) {lit}`T` is
+diagonalizable. We take separability — the one numerically-checked fact — as a
+hypothesis. -/
+
+noncomputable def T_5_60 : (Fin 5 → ℂ) →ₗ[ℂ] (Fin 5 → ℂ) where
+  toFun z := ![-3 * z 4, z 0 + 6 * z 4, z 1, z 2, z 3]
+  map_add' z w := by funext i; fin_cases i <;> simp <;> ring
+  map_smul' c z := by funext i; fin_cases i <;> simp <;> ring
+
+-- {lit}`z⁵ − 6z + 3` annihilates {lit}`T` (its minimal polynomial, 5.26).
+theorem aeval_T_5_60 :
+    aeval T_5_60 (Polynomial.X ^ 5 - Polynomial.C 6 * Polynomial.X +
+      Polynomial.C 3 : Polynomial ℂ) = 0 := by
+  simp only [map_add, map_sub, map_pow, map_mul, Polynomial.aeval_X,
+    Polynomial.aeval_C]
+  apply LinearMap.ext; intro z; funext j
+  fin_cases j <;>
+    simp [T_5_60, pow_succ, Module.End.mul_apply,
+      LinearMap.sub_apply, LinearMap.add_apply, Module.algebraMap_end_apply,
+      Pi.smul_apply, smul_eq_mul, Matrix.vecHead, Matrix.vecTail]
+  all_goals ring
+
+/-- 5.60: {lit}`T` is diagonalizable, given that its minimal polynomial
+{lit}`z⁵ − 6z + 3` has distinct roots (is separable). -/
+theorem isDiagonalizable_T_5_60
+    (hsep : (Polynomial.X ^ 5 - Polynomial.C 6 * Polynomial.X +
+      Polynomial.C 3 : Polynomial ℂ).Separable) :
+    IsDiagonalizable T_5_60 :=
+  isDiagonalizable_of_separable_aeval T_5_60 _ hsep aeval_T_5_60
+
+/-! 5.61 Example: showing that an operator is not diagonalizable. Define
+{lit}`T(z₁, z₂, z₃) = (6z₁ + 3z₂ + 4z₃, 6z₂ + 2z₃, 7z₃)` on {lit}`ℂ³`. Its
+upper-triangular matrix has diagonal {lit}`6, 6, 7`, so {lit}`(T − 6I)²(T − 7I)
+= 0` while {lit}`(T − 6I)(T − 7I) ≠ 0`; hence the minimal polynomial is
+{lit}`(z − 6)²(z − 7)`, which is *not* a product of distinct linear factors, so
+by 5.62 {lit}`T` is not diagonalizable. -/
+
+noncomputable def T_5_61 : (Fin 3 → ℂ) →ₗ[ℂ] (Fin 3 → ℂ) where
+  toFun x := ![6 * x 0 + 3 * x 1 + 4 * x 2, 6 * x 1 + 2 * x 2, 7 * x 2]
+  map_add' x y := by funext i; fin_cases i <;> simp <;> ring
+  map_smul' c x := by funext i; fin_cases i <;> simp <;> ring
+
+theorem not_isDiagonalizable_T_5_61 : ¬ IsDiagonalizable T_5_61 := by
+  intro hdiag
+  obtain ⟨s, hs⟩ :=
+    (isDiagonalizable_iff_minpoly_eq_prod_distinct T_5_61).mp hdiag
+  -- {lit}`(T − 6I)²(T − 7I) = 0`, so the minimal polynomial divides
+  -- {lit}`(X − 6)²(X − 7)`.
+  have hA : aeval T_5_61
+      ((Polynomial.X - Polynomial.C (6 : ℂ)) ^ 2 *
+        (Polynomial.X - Polynomial.C (7 : ℂ))) = 0 := by
+    rw [map_mul, map_pow, aeval_X_sub_C_eq, aeval_X_sub_C_eq]
+    apply LinearMap.ext; intro x; funext j
+    fin_cases j <;>
+      simp [T_5_61, pow_two, Module.End.mul_apply, LinearMap.sub_apply,
+        Module.algebraMap_end_apply, Pi.smul_apply, smul_eq_mul,
+        Matrix.vecHead, Matrix.vecTail]
+  have hdvd1 : minpoly ℂ T_5_61 ∣
+      (Polynomial.X - Polynomial.C (6 : ℂ)) ^ 2 *
+        (Polynomial.X - Polynomial.C (7 : ℂ)) :=
+    (aeval_eq_zero_iff_minpoly_dvd _ _).mp hA
+  -- {lit}`(T − 6I)(T − 7I) ≠ 0`.
+  have hC : aeval T_5_61
+      ((Polynomial.X - Polynomial.C (6 : ℂ)) * (Polynomial.X - Polynomial.C (7 : ℂ)))
+        ≠ 0 := by
+    rw [map_mul, aeval_X_sub_C_eq, aeval_X_sub_C_eq]
+    intro h
+    have hcoord := congrFun (LinearMap.congr_fun h ![0, 1, 0]) 0
+    simp [T_5_61, Module.End.mul_apply, LinearMap.sub_apply,
+      Module.algebraMap_end_apply, smul_eq_mul,
+      Matrix.vecHead, Matrix.vecTail] at hcoord
+    norm_num at hcoord
+  -- {lit}`6` and {lit}`7` are eigenvalues of {lit}`T`.
+  have h6 : HasEigenvalue T_5_61 6 :=
+    Module.End.hasEigenvalue_iff_exists.mpr ⟨![1, 0, 0],
+      by intro h; have := congrFun h 0; simp at this,
+      by funext i; fin_cases i <;> simp [T_5_61]⟩
+  have h7 : HasEigenvalue T_5_61 7 :=
+    Module.End.hasEigenvalue_iff_exists.mpr ⟨![10, 2, 1],
+      by intro h; have := congrFun h 2; simp at this,
+      by funext i; fin_cases i <;> simp [T_5_61]; all_goals norm_num⟩
+  -- Every eigenvalue lies in {lit}`s` (it is a root of the minimal
+  -- polynomial), and every element of {lit}`s` is a root of
+  -- {lit}`(X − 6)²(X − 7)`, hence {lit}`6` or {lit}`7`. So {lit}`s = {6, 7}`.
+  have hmem : ∀ a : ℂ, HasEigenvalue T_5_61 a → a ∈ s := by
+    intro a ha
+    have hr : (∏ b ∈ s, (Polynomial.X - Polynomial.C b)).IsRoot a :=
+      hs ▸ (isEigenvalue_iff_isRoot T_5_61 a).mp ha
+    rw [Polynomial.IsRoot.def, Polynomial.eval_prod] at hr
+    obtain ⟨b, hb, hbe⟩ := Finset.prod_eq_zero_iff.mp hr
+    rw [Polynomial.eval_sub, Polynomial.eval_X, Polynomial.eval_C,
+      sub_eq_zero] at hbe
+    subst hbe; exact hb
+  have hsub : s ⊆ {6, 7} := by
+    intro a ha
+    have haroot : (minpoly ℂ T_5_61).IsRoot a := by
+      rw [hs, Polynomial.IsRoot.def, Polynomial.eval_prod]
+      exact Finset.prod_eq_zero ha (by simp)
+    have hroot2 : ((Polynomial.X - Polynomial.C (6 : ℂ)) ^ 2 *
+        (Polynomial.X - Polynomial.C (7 : ℂ))).IsRoot a := haroot.dvd hdvd1
+    rw [Polynomial.IsRoot.def] at hroot2
+    simp only [Polynomial.eval_mul, Polynomial.eval_pow, Polynomial.eval_sub,
+      Polynomial.eval_X, Polynomial.eval_C] at hroot2
+    rcases mul_eq_zero.mp hroot2 with hh | hh
+    · have ha6 : a - 6 = 0 := (pow_eq_zero_iff (by norm_num)).mp hh
+      rw [sub_eq_zero] at ha6; simp [ha6]
+    · rw [sub_eq_zero] at hh; simp [hh]
+  have hs_eq : s = {6, 7} :=
+    Finset.Subset.antisymm hsub (by
+      intro a ha
+      simp only [Finset.mem_insert, Finset.mem_singleton] at ha
+      rcases ha with rfl | rfl
+      · exact hmem 6 h6
+      · exact hmem 7 h7)
+  have hmin : minpoly ℂ T_5_61 =
+      (Polynomial.X - Polynomial.C (6 : ℂ)) * (Polynomial.X - Polynomial.C (7 : ℂ)) := by
+    rw [hs, hs_eq, Finset.prod_pair (by norm_num : (6 : ℂ) ≠ 7)]
+  exact hC (by rw [← hmin]; exact minpoly.aeval ℂ T_5_61)
 
 /-! 5.65 The restriction of a diagonalizable operator to an invariant
 subspace is diagonalizable: the minimal polynomial of {lit}`T|_U` divides
@@ -696,8 +1004,8 @@ theorem exercise_5D_4 [Finite F V] (T : V →ₗ[F] V) :
 theorem exercise_5D_5 {V : Type*} [AddCommGroup V] [Module ℂ V]
     [Finite ℂ V] (T : V →ₗ[ℂ] V) :
     IsDiagonalizable T ↔
-      ∀ lam : ℂ, IsCompl (ker (T - lam • (LinearMap.id : V →ₗ[ℂ] V)))
-        (range (T - lam • (LinearMap.id : V →ₗ[ℂ] V))) := by
+      ∀ γ : ℂ, IsCompl (ker (T - γ • (LinearMap.id : V →ₗ[ℂ] V)))
+        (range (T - γ • (LinearMap.id : V →ₗ[ℂ] V))) := by
   sorry
 
 /-- 5D.6 -/
@@ -708,9 +1016,9 @@ theorem exercise_5D_6 (T : (Fin 5 → ℝ) →ₗ[ℝ] (Fin 5 → ℝ))
   sorry
 
 /-- 5D.7 -/
-theorem exercise_5D_7 (T : V →ₗ[F] V) (hT : IsInvertible T) (lam : F)
-    (hlam : lam ≠ 0) :
-    Module.End.eigenspace T lam = Module.End.eigenspace hT.inv lam⁻¹ := by
+theorem exercise_5D_7 (T : V →ₗ[F] V) (hT : IsInvertible T) (γ : F)
+    (hγ : γ ≠ 0) :
+    Module.End.eigenspace T γ = Module.End.eigenspace hT.inv γ⁻¹ := by
   sorry
 
 /-- 5D.8 -/
@@ -723,8 +1031,8 @@ theorem exercise_5D_8 [Finite F V] (T : V →ₗ[F] V) {m : ℕ}
 
 /-- 5D.9 -/
 theorem exercise_5D_9 (R T : (Fin 3 → ℂ) →ₗ[ℂ] (Fin 3 → ℂ))
-    (hR : ∀ lam : ℂ, HasEigenvalue R lam ↔ lam = 2 ∨ lam = 6 ∨ lam = 7)
-    (hT : ∀ lam : ℂ, HasEigenvalue T lam ↔ lam = 2 ∨ lam = 6 ∨ lam = 7) :
+    (hR : ∀ γ : ℂ, HasEigenvalue R γ ↔ γ = 2 ∨ γ = 6 ∨ γ = 7)
+    (hT : ∀ γ : ℂ, HasEigenvalue T γ ↔ γ = 2 ∨ γ = 6 ∨ γ = 7) :
     ∃ (S : (Fin 3 → ℂ) →ₗ[ℂ] (Fin 3 → ℂ)) (hS : IsInvertible S),
       R = hS.inv ∘ₗ T ∘ₗ S := by
   sorry
@@ -732,8 +1040,8 @@ theorem exercise_5D_9 (R T : (Fin 3 → ℂ) →ₗ[ℂ] (Fin 3 → ℂ))
 /-- 5D.10 -/
 theorem exercise_5D_10 :
     ∃ R T : (Fin 4 → ℂ) →ₗ[ℂ] (Fin 4 → ℂ),
-      (∀ lam : ℂ, HasEigenvalue R lam ↔ lam = 2 ∨ lam = 6 ∨ lam = 7) ∧
-      (∀ lam : ℂ, HasEigenvalue T lam ↔ lam = 2 ∨ lam = 6 ∨ lam = 7) ∧
+      (∀ γ : ℂ, HasEigenvalue R γ ↔ γ = 2 ∨ γ = 6 ∨ γ = 7) ∧
+      (∀ γ : ℂ, HasEigenvalue T γ ↔ γ = 2 ∨ γ = 6 ∨ γ = 7) ∧
       ¬ ∃ (S : (Fin 4 → ℂ) →ₗ[ℂ] (Fin 4 → ℂ)) (hS : IsInvertible S),
         R = hS.inv ∘ₗ T ∘ₗ S := by
   sorry
@@ -757,9 +1065,12 @@ theorem exercise_5D_13 {n : ℕ} (A B : Matrix (Fin n) (Fin n) F)
     A * B = B * A ↔ B.IsDiag := by
   sorry
 
-/-- 5D.14 (a) -/
+/-- 5D.14 (a) The vector space is part of the example: exhibit *some*
+finite-dimensional complex vector space with an operator {lit}`T` such that
+{lit}`T²` is diagonalizable but {lit}`T` is not. -/
 theorem exercise_5D_14a :
-    ∃ T : (Fin 2 → ℂ) →ₗ[ℂ] (Fin 2 → ℂ),
+    ∃ (V : Type) (_ : AddCommGroup V) (_ : Module ℂ V) (_ : Module.Finite ℂ V)
+      (T : V →ₗ[ℂ] V),
       IsDiagonalizable (T ∘ₗ T) ∧ ¬ IsDiagonalizable T := by
   sorry
 
@@ -776,22 +1087,25 @@ derivative. -/
 theorem exercise_5D_15 {V : Type*} [AddCommGroup V] [Module ℂ V]
     [Finite ℂ V] (T : V →ₗ[ℂ] V) :
     [IsDiagonalizable T,
-      ¬ ∃ lam : ℂ, (Polynomial.X - Polynomial.C lam) ^ 2 ∣ minpoly ℂ T,
-      ∀ lam : ℂ, ¬ ((minpoly ℂ T).IsRoot lam ∧
-        (minpoly ℂ T).derivative.IsRoot lam),
+      ¬ ∃ γ : ℂ, (Polynomial.X - Polynomial.C γ) ^ 2 ∣ minpoly ℂ T,
+      ∀ γ : ℂ, ¬ ((minpoly ℂ T).IsRoot γ ∧
+        (minpoly ℂ T).derivative.IsRoot γ),
       IsCoprime (minpoly ℂ T) (minpoly ℂ T).derivative].TFAE := by
   sorry
 
 /-- 5D.16 For diagonalizable {lit}`T` with distinct eigenvalues
-{lit}`λ₁, …, λₘ`: a subspace {lit}`U` is invariant under {lit}`T` iff it is
-the (direct) sum of its intersections with the eigenspaces. -/
+{lit}`λ₁, …, λₘ`: a subspace {lit}`U` is invariant under {lit}`T` iff there
+exist subspaces {lit}`U₁, …, Uₘ` with {lit}`Uₖ ⊆ E(λₖ, T)` for each {lit}`k`
+and {lit}`U = U₁ ⊕ ⋯ ⊕ Uₘ`. -/
 theorem exercise_5D_16 [Finite F V] (T : V →ₗ[F] V)
     (hT : IsDiagonalizable T) {m : ℕ} (lam : Fin m → F)
     (hlam : Function.Injective lam)
     (hall : ∀ mu : F, HasEigenvalue T mu ↔ ∃ k, lam k = mu)
     (U : Submodule F V) :
     InvariantUnder T U ↔
-      U = ⨆ k, U ⊓ Module.End.eigenspace T (lam k) := by
+      ∃ W : Fin m → Submodule F V,
+        (∀ k, W k ≤ Module.End.eigenspace T (lam k)) ∧
+        IsDirectSum W ∧ U = ⨆ k, W k := by
   sorry
 
 /-- 5D.17 {lit}`ℒ(V)` has a basis consisting of diagonalizable
@@ -809,11 +1123,13 @@ theorem exercise_5D_18 [Finite F V] (T : V →ₗ[F] V)
     IsDiagonalizable (exercise_5A_38_quotient_op T U hU) := by
   sorry
 
-/-- 5D.19 Prove or give a counterexample: if {lit}`T|_U` and {lit}`T/U` are
-both diagonalizable, then so is {lit}`T`. (Stated on {lit}`ℂ²`.) -/
+/-- 5D.19 Prove or give a counterexample: for a finite-dimensional complex
+vector space {lit}`V`, if {lit}`T ∈ ℒ(V)` has an invariant subspace {lit}`U`
+with {lit}`T|_U` and {lit}`T/U` both diagonalizable, then {lit}`T` is
+diagonalizable. -/
 def exercise_5D_19 :
-    Decidable (∀ (T : (Fin 2 → ℂ) →ₗ[ℂ] (Fin 2 → ℂ))
-      (U : Submodule ℂ (Fin 2 → ℂ)) (hU : InvariantUnder T U),
+    Decidable (∀ (V : Type) [AddCommGroup V] [Module ℂ V] [Module.Finite ℂ V]
+      (T : V →ₗ[ℂ] V) (U : Submodule ℂ V) (hU : InvariantUnder T U),
       IsDiagonalizable hU.restrict →
       IsDiagonalizable (exercise_5A_38_quotient_op T U hU) →
       IsDiagonalizable T) := by
@@ -850,18 +1166,22 @@ theorem exercise_5D_21a (n : ℕ) :
     (T_fib ^ n) ![0, 1] = ![(Nat.fib n : ℝ), (Nat.fib (n + 1) : ℝ)] := by
   sorry
 
-/-- 5D.21 (b) The eigenvalues of {lit}`T` are {lit}`(1 ± √5)/2`. -/
-theorem exercise_5D_21b (lam : ℝ) :
-    HasEigenvalue T_fib lam ↔
-      lam = (1 + Real.sqrt 5) / 2 ∨ lam = (1 - Real.sqrt 5) / 2 := by
+/-- 5D.21 (b) The set of eigenvalues to be found. -/
+def eigenvalues_5D_21b : Set ℝ := sorry
+
+/-- 5D.21 (b) Find the eigenvalues of {lit}`T`. -/
+theorem exercise_5D_21b (γ : ℝ) :
+    HasEigenvalue T_fib γ ↔ γ ∈ eigenvalues_5D_21b := by
   sorry
 
-/-- 5D.21 (c) The vectors {lit}`(1, λ)` for the two eigenvalues {lit}`λ`
-form a basis of eigenvectors. -/
+/-- 5D.21 (c) The basis to be found. -/
+def basis_5D_21c : Fin 2 → (Fin 2 → ℝ) := sorry
+
+/-- 5D.21 (c) Find a basis of {lit}`ℝ²` consisting of eigenvectors of
+{lit}`T`. -/
 theorem exercise_5D_21c :
-    ∃ hv : IsBasis ℝ ![![1, (1 + Real.sqrt 5) / 2],
-      ![1, (1 - Real.sqrt 5) / 2]],
-      (matrixOf hv hv T_fib).IsDiag := by
+    IsBasis ℝ basis_5D_21c ∧
+      ∀ i, ∃ γ : ℝ, HasEigenvector T_fib γ (basis_5D_21c i) := by
   sorry
 
 /-- 5D.21 (d) Binet's formula. -/

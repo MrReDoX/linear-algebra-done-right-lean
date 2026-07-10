@@ -77,7 +77,7 @@ the section's exercises.
 | 5A. Invariant Subspaces | ✓ | ✓ | — |
 | 5B. The Minimal Polynomial | ✓ | ✓ | — |
 | 5C. Upper-Triangular Matrices | ✓ | ✓ | — |
-| 5D. Diagonalizable Operators | ✓ | — | — |
+| 5D. Diagonalizable Operators | ✓ | ✓ | — |
 | 5E. Commuting Operators | ✓ | — | — |
 | 6A. Inner Products and Norms | ✓ | — | — |
 | 6B. Orthonormal Bases | ✓ | — | — |
