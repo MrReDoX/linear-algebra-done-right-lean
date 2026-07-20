@@ -206,8 +206,10 @@ theorem complex_spectral {W : Type*} [NormedAddCommGroup W] [InnerProductSpace �
     [FiniteDimensional ℂ W] (T : W →ₗ[ℂ] W) (hN : IsStarNormal T) :
     ∃ (n : ℕ) (e : OrthonormalBasis (Fin n) ℂ W),
       ∀ k, T (e k) = ⟪e k, T (e k)⟫_ℂ • e k := by
-  obtain ⟨n, e, hUT⟩ := LADR.Section_6B.exists_orthonormal_upperTriangular_complex T
-  exact ⟨n, e, normal_ut_diagonal T hN e hUT⟩
+  obtain ⟨n, e, he, hUT⟩ := LADR.Section_6B.exists_orthonormal_upperTriangular_complex T
+  have hflag : ∀ k, T (e k) ∈ Submodule.span ℂ (e '' {i | i ≤ k}) :=
+    ((LADR.Section_5C.tfae_upperTriangular he T).out 0 2).mp hUT
+  exact ⟨n, e, normal_ut_diagonal T hN e hflag⟩
 
 /-! # Exercises 7B -/
 

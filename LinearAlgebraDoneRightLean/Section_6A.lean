@@ -1,5 +1,6 @@
 import Mathlib.Analysis.InnerProductSpace.Basic
 import Mathlib.Analysis.InnerProductSpace.PiL2
+import Mathlib.Analysis.InnerProductSpace.Convex
 import Mathlib.Analysis.RCLike.Basic
 import Mathlib.LinearAlgebra.Matrix.ToLin
 import Mathlib.MeasureTheory.Integral.IntervalIntegral.Basic
@@ -590,6 +591,16 @@ end
 nonnegative real multiple of the other. -/
 
 theorem triangle_inequality (u v : V) : ‖u + v‖ ≤ ‖u‖ + ‖v‖ := norm_add_le u v
+
+/-- The equality case: {lit}`‖u + v‖ = ‖u‖ + ‖v‖` if and only if {lit}`u` and
+{lit}`v` point in the same direction, i.e. one is a nonnegative real multiple of the
+other. mathlib packages "same direction" as {name}`SameRay` over {lit}`ℝ`, and
+(real) inner product spaces are strictly convex, so this is
+{name}`sameRay_iff_norm_add`. -/
+theorem triangle_inequality_eq_iff {V : Type*} [NormedAddCommGroup V]
+    [InnerProductSpace ℝ V] (u v : V) :
+    ‖u + v‖ = ‖u‖ + ‖v‖ ↔ SameRay ℝ u v :=
+  sameRay_iff_norm_add.symm
 
 /-! 6.21 Parallelogram equality
 
