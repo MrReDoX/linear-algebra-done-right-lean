@@ -6,6 +6,11 @@ import Mathlib.Analysis.InnerProductSpace.PiL2
 import Mathlib.Analysis.InnerProductSpace.Adjoint
 import Mathlib.Tactic.Linarith
 import Mathlib.Tactic.Linter.Style
+import Mathlib.MeasureTheory.Integral.IntervalIntegral.Basic
+import Mathlib.Analysis.SpecialFunctions.Trigonometric.Basic
+import Mathlib.Analysis.InnerProductSpace.GramSchmidtOrtho
+import Mathlib.Algebra.Polynomial.Derivative
+import Mathlib.LinearAlgebra.Dual.Basis
 import CompanionHelper
 
 /-!
@@ -102,6 +107,10 @@ example (U : Submodule 𝕜 V) [U.HasOrthogonalProjection] (v : V) :
 /-! 6.56 Example: orthogonal projection onto a one-dimensional subspace.
 For {lit}`u ≠ 0` and {lit}`U = span(u)`, {lit}`P_U v = (⟨v, u⟩ / ‖u‖²) u`
 (reading Axler's {lit}`⟨v, u⟩` as mathlib's {lit}`⟪u, v⟫`). -/
+
+example (u v : V) :
+    (𝕜 ∙ u).starProjection v = (⟪u, v⟫_𝕜 / ((‖u‖ ^ 2 : ℝ) : 𝕜)) • u :=
+  Submodule.starProjection_singleton 𝕜 v
 
 /-! 6.57 Properties of orthogonal projection {lit}`P_U`
 
@@ -317,6 +326,30 @@ theorem exercise_6C_1 {m : ℕ} (v : Fin m → V) :
     (Submodule.span 𝕜 (Set.range v))ᗮ = (⨅ i, (𝕜 ∙ v i)ᗮ) := by
   sorry
 
+/-- 6C.2 If a basis of {lit}`V` extends a basis {lit}`u₁, …, uₘ` of {lit}`U`, then
+Gram–Schmidt produces {lit}`e₁, …, eₘ, f₁, …, fₙ` with {lit}`e₁, …, eₘ` spanning
+{lit}`U` and {lit}`f₁, …, fₙ` spanning {lit}`U⟂`. -/
+theorem exercise_6C_2 [FiniteDimensional 𝕜 V] {m n : ℕ}
+    (b : Module.Basis (Fin (m + n)) 𝕜 V)
+    (h : finrank 𝕜 V = Fintype.card (Fin (m + n)))
+    (U : Submodule 𝕜 V)
+    (hU : U = Submodule.span 𝕜 (Set.range fun i : Fin m => b (Fin.castAdd n i))) :
+    let e := InnerProductSpace.gramSchmidtOrthonormalBasis h (b : Fin (m + n) → V)
+    Submodule.span 𝕜 (Set.range fun i : Fin m => (e (Fin.castAdd n i) : V)) = U ∧
+      Submodule.span 𝕜 (Set.range fun j : Fin n => (e (Fin.natAdd m j) : V)) = Uᗮ := by
+  sorry
+
+/-- 6C.3 In {lit}`ℝ⁴`, with {lit}`U = span((1,2,3,−4), (−5,4,3,2))`, find an
+orthonormal basis of {lit}`U` and an orthonormal basis of {lit}`U⟂`. -/
+theorem exercise_6C_3 :
+    (∃ b : Fin 2 → EuclideanSpace ℝ (Fin 4), Orthonormal ℝ b ∧
+        Submodule.span ℝ (Set.range b) =
+          Submodule.span ℝ {!₂[1, 2, 3, -4], !₂[-5, 4, 3, 2]}) ∧
+      (∃ c : Fin 2 → EuclideanSpace ℝ (Fin 4), Orthonormal ℝ c ∧
+        Submodule.span ℝ (Set.range c) =
+          (Submodule.span ℝ {!₂[1, 2, 3, -4], !₂[-5, 4, 3, 2]})ᗮ) := by
+  sorry
+
 /-- 6C.4 Converse to 6.30(b): if {lit}`‖eₖ‖ = 1` for each {lit}`k` and Parseval's
 equality {lit}`‖v‖² = ∑ |⟨v, eₖ⟩|²` holds for all {lit}`v`, then {lit}`e₁, …, eₙ`
 is an orthonormal basis. -/
@@ -329,6 +362,15 @@ theorem exercise_6C_4 [FiniteDimensional 𝕜 V] {n : ℕ} (e : Fin n → V)
 /-- 6C.5 {lit}`P_(U⟂) = I − P_U`. -/
 theorem exercise_6C_5 (U : Submodule 𝕜 V) [FiniteDimensional 𝕜 U] :
     Uᗮ.starProjection = 1 - U.starProjection := by
+  sorry
+
+/-- 6C.6 If {lit}`V` is finite-dimensional and {lit}`T ∈ ℒ(V, W)`, then
+{lit}`T = T P_(null T)⟂ = P_(range T) T`. -/
+theorem exercise_6C_6 [FiniteDimensional 𝕜 V]
+    {W : Type*} [NormedAddCommGroup W] [InnerProductSpace 𝕜 W] [FiniteDimensional 𝕜 W]
+    (T : V →ₗ[𝕜] W) :
+    T = T ∘ₗ ((Submodule.orthogonal (LinearMap.ker T)).starProjection : V →ₗ[𝕜] V) ∧
+      T = ((LinearMap.range T).starProjection : W →ₗ[𝕜] W) ∘ₗ T := by
   sorry
 
 /-- 6C.7 For finite-dimensional subspaces {lit}`X, Y`, {lit}`P_X P_Y = 0` iff
@@ -354,6 +396,14 @@ theorem exercise_6C_9 [FiniteDimensional 𝕜 V] (P : V →ₗ[𝕜] V) (hP : P 
       (U.starProjection : V →ₗ[𝕜] V) = P := by
   sorry
 
+/-- 6C.10 If {lit}`V` is finite-dimensional, {lit}`P² = P`, and {lit}`‖Pv‖ ≤ ‖v‖`
+for every {lit}`v`, then {lit}`P = P_U` for some subspace {lit}`U`. -/
+theorem exercise_6C_10 [FiniteDimensional 𝕜 V] (P : V →ₗ[𝕜] V)
+    (hP : P ∘ₗ P = P) (hnorm : ∀ v, ‖P v‖ ≤ ‖v‖) :
+    ∃ (U : Submodule 𝕜 V) (_ : U.HasOrthogonalProjection),
+      (U.starProjection : V →ₗ[𝕜] V) = P := by
+  sorry
+
 /-- 6C.11 For {lit}`T ∈ ℒ(V)` and a finite-dimensional subspace {lit}`U`,
 {lit}`U` is invariant under {lit}`T` iff {lit}`P_U T P_U = T P_U`. -/
 theorem exercise_6C_11 (T : V →ₗ[𝕜] V) (U : Submodule 𝕜 V)
@@ -372,6 +422,21 @@ theorem exercise_6C_12 [FiniteDimensional 𝕜 V] (T : V →ₗ[𝕜] V)
       (U.starProjection : V →ₗ[𝕜] V) ∘ₗ T = T ∘ₗ (U.starProjection : V →ₗ[𝕜] V) := by
   sorry
 
+/-- 6C.13 For {lit}`𝔽 = ℝ` and {lit}`V` finite-dimensional, {lit}`v ↦ φ_v` with
+{lit}`φ_v(u) = ⟨u, v⟩` is a linear isomorphism of {lit}`V` onto its dual {lit}`V′`
+(parts (a) injectivity and (b) surjectivity together). -/
+theorem exercise_6C_13 {V : Type*} [NormedAddCommGroup V] [InnerProductSpace ℝ V]
+    [FiniteDimensional ℝ V] :
+    ∃ f : V ≃ₗ[ℝ] Module.Dual ℝ V, ∀ v u : V, f v u = ⟪u, v⟫_ℝ := by
+  sorry
+
+/-- 6C.14 If {lit}`e₁, …, eₙ` is an orthonormal basis of {lit}`V`, then its dual
+basis is {lit}`e₁, …, eₙ` under the Riesz identification: {lit}`εᵢ(eⱼ) = ⟨eᵢ, eⱼ⟩`. -/
+theorem exercise_6C_14 [FiniteDimensional 𝕜 V] {n : ℕ}
+    (e : OrthonormalBasis (Fin n) 𝕜 V) (i j : Fin n) :
+    e.toBasis.dualBasis i (e j) = ⟪e i, e j⟫_𝕜 := by
+  sorry
+
 /-- 6C.15 In {lit}`ℝ⁴`, with {lit}`U = span((1,1,0,0), (1,1,1,2))`, find
 {lit}`u ∈ U` minimizing {lit}`‖u − (1,2,3,4)‖`. The minimizer is {lit}`P_U` of
 the target. -/
@@ -381,6 +446,76 @@ theorem exercise_6C_15 :
       ∀ u' ∈ Submodule.span ℝ {(!₂[1, 1, 0, 0] : EuclideanSpace ℝ (Fin 4)),
         !₂[1, 1, 1, 2]},
         ‖u - !₂[1, 2, 3, 4]‖ ≤ ‖u' - !₂[1, 2, 3, 4]‖ := by
+  sorry
+
+/-! 6C.16 (deferred): on {lit}`C[−1, 1]` with {lit}`⟨f, g⟩ = ∫₋₁¹ fg`, and
+{lit}`U = {f : f(0) = 0}`, show (a) {lit}`U⟂ = {0}` and (b) that 6.49 and 6.52 fail
+without finite-dimensionality. This needs the inner-product-space structure on the
+infinite-dimensional space {lit}`C[−1, 1]`, which the pinned mathlib does not
+provide as an instance; deferred. -/
+
+/-- 6C.17 Find {lit}`p ∈ 𝒫₃(ℝ)` with {lit}`p(0) = 0` and {lit}`p′(0) = 0`
+minimizing {lit}`∫₀¹ |2 + 3x − p(x)|²`. -/
+theorem exercise_6C_17 :
+    ∃ p : Polynomial ℝ, p.degree ≤ 3 ∧ p.eval 0 = 0 ∧
+      (Polynomial.derivative p).eval 0 = 0 ∧
+      ∀ q : Polynomial ℝ, q.degree ≤ 3 → q.eval 0 = 0 →
+        (Polynomial.derivative q).eval 0 = 0 →
+        (∫ x in (0 : ℝ)..1, |2 + 3 * x - p.eval x| ^ 2) ≤
+          (∫ x in (0 : ℝ)..1, |2 + 3 * x - q.eval x| ^ 2) := by
+  sorry
+
+/-- 6C.18 Find {lit}`p ∈ 𝒫₅(ℝ)` minimizing {lit}`∫₋ₚᵢᵖⁱ |sin x − p(x)|²`. -/
+theorem exercise_6C_18 :
+    ∃ p : Polynomial ℝ, p.degree ≤ 5 ∧
+      ∀ q : Polynomial ℝ, q.degree ≤ 5 →
+        (∫ x in (-Real.pi)..Real.pi, |Real.sin x - p.eval x| ^ 2) ≤
+          (∫ x in (-Real.pi)..Real.pi, |Real.sin x - q.eval x| ^ 2) := by
+  sorry
+
+/-- 6C.19 If {lit}`V` is finite-dimensional and {lit}`P` is the orthogonal
+projection onto a subspace {lit}`U`, then {lit}`P† = P`. -/
+theorem exercise_6C_19 [FiniteDimensional 𝕜 V] (U : Submodule 𝕜 V) :
+    pinv (U.starProjection : V →ₗ[𝕜] V) = (U.starProjection : V →ₗ[𝕜] V) := by
+  sorry
+
+/-- 6C.20 If {lit}`V` is finite-dimensional and {lit}`T ∈ ℒ(V, W)`, then
+{lit}`null T† = (range T)⟂` and {lit}`range T† = (null T)⟂`. -/
+theorem exercise_6C_20 [FiniteDimensional 𝕜 V]
+    {W : Type*} [NormedAddCommGroup W] [InnerProductSpace 𝕜 W] [FiniteDimensional 𝕜 W]
+    (T : V →ₗ[𝕜] W) :
+    LinearMap.ker (pinv T) = (LinearMap.range T)ᗮ ∧
+      LinearMap.range (pinv T) = (LinearMap.ker T)ᗮ := by
+  sorry
+
+/-- 6C.21 For {lit}`T : 𝔽³ → 𝔽²`, {lit}`T(a,b,c) = (a+b+c, 2b+3c)`: find a formula
+for {lit}`T†`, and verify {lit}`T T† = P_(range T)` (6.69(b)) and
+{lit}`T† T = P_(null T)⟂` (6.69(c)). -/
+theorem exercise_6C_21
+    (T : EuclideanSpace 𝕜 (Fin 3) →ₗ[𝕜] EuclideanSpace 𝕜 (Fin 2))
+    (hT : ∀ v : EuclideanSpace 𝕜 (Fin 3),
+      T v 0 = v 0 + v 1 + v 2 ∧ T v 1 = 2 * v 1 + 3 * v 2) :
+    T ∘ₗ pinv T =
+        ((LinearMap.range T).starProjection : EuclideanSpace 𝕜 (Fin 2) →ₗ[𝕜] _) ∧
+      pinv T ∘ₗ T =
+        ((Submodule.orthogonal (LinearMap.ker T)).starProjection :
+          EuclideanSpace 𝕜 (Fin 3) →ₗ[𝕜] _) := by
+  sorry
+
+/-- 6C.22 If {lit}`V` is finite-dimensional and {lit}`T ∈ ℒ(V, W)`, then
+{lit}`T T† T = T` and {lit}`T† T T† = T†`. -/
+theorem exercise_6C_22 [FiniteDimensional 𝕜 V]
+    {W : Type*} [NormedAddCommGroup W] [InnerProductSpace 𝕜 W] [FiniteDimensional 𝕜 W]
+    (T : V →ₗ[𝕜] W) :
+    T ∘ₗ pinv T ∘ₗ T = T ∧ pinv T ∘ₗ T ∘ₗ pinv T = pinv T := by
+  sorry
+
+/-- 6C.23 If {lit}`V` and {lit}`W` are finite-dimensional and {lit}`T ∈ ℒ(V, W)`,
+then {lit}`(T†)† = T`. -/
+theorem exercise_6C_23 [FiniteDimensional 𝕜 V]
+    {W : Type*} [NormedAddCommGroup W] [InnerProductSpace 𝕜 W] [FiniteDimensional 𝕜 W]
+    (T : V →ₗ[𝕜] W) :
+    pinv (pinv T) = T := by
   sorry
 
 end LADR.Section_6C
