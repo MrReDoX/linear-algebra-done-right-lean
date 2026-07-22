@@ -11,6 +11,7 @@ import Mathlib.Analysis.SpecialFunctions.Trigonometric.Basic
 import Mathlib.Analysis.InnerProductSpace.GramSchmidtOrtho
 import Mathlib.Algebra.Polynomial.Derivative
 import Mathlib.LinearAlgebra.Dual.Basis
+import LinearAlgebraDoneRightLean.L2Interval
 import CompanionHelper
 
 /-!
@@ -448,11 +449,15 @@ theorem exercise_6C_15 :
         ‖u - !₂[1, 2, 3, 4]‖ ≤ ‖u' - !₂[1, 2, 3, 4]‖ := by
   sorry
 
-/-! 6C.16 (deferred): on {lit}`C[−1, 1]` with {lit}`⟨f, g⟩ = ∫₋₁¹ fg`, and
-{lit}`U = {f : f(0) = 0}`, show (a) {lit}`U⟂ = {0}` and (b) that 6.49 and 6.52 fail
-without finite-dimensionality. This needs the inner-product-space structure on the
-infinite-dimensional space {lit}`C[−1, 1]`, which the pinned mathlib does not
-provide as an instance; deferred. -/
+/-- 6C.16 On {lit}`C[−1, 1]` with {lit}`⟨f, g⟩ = ∫₋₁¹ fg` (the space
+{name}`L2C` {lit}`(−1) 1`), and {lit}`U = {f : f(0) = 0}`, we have {lit}`U⟂ = {0}`
+while {lit}`U ≠ V` — so 6.49 ({lit}`V = U ⊕ U⟂`) and 6.52 ({lit}`U = (U⟂)⟂`) both
+fail without finite-dimensionality. -/
+theorem exercise_6C_16 (U : Submodule ℝ (L2C (-1) 1))
+    (hU : ∀ f, f ∈ U ↔
+      (L2C.toCont f) ⟨0, Set.mem_Icc.mpr ⟨by norm_num, by norm_num⟩⟩ = 0) :
+    Uᗮ = ⊥ ∧ U ≠ ⊤ := by
+  sorry
 
 /-- 6C.17 Find {lit}`p ∈ 𝒫₃(ℝ)` with {lit}`p(0) = 0` and {lit}`p′(0) = 0`
 minimizing {lit}`∫₀¹ |2 + 3x − p(x)|²`. -/
