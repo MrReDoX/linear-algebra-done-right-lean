@@ -20,6 +20,8 @@ import Mathlib.Analysis.InnerProductSpace.Adjoint
 import Mathlib.Analysis.InnerProductSpace.Positive
 import Mathlib.Analysis.InnerProductSpace.PiL2
 import Mathlib.MeasureTheory.Measure.Lebesgue.EqHaar
+import Mathlib.RingTheory.MvPolynomial.Symmetric.Defs
+import Mathlib.Analysis.Calculus.Deriv.Basic
 import Mathlib.Tactic.Linarith
 import Mathlib.Tactic.Ring
 import Mathlib.Tactic.Linter.Style
@@ -472,11 +474,16 @@ establishing that {lit}`z ↦ det(zS − T)` is a polynomial (and reading off it
 degree and leading coefficient) needs the determinant-as-polynomial-in-a-parameter
 development not set up here. -/
 
-/-! 9C.13 (deferred): over {lit}`ℂ` with {lit}`n = dim V > 2`, the coefficient of
-{lit}`z^{n−2}` (resp. {lit}`z`) in the characteristic polynomial is the elementary
-symmetric polynomial {lit}`e₂` (resp. {lit}`±e_{n−1}`) of the eigenvalues. Deferred
-— a faithful statement needs `Multiset.esymm` of the charpoly roots with the exact
-signs, which is fiddly to pin down as a stub. -/
+/-- 9C.13 Over {lit}`ℂ` with {lit}`n = dim V > 2`, the coefficient of {lit}`z^{n−2}`
+in the characteristic polynomial is the elementary symmetric polynomial {lit}`e₂` of
+the eigenvalues, and the coefficient of {lit}`z` is {lit}`(−1)^{n−1} e_{n−1}`. -/
+theorem exercise_9C_13 {V : Type*} [AddCommGroup V] [Module ℂ V] [Finite ℂ V]
+    (T : V →ₗ[ℂ] V) (hn : 2 < finrank ℂ V) :
+    (LinearMap.charpoly T).coeff (finrank ℂ V - 2) =
+        (LinearMap.charpoly T).roots.esymm 2 ∧
+      (LinearMap.charpoly T).coeff 1 =
+        (-1) ^ (finrank ℂ V - 1) * (LinearMap.charpoly T).roots.esymm (finrank ℂ V - 1) := by
+  sorry
 
 /-- 9C.14 For a positive operator {lit}`T` with positive square root {lit}`R`,
 {lit}`det √T = √(det T)`. -/
@@ -493,9 +500,12 @@ theorem exercise_9C_15 {𝕜 E : Type*} [RCLike 𝕜] [NormedAddCommGroup E]
       Real.sqrt (RCLike.re (LinearMap.det (LinearMap.adjoint T ∘ₗ T))) := by
   sorry
 
-/-! 9C.16 (deferred): for {lit}`g(x) = det(I + xT)`, {lit}`g′(0) = tr T`. Deferred —
-it needs the derivative (`deriv`) of the determinant as a function of a real/complex
-parameter, i.e. analytic machinery beyond this section. -/
+/-- 9C.16 For {lit}`g(x) = det(I + xT)`, {lit}`g′(0) = tr T`. -/
+theorem exercise_9C_16 {V : Type*} [AddCommGroup V] [Module ℂ V] [Finite ℂ V]
+    (T : V →ₗ[ℂ] V) :
+    deriv (fun x : ℂ => LinearMap.det (LinearMap.id + x • T)) 0 =
+      LinearMap.trace ℂ V T := by
+  sorry
 
 /-- 9C.17 The ellipsoid is the image of the open unit ball under the diagonal
 operator {lit}`T = diag(a, b, c)`, so its volume is {lit}`abc` times the volume of
