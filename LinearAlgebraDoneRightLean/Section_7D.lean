@@ -5,6 +5,8 @@ import Mathlib.Analysis.InnerProductSpace.PiL2
 import Mathlib.Analysis.SpecialFunctions.Trigonometric.Basic
 import Mathlib.LinearAlgebra.UnitaryGroup
 import Mathlib.LinearAlgebra.Matrix.Notation
+import Mathlib.LinearAlgebra.Matrix.IsDiag
+import Mathlib.Data.List.TFAE
 import LinearAlgebraDoneRightLean.Section_7B
 import LinearAlgebraDoneRightLean.Section_7C
 import Mathlib.Tactic.Linter.Style
@@ -395,41 +397,168 @@ stated here without a Lean declaration to avoid a `sorry` on a numbered theorem.
 
 /-- 7D.1 Suppose {lit}`dim V ≥ 2`. Then {lit}`S` is an isometry iff it maps every
 orthonormal list of length two to an orthonormal list. -/
-theorem exercise_1 (S : V →ₗ[𝕜] W) :
+theorem exercise_7D_1 (S : V →ₗ[𝕜] W) :
     IsIsometry S ↔ ∀ e : Fin 2 → V, Orthonormal 𝕜 e → Orthonormal 𝕜 (fun i => S (e i)) := by
   sorry
 
+/-- 7D.2 A nonzero {lit}`T` is a scalar multiple of an isometry iff {lit}`T`
+preserves orthogonality. -/
+theorem exercise_7D_2 (T : V →ₗ[𝕜] W) (hT : T ≠ 0) :
+    (∃ (c : 𝕜) (S : V →ₗ[𝕜] W), IsIsometry S ∧ T = c • S) ↔
+      ∀ u v, ⟪u, v⟫_𝕜 = 0 → ⟪T u, T v⟫_𝕜 = 0 := by
+  sorry
+
 /-- 7D.3(a) The product of two unitary operators is unitary. -/
-theorem exercise_3a {S T : V →ₗ[𝕜] V} (hS : IsUnitary S) (hT : IsUnitary T) :
+theorem exercise_7D_3a {S T : V →ₗ[𝕜] V} (hS : IsUnitary S) (hT : IsUnitary T) :
     IsUnitary (S ∘ₗ T) := by
   sorry
 
 /-- 7D.3(b) The adjoint (inverse) of a unitary operator is unitary. -/
-theorem exercise_3b {S : V →ₗ[𝕜] V} (hS : IsUnitary S) :
+theorem exercise_7D_3b {S : V →ₗ[𝕜] V} (hS : IsUnitary S) :
     IsUnitary (LinearMap.adjoint S) := by
   sorry
 
 /-- 7D.4 Over {lit}`ℂ`, for self-adjoint {lit}`A, B`, the operator {lit}`A + iB` is
 unitary iff {lit}`AB = BA` and {lit}`A² + B² = I`. -/
-theorem exercise_4 {E : Type*} [NormedAddCommGroup E] [InnerProductSpace ℂ E]
+theorem exercise_7D_4 {E : Type*} [NormedAddCommGroup E] [InnerProductSpace ℂ E]
     [FiniteDimensional ℂ E] {A B : E →ₗ[ℂ] E}
     (hA : LinearMap.IsSymmetric A) (hB : LinearMap.IsSymmetric B) :
     IsUnitary (A + Complex.I • B) ↔
       (A ∘ₗ B = B ∘ₗ A ∧ A ∘ₗ A + B ∘ₗ B = 1) := by
   sorry
 
+/-- 7D.5 The following are equivalent: (a) {lit}`S` is a self-adjoint unitary;
+(b) {lit}`S = 2P − I` for an orthogonal projection {lit}`P`; (c) {lit}`S = 1` on
+some {lit}`U` and {lit}`S = −1` on {lit}`U⟂`. -/
+theorem exercise_7D_5 (S : V →ₗ[𝕜] V) :
+    [LinearMap.IsSymmetric S ∧ IsUnitary S,
+      ∃ P : V →ₗ[𝕜] V, LinearMap.adjoint P = P ∧ P ∘ₗ P = P ∧ S = 2 • P - 1,
+      ∃ U : Submodule 𝕜 V, (∀ u ∈ U, S u = u) ∧ ∀ w ∈ Uᗮ, S w = -w].TFAE := by
+  sorry
+
+/-- 7D.6 Two normal operators on {lit}`𝔽³` with eigenvalues {lit}`2, 5, 7` are
+unitarily equivalent. -/
+theorem exercise_7D_6
+    (T₁ T₂ : EuclideanSpace 𝕜 (Fin 3) →ₗ[𝕜] EuclideanSpace 𝕜 (Fin 3))
+    (hN1 : IsStarNormal T₁) (hN2 : IsStarNormal T₂)
+    (he1 : ∀ μ : 𝕜, HasEigenvalue T₁ μ ↔ μ = 2 ∨ μ = 5 ∨ μ = 7)
+    (he2 : ∀ μ : 𝕜, HasEigenvalue T₂ μ ↔ μ = 2 ∨ μ = 5 ∨ μ = 7) :
+    ∃ S : EuclideanSpace 𝕜 (Fin 3) →ₗ[𝕜] EuclideanSpace 𝕜 (Fin 3),
+      IsUnitary S ∧ T₁ = LinearMap.adjoint S ∘ₗ T₂ ∘ₗ S := by
+  sorry
+
+/-- 7D.7 There are self-adjoint operators on {lit}`𝔽⁴` both with eigenvalues
+{lit}`2, 5, 7` that are not unitarily equivalent. -/
+theorem exercise_7D_7 :
+    ∃ T₁ T₂ : EuclideanSpace 𝕜 (Fin 4) →ₗ[𝕜] EuclideanSpace 𝕜 (Fin 4),
+      LinearMap.IsSymmetric T₁ ∧ LinearMap.IsSymmetric T₂ ∧
+      (∀ μ : 𝕜, HasEigenvalue T₁ μ ↔ μ = 2 ∨ μ = 5 ∨ μ = 7) ∧
+      (∀ μ : 𝕜, HasEigenvalue T₂ μ ↔ μ = 2 ∨ μ = 5 ∨ μ = 7) ∧
+      ¬ ∃ S : EuclideanSpace 𝕜 (Fin 4) →ₗ[𝕜] EuclideanSpace 𝕜 (Fin 4),
+        IsUnitary S ∧ T₁ = LinearMap.adjoint S ∘ₗ T₂ ∘ₗ S := by
+  sorry
+
+/-- 7D.8 Counterexample: {lit}`‖S eₖ‖ = 1` on an orthonormal basis does not imply
+{lit}`S` is unitary. -/
+theorem exercise_7D_8 :
+    ¬ ∀ (E : Type) [NormedAddCommGroup E] [InnerProductSpace 𝕜 E] [FiniteDimensional 𝕜 E]
+      (S : E →ₗ[𝕜] E) (n : ℕ) (e : OrthonormalBasis (Fin n) 𝕜 E),
+      (∀ k, ‖S (e k)‖ = 1) → IsUnitary S := by
+  sorry
+
 /-- 7D.9 Over {lit}`ℂ`, if every eigenvalue of {lit}`T` has absolute value 1 and
 {lit}`‖T v‖ ≤ ‖v‖` for all {lit}`v`, then {lit}`T` is unitary. -/
-theorem exercise_9 {E : Type*} [NormedAddCommGroup E] [InnerProductSpace ℂ E]
+theorem exercise_7D_9 {E : Type*} [NormedAddCommGroup E] [InnerProductSpace ℂ E]
     [FiniteDimensional ℂ E] (T : E →ₗ[ℂ] E)
     (h1 : ∀ μ : ℂ, HasEigenvalue T μ → ‖μ‖ = 1) (h2 : ∀ v, ‖T v‖ ≤ ‖v‖) :
     IsUnitary T := by
   sorry
 
+/-- 7D.10 Over {lit}`ℂ`, for self-adjoint {lit}`T` with {lit}`‖Tv‖ ≤ ‖v‖`:
+(a) {lit}`I − T²` is positive; (b) {lit}`T + i√(I − T²)` is unitary. -/
+theorem exercise_7D_10 {E : Type*} [NormedAddCommGroup E] [InnerProductSpace ℂ E]
+    [FiniteDimensional ℂ E] (T : E →ₗ[ℂ] E) (hT : LinearMap.IsSymmetric T)
+    (hnorm : ∀ v, ‖T v‖ ≤ ‖v‖) :
+    (1 - T ∘ₗ T).IsPositive ∧
+      ∀ R : E →ₗ[ℂ] E, R.IsPositive → R ∘ₗ R = 1 - T ∘ₗ T →
+        IsUnitary (T + Complex.I • R) := by
+  sorry
+
+/-- 7D.11 {lit}`S` is unitary iff it maps the closed unit ball onto itself. -/
+theorem exercise_7D_11 (S : V →ₗ[𝕜] V) :
+    IsUnitary S ↔ (S '' {v | ‖v‖ ≤ 1}) = {v | ‖v‖ ≤ 1} := by
+  sorry
+
+/-- 7D.12 Counterexample: {lit}`S` invertible with {lit}`‖S⁻¹v‖ = ‖Sv‖` for all
+{lit}`v` need not be unitary. -/
+theorem exercise_7D_12 :
+    ¬ ∀ (E : Type) [NormedAddCommGroup E] [InnerProductSpace 𝕜 E] [FiniteDimensional 𝕜 E]
+      (S : E ≃ₗ[𝕜] E), (∀ v, ‖S.symm v‖ = ‖S v‖) → IsUnitary (S : E →ₗ[𝕜] E) := by
+  sorry
+
 /-- 7D.13 For a square complex matrix, the columns form an orthonormal list iff the
 rows do (equivalently {lit}`Q* Q = I ⟺ Q Q* = I`). -/
-theorem exercise_13 {n : Type*} [Fintype n] [DecidableEq n] (Q : Matrix n n 𝕜) :
+theorem exercise_7D_13 {n : Type*} [Fintype n] [DecidableEq n] (Q : Matrix n n 𝕜) :
     Qᴴ * Q = 1 ↔ Q * Qᴴ = 1 := by
   sorry
+
+/-- 7D.14 For a unit vector {lit}`v` and {lit}`b ∈ 𝔽` (with {lit}`dim V ≥ 2`), there
+is a unitary {lit}`S` with {lit}`⟨Sv, v⟩ = b` iff {lit}`|b| ≤ 1`. -/
+theorem exercise_7D_14 (h : 2 ≤ finrank 𝕜 V) (v : V) (hv : ‖v‖ = 1) (b : 𝕜) :
+    (∃ S : V →ₗ[𝕜] V, IsUnitary S ∧ ⟪S v, v⟫_𝕜 = b) ↔ ‖b‖ ≤ 1 := by
+  sorry
+
+/-- 7D.15 For unitary {lit}`T` with {lit}`T − I` invertible (inverse {lit}`Tinv`):
+(a) {lit}`(T + I)(T − I)⁻¹` is skew. -/
+theorem exercise_7D_15a (T : V →ₗ[𝕜] V) (hT : IsUnitary T) (Tinv : V →ₗ[𝕜] V)
+    (hi1 : Tinv ∘ₗ (T - 1) = 1) (hi2 : (T - 1) ∘ₗ Tinv = 1) :
+    LinearMap.adjoint ((T + 1) ∘ₗ Tinv) = -((T + 1) ∘ₗ Tinv) := by
+  sorry
+
+/-- 7D.15 (b) Over {lit}`ℂ`, {lit}`i(T + I)(T − I)⁻¹` is self-adjoint. -/
+theorem exercise_7D_15b {E : Type*} [NormedAddCommGroup E] [InnerProductSpace ℂ E]
+    [FiniteDimensional ℂ E] (T : E →ₗ[ℂ] E) (hT : IsUnitary T) (Tinv : E →ₗ[ℂ] E)
+    (hi1 : Tinv ∘ₗ (T - 1) = 1) (hi2 : (T - 1) ∘ₗ Tinv = 1) :
+    LinearMap.IsSymmetric (Complex.I • ((T + 1) ∘ₗ Tinv)) := by
+  sorry
+
+/-- 7D.16 Over {lit}`ℂ`, for self-adjoint {lit}`T`, {lit}`(T + iI)(T − iI)⁻¹` is
+unitary and {lit}`1` is not an eigenvalue of it. -/
+theorem exercise_7D_16 {E : Type*} [NormedAddCommGroup E] [InnerProductSpace ℂ E]
+    [FiniteDimensional ℂ E] (T : E →ₗ[ℂ] E) (hT : LinearMap.IsSymmetric T)
+    (Tinv : E →ₗ[ℂ] E) (hi1 : Tinv ∘ₗ (T - Complex.I • 1) = 1)
+    (hi2 : (T - Complex.I • 1) ∘ₗ Tinv = 1) :
+    IsUnitary ((T + Complex.I • 1) ∘ₗ Tinv) ∧
+      ¬ HasEigenvalue ((T + Complex.I • 1) ∘ₗ Tinv) 1 := by
+  sorry
+
+/-- 7D.17 (7.57) A matrix is unitary iff its conjugate transpose is unitary
+(columns orthonormal iff rows orthonormal). -/
+theorem exercise_7D_17 {n : Type*} [Fintype n] [DecidableEq n] (Q : Matrix n n 𝕜) :
+    IsUnitaryMatrix Q ↔ IsUnitaryMatrix Qᴴ := by
+  sorry
+
+/-- 7D.18 A real symmetric matrix is orthogonally diagonalizable: there is a real
+unitary {lit}`Q` with {lit}`Q* A Q` diagonal. -/
+theorem exercise_7D_18 {n : Type*} [Fintype n] [DecidableEq n] (A : Matrix n n ℝ)
+    (hA : A.transpose = A) :
+    ∃ Q : Matrix n n ℝ, Q ∈ Matrix.unitaryGroup n ℝ ∧ Matrix.IsDiag (Qᴴ * A * Q) := by
+  sorry
+
+/-- 7D.19 The discrete Fourier transform {lit}`ℱ` on {lit}`ℂⁿ` is unitary and
+satisfies {lit}`ℱ⁴ = I`. -/
+theorem exercise_7D_19 {n : ℕ} (hn : 0 < n)
+    (F : EuclideanSpace ℂ (Fin n) →ₗ[ℂ] EuclideanSpace ℂ (Fin n))
+    (hF : ∀ (z : EuclideanSpace ℂ (Fin n)) (j : Fin n),
+      F z j = (1 / Real.sqrt n : ℂ) *
+        ∑ m : Fin n, z m *
+          Complex.exp (-2 * Real.pi * Complex.I * (j : ℂ) * (m : ℂ) / (n : ℂ))) :
+    IsUnitary F ∧ F ∘ₗ F ∘ₗ F ∘ₗ F = 1 := by
+  sorry
+
+/-! 7D.20 (deferred): a matrix with linearly independent columns factors uniquely
+as {lit}`A = RQ` with {lit}`R` lower triangular (positive diagonal) and {lit}`Q`
+unitary. This is the {lit}`RQ` variant of the QR factorization (7.58), which is
+itself deferred — the pinned mathlib has no packaged QR/RQ factorization. -/
 
 end LADR.Section_7D
