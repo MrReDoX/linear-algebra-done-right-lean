@@ -4,8 +4,11 @@ import Mathlib.Analysis.InnerProductSpace.Symmetric
 import Mathlib.Analysis.InnerProductSpace.PiL2
 import Mathlib.FieldTheory.Minpoly.Field
 import Mathlib.Algebra.Polynomial.Splits
+import Mathlib.Analysis.InnerProductSpace.Projection.FiniteDimensional
+import Mathlib.LinearAlgebra.Matrix.ToLin
 import LinearAlgebraDoneRightLean.Section_7A
 import LinearAlgebraDoneRightLean.Section_6B
+import LinearAlgebraDoneRightLean.Section_6C
 import Mathlib.Tactic.Linarith
 import Mathlib.Tactic.Linter.Style
 import CompanionHelper
@@ -213,22 +216,213 @@ theorem complex_spectral {W : Type*} [NormedAddCommGroup W] [InnerProductSpace �
 
 /-! # Exercises 7B -/
 
-/-- 7B.5 If {lit}`T` is self-adjoint (here for any {lit}`𝕜`; the real spectral
-theorem is the {lit}`ℝ` case) then {lit}`T` is orthonormally diagonalizable — a
-restatement of {lit}`spectral_orthonormal_eigenbasis` asked of the reader in
-various concrete forms. As an exercise, show the eigenvalues are real. -/
-theorem exercise_7B_eigenvalues_real (T : V →ₗ[𝕜] V)
-    (hT : LinearMap.IsSymmetric T) {μ : 𝕜} (hμ : HasEigenvalue T μ) :
-    conj μ = μ := by
+/-- 7B.1 A normal operator on a complex inner product space is self-adjoint iff
+all its eigenvalues are real. -/
+theorem exercise_7B_1 {V : Type*} [NormedAddCommGroup V] [InnerProductSpace ℂ V]
+    [FiniteDimensional ℂ V] (T : V →ₗ[ℂ] V) (hN : IsStarNormal T) :
+    LinearMap.IsSymmetric T ↔ ∀ μ : ℂ, HasEigenvalue T μ → conj μ = μ := by
   sorry
 
-/-- 7B.7 If {lit}`T` is self-adjoint and {lit}`⟨Tv, v⟩ ≥ 0` structure holds, one
-studies positive operators (Section 7C). Here: a self-adjoint operator with all
-eigenvalues zero is the zero operator. -/
-theorem exercise_7B_zero_of_eigenvalues_zero (T : V →ₗ[𝕜] V)
-    (hT : LinearMap.IsSymmetric T)
-    (h : ∀ i : Fin (finrank 𝕜 V), hT.eigenvalues rfl i = 0) :
-    T = 0 := by
+/-- 7B.2 A normal operator on a complex inner product space with only one
+eigenvalue is a scalar multiple of the identity. -/
+theorem exercise_7B_2 {V : Type*} [NormedAddCommGroup V] [InnerProductSpace ℂ V]
+    [FiniteDimensional ℂ V] [Nontrivial V] (T : V →ₗ[ℂ] V) (hN : IsStarNormal T)
+    (μ : ℂ) (hμ : ∀ ν : ℂ, HasEigenvalue T ν ↔ ν = μ) :
+    T = μ • LinearMap.id := by
+  sorry
+
+/-- 7B.3 For normal {lit}`T` on a complex inner product space, the eigenvalues lie
+in {lit}`{0, 1}` iff {lit}`T = P_U` for some subspace {lit}`U`. -/
+theorem exercise_7B_3 {V : Type*} [NormedAddCommGroup V] [InnerProductSpace ℂ V]
+    [FiniteDimensional ℂ V] (T : V →ₗ[ℂ] V) (hN : IsStarNormal T) :
+    (∀ μ : ℂ, HasEigenvalue T μ → μ = 0 ∨ μ = 1) ↔
+      ∃ U : Submodule ℂ V, (U.starProjection : V →ₗ[ℂ] V) = T := by
+  sorry
+
+/-- 7B.4 A normal operator on a complex inner product space is skew
+({lit}`T* = −T`) iff all its eigenvalues are purely imaginary. -/
+theorem exercise_7B_4 {V : Type*} [NormedAddCommGroup V] [InnerProductSpace ℂ V]
+    [FiniteDimensional ℂ V] (T : V →ₗ[ℂ] V) (hN : IsStarNormal T) :
+    LinearMap.adjoint T = -T ↔ ∀ μ : ℂ, HasEigenvalue T μ → μ.re = 0 := by
+  sorry
+
+/-- 7B.5 Counterexample: a diagonalizable operator on {lit}`ℂ³` need not be
+normal with respect to the usual inner product. -/
+theorem exercise_7B_5 :
+    ¬ ∀ T : EuclideanSpace ℂ (Fin 3) →ₗ[ℂ] EuclideanSpace ℂ (Fin 3),
+      (∃ b : Module.Basis (Fin 3) ℂ (EuclideanSpace ℂ (Fin 3)),
+        ∀ i, ∃ μ : ℂ, T (b i) = μ • b i) → IsStarNormal T := by
+  sorry
+
+/-- 7B.6 If {lit}`T` is normal on a complex inner product space and {lit}`T⁹ = T⁸`,
+then {lit}`T` is self-adjoint and {lit}`T² = T`. -/
+theorem exercise_7B_6 {V : Type*} [NormedAddCommGroup V] [InnerProductSpace ℂ V]
+    [FiniteDimensional ℂ V] (T : V →ₗ[ℂ] V) (hN : IsStarNormal T) (h : T ^ 9 = T ^ 8) :
+    LinearMap.IsSymmetric T ∧ T ^ 2 = T := by
+  sorry
+
+/-- 7B.7 There is an operator on a complex vector space with {lit}`T⁹ = T⁸` but
+{lit}`T² ≠ T`. -/
+theorem exercise_7B_7 :
+    ∃ (V : Type) (_ : AddCommGroup V) (_ : Module ℂ V) (_ : Module.Finite ℂ V)
+      (T : V →ₗ[ℂ] V), T ^ 9 = T ^ 8 ∧ T ^ 2 ≠ T := by
+  sorry
+
+/-- 7B.8 For {lit}`𝔽 = ℂ`, {lit}`T` is normal iff every eigenvector of {lit}`T` is
+also an eigenvector of {lit}`T*`. -/
+theorem exercise_7B_8 {V : Type*} [NormedAddCommGroup V] [InnerProductSpace ℂ V]
+    [FiniteDimensional ℂ V] (T : V →ₗ[ℂ] V) :
+    IsStarNormal T ↔ ∀ (v : V) (μ : ℂ), v ≠ 0 → T v = μ • v →
+      ∃ ν : ℂ, LinearMap.adjoint T v = ν • v := by
+  sorry
+
+/-- 7B.9 For {lit}`𝔽 = ℂ`, {lit}`T` is normal iff {lit}`T* = p(T)` for some
+polynomial {lit}`p ∈ 𝒫(ℂ)`. -/
+theorem exercise_7B_9 {V : Type*} [NormedAddCommGroup V] [InnerProductSpace ℂ V]
+    [FiniteDimensional ℂ V] (T : V →ₗ[ℂ] V) :
+    IsStarNormal T ↔ ∃ p : Polynomial ℂ, LinearMap.adjoint T = Polynomial.aeval T p := by
+  sorry
+
+/-- 7B.10 Every normal operator on a complex inner product space has a square
+root. -/
+theorem exercise_7B_10 {V : Type*} [NormedAddCommGroup V] [InnerProductSpace ℂ V]
+    [FiniteDimensional ℂ V] (T : V →ₗ[ℂ] V) (hN : IsStarNormal T) :
+    ∃ S : V →ₗ[ℂ] V, S ^ 2 = T := by
+  sorry
+
+/-- 7B.11 Every self-adjoint operator on {lit}`V` has a cube root. -/
+theorem exercise_7B_11 (T : V →ₗ[𝕜] V) (hT : LinearMap.IsSymmetric T) :
+    ∃ S : V →ₗ[𝕜] V, S ^ 3 = T := by
+  sorry
+
+/-- 7B.12 (Fuglede) For normal {lit}`T` on a complex inner product space, any
+{lit}`S` commuting with {lit}`T` also commutes with {lit}`T*`. -/
+theorem exercise_7B_12 {V : Type*} [NormedAddCommGroup V] [InnerProductSpace ℂ V]
+    [FiniteDimensional ℂ V] (T S : V →ₗ[ℂ] V) (hN : IsStarNormal T)
+    (h : S ∘ₗ T = T ∘ₗ S) :
+    S ∘ₗ LinearMap.adjoint T = LinearMap.adjoint T ∘ₗ S := by
+  sorry
+
+/-- 7B.13 (Via Schur for two commuting operators) Every normal operator on a
+complex inner product space has an orthonormal basis of eigenvectors. -/
+theorem exercise_7B_13 {V : Type*} [NormedAddCommGroup V] [InnerProductSpace ℂ V]
+    [FiniteDimensional ℂ V] (T : V →ₗ[ℂ] V) (hN : IsStarNormal T) :
+    ∃ (n : ℕ) (e : OrthonormalBasis (Fin n) ℂ V), ∀ k, ∃ μ : ℂ, T (e k) = μ • e k := by
+  sorry
+
+/-- 7B.14 For {lit}`𝔽 = ℝ`, {lit}`T` is self-adjoint iff eigenvectors for distinct
+eigenvalues are orthogonal and the eigenspaces span {lit}`V`. -/
+theorem exercise_7B_14 {V : Type*} [NormedAddCommGroup V] [InnerProductSpace ℝ V]
+    [FiniteDimensional ℝ V] (T : V →ₗ[ℝ] V) :
+    LinearMap.IsSymmetric T ↔
+      ((∀ (μ ν : ℝ) (u v : V), μ ≠ ν → T u = μ • u → T v = ν • v → ⟪u, v⟫_ℝ = 0) ∧
+        (⨆ μ : ℝ, Module.End.eigenspace T μ) = ⊤) := by
+  sorry
+
+/-- 7B.15 For {lit}`𝔽 = ℂ`, {lit}`T` is normal iff eigenvectors for distinct
+eigenvalues are orthogonal and the eigenspaces span {lit}`V`. -/
+theorem exercise_7B_15 {V : Type*} [NormedAddCommGroup V] [InnerProductSpace ℂ V]
+    [FiniteDimensional ℂ V] (T : V →ₗ[ℂ] V) :
+    IsStarNormal T ↔
+      ((∀ (μ ν : ℂ) (u v : V), μ ≠ ν → T u = μ • u → T v = ν • v → ⟪u, v⟫_ℂ = 0) ∧
+        (⨆ μ : ℂ, Module.End.eigenspace T μ) = ⊤) := by
+  sorry
+
+/-- 7B.16 For {lit}`𝔽 = ℂ` and {lit}`ℰ ⊆ ℒ(V)`, there is an orthonormal basis
+diagonalizing every element of {lit}`ℰ` iff all pairs in {lit}`ℰ` are commuting
+normal operators. -/
+theorem exercise_7B_16 {V : Type*} [NormedAddCommGroup V] [InnerProductSpace ℂ V]
+    [FiniteDimensional ℂ V] (ℰ : Set (V →ₗ[ℂ] V)) :
+    (∃ (n : ℕ) (e : OrthonormalBasis (Fin n) ℂ V),
+        ∀ T ∈ ℰ, ∀ k, ∃ μ : ℂ, T (e k) = μ • e k) ↔
+      (∀ S ∈ ℰ, ∀ T ∈ ℰ, IsStarNormal S ∧ IsStarNormal T ∧ S ∘ₗ T = T ∘ₗ S) := by
+  sorry
+
+/-- 7B.17 For {lit}`𝔽 = ℝ` and {lit}`ℰ ⊆ ℒ(V)`, there is an orthonormal basis
+diagonalizing every element of {lit}`ℰ` iff all pairs in {lit}`ℰ` are commuting
+self-adjoint operators. -/
+theorem exercise_7B_17 {V : Type*} [NormedAddCommGroup V] [InnerProductSpace ℝ V]
+    [FiniteDimensional ℝ V] (ℰ : Set (V →ₗ[ℝ] V)) :
+    (∃ (n : ℕ) (e : OrthonormalBasis (Fin n) ℝ V),
+        ∀ T ∈ ℰ, ∀ k, ∃ μ : ℝ, T (e k) = μ • e k) ↔
+      (∀ S ∈ ℰ, ∀ T ∈ ℰ,
+        LinearMap.IsSymmetric S ∧ LinearMap.IsSymmetric T ∧ S ∘ₗ T = T ∘ₗ S) := by
+  sorry
+
+/-- 7B.18 The self-adjoint hypothesis in 7.26 cannot be dropped: there is a real
+inner product space operator {lit}`T` and {lit}`b, c` with {lit}`b² < 4c` making
+{lit}`T² + bT + cI` non-invertible. -/
+theorem exercise_7B_18 :
+    ∃ (T : EuclideanSpace ℝ (Fin 2) →ₗ[ℝ] EuclideanSpace ℝ (Fin 2)) (b c : ℝ),
+      b ^ 2 < 4 * c ∧
+      ¬ Function.Bijective (T ∘ₗ T + b • T +
+        c • (LinearMap.id : EuclideanSpace ℝ (Fin 2) →ₗ[ℝ] EuclideanSpace ℝ (Fin 2))) := by
+  sorry
+
+/-- 7B.19 If {lit}`T` is self-adjoint and {lit}`U` is invariant, then (a) {lit}`U⟂`
+is invariant and (b) {lit}`T|U` is self-adjoint. -/
+theorem exercise_7B_19 (T : V →ₗ[𝕜] V) (hT : LinearMap.IsSymmetric T)
+    (U : Submodule 𝕜 V) (hU : ∀ u ∈ U, T u ∈ U) :
+    (∀ w ∈ Uᗮ, T w ∈ Uᗮ) ∧ LinearMap.IsSymmetric (T.restrict hU) := by
+  sorry
+
+/-- 7B.20 If {lit}`T` is normal and {lit}`U` is invariant, then (a) {lit}`U⟂` is
+invariant, (b) {lit}`U` is invariant under {lit}`T*`, and (d) {lit}`T|U` is
+normal. -/
+theorem exercise_7B_20 (T : V →ₗ[𝕜] V) (hN : IsStarNormal T)
+    (U : Submodule 𝕜 V) (hU : ∀ u ∈ U, T u ∈ U) :
+    (∀ w ∈ Uᗮ, T w ∈ Uᗮ) ∧ (∀ u ∈ U, LinearMap.adjoint T u ∈ U) ∧
+      IsStarNormal (T.restrict hU) := by
+  sorry
+
+/-- 7B.21 If {lit}`T` is self-adjoint with {lit}`2, 3` its only eigenvalues, then
+{lit}`T² − 5T + 6I = 0`. -/
+theorem exercise_7B_21 (T : V →ₗ[𝕜] V) (hT : LinearMap.IsSymmetric T)
+    (h : ∀ μ : 𝕜, HasEigenvalue T μ ↔ μ = 2 ∨ μ = 3) :
+    T ∘ₗ T - (5 : 𝕜) • T + (6 : 𝕜) • (LinearMap.id : V →ₗ[𝕜] V) = 0 := by
+  sorry
+
+/-- 7B.22 There is an operator on {lit}`ℂ³` with {lit}`2, 3` its only eigenvalues
+but {lit}`T² − 5T + 6I ≠ 0`. -/
+theorem exercise_7B_22 :
+    ∃ T : EuclideanSpace ℂ (Fin 3) →ₗ[ℂ] EuclideanSpace ℂ (Fin 3),
+      (∀ μ : ℂ, HasEigenvalue T μ ↔ μ = 2 ∨ μ = 3) ∧
+      T ∘ₗ T - (5 : ℂ) • T +
+        (6 : ℂ) • (LinearMap.id : EuclideanSpace ℂ (Fin 3) →ₗ[ℂ] EuclideanSpace ℂ (Fin 3)) ≠ 0 := by
+  sorry
+
+/-- 7B.23 If {lit}`T` is self-adjoint and {lit}`‖Tv − λv‖ < ε` for some unit
+{lit}`v`, then {lit}`T` has an eigenvalue within {lit}`ε` of {lit}`λ`. -/
+theorem exercise_7B_23 (T : V →ₗ[𝕜] V) (hT : LinearMap.IsSymmetric T) (μ : 𝕜)
+    (ε : ℝ) (hε : 0 < ε) (v : V) (hv : ‖v‖ = 1) (hlt : ‖T v - μ • v‖ < ε) :
+    ∃ μ' : 𝕜, HasEigenvalue T μ' ∧ ‖μ - μ'‖ < ε := by
+  sorry
+
+/-- 7B.24 (a) For {lit}`𝔽 = ℝ`, {lit}`T` is diagonalizable iff some basis gives a
+matrix equal to its transpose. -/
+theorem exercise_7B_24a {U : Type*} [NormedAddCommGroup U] [InnerProductSpace ℝ U]
+    [FiniteDimensional ℝ U] (T : U →ₗ[ℝ] U) :
+    (∃ b : Module.Basis (Fin (finrank ℝ U)) ℝ U, ∀ i, ∃ μ : ℝ, T (b i) = μ • b i) ↔
+      ∃ b : Module.Basis (Fin (finrank ℝ U)) ℝ U,
+        (LinearMap.toMatrix b b T).transpose = LinearMap.toMatrix b b T := by
+  sorry
+
+/-- 7B.24 (b) For {lit}`𝔽 = ℂ`, {lit}`T` is diagonalizable iff some basis gives a
+matrix commuting with its conjugate transpose. -/
+theorem exercise_7B_24b {U : Type*} [NormedAddCommGroup U] [InnerProductSpace ℂ U]
+    [FiniteDimensional ℂ U] (T : U →ₗ[ℂ] U) :
+    (∃ b : Module.Basis (Fin (finrank ℂ U)) ℂ U, ∀ i, ∃ μ : ℂ, T (b i) = μ • b i) ↔
+      ∃ b : Module.Basis (Fin (finrank ℂ U)) ℂ U,
+        LinearMap.toMatrix b b T * (LinearMap.toMatrix b b T).conjTranspose =
+          (LinearMap.toMatrix b b T).conjTranspose * LinearMap.toMatrix b b T := by
+  sorry
+
+/-- 7B.25 For {lit}`T` with orthonormal eigenbasis {lit}`e` and eigenvalues
+{lit}`λ`, the pseudoinverse satisfies {lit}`T† eₖ = (1/λₖ) eₖ` if {lit}`λₖ ≠ 0`,
+else {lit}`0`. -/
+theorem exercise_7B_25 {n : ℕ} (T : V →ₗ[𝕜] V) (e : OrthonormalBasis (Fin n) 𝕜 V)
+    (lam : Fin n → 𝕜) (he : ∀ k, T (e k) = lam k • e k) (k : Fin n) :
+    LADR.Section_6C.pinv T (e k) = (if lam k = 0 then 0 else (lam k)⁻¹ • e k) := by
   sorry
 
 end LADR.Section_7B
