@@ -8,6 +8,9 @@ import Mathlib.LinearAlgebra.QuadraticForm.Basis
 import Mathlib.LinearAlgebra.Dimension.Constructions
 import Mathlib.LinearAlgebra.Trace
 import Mathlib.Analysis.InnerProductSpace.Basic
+import Mathlib.Analysis.InnerProductSpace.Positive
+import Mathlib.MeasureTheory.Integral.IntervalIntegral.Basic
+import Mathlib.Algebra.Polynomial.Derivative
 import Mathlib.Tactic.Linarith
 import Mathlib.Tactic.Linter.Style
 import Mathlib.Tactic.Recall
@@ -556,10 +559,37 @@ theorem exercise_9A_8 [FiniteDimensional F V] :
       finrank F (altSubmodule (F := F) (V := V)) * 2 = finrank F V * (finrank F V - 1) := by
   sorry
 
-/-! 9A.5, 9A.7, 9A.9, 9A.10 are omitted from this file: 9A.5 characterizes when the
-form of Exercise 4 is an inner product (needs the theory of positive operators);
-9A.7 asks for a prose explanation of why 9.13 fails over {lit}`ℂ`; and 9A.9, 9A.10
-concern alternating/symmetric forms defined by integrals on polynomial subspaces,
-outside the algebraic core tracked here. -/
+/-- 9A.5 With {lit}`T` the operator of Exercise 4 ({lit}`β(u,v) = ⟨u, Tv⟩`),
+{lit}`β` is an inner product iff {lit}`T` is an invertible positive operator. -/
+theorem exercise_9A_5 {V : Type*} [NormedAddCommGroup V] [InnerProductSpace ℝ V]
+    [FiniteDimensional ℝ V] (B : BilinForm ℝ V) (T : V →ₗ[ℝ] V)
+    (hT : ∀ u v, B u v = ⟪u, T v⟫) :
+    (∃ core : InnerProductSpace.Core ℝ V, ∀ u v, core.inner u v = B u v) ↔
+      (T.IsPositive ∧ Function.Bijective T) := by
+  sorry
+
+/-! 9A.7 (deferred): explain why the proof of 9.13 (diagonalization of a symmetric
+bilinear form by an orthonormal basis) fails when {lit}`𝔽 ≠ ℝ`. This is a prose
+"explain why the proof fails" exercise with no crisp propositional content to
+state in Lean. -/
+
+/-- 9A.9 On {lit}`V = {p ∈ 𝒫ₙ(ℝ) : p(0) = p(1)}`, the form
+{lit}`α(p, q) = ∫₀¹ p q′` is alternating: {lit}`α(p, p) = 0`. -/
+theorem exercise_9A_9 (p : Polynomial ℝ) (hp : p.eval 0 = p.eval 1) :
+    (∫ x in (0 : ℝ)..1, p.eval x * (Polynomial.derivative p).eval x) = 0 := by
+  sorry
+
+/-- 9A.10 On {lit}`V = {p ∈ 𝒫ₙ(ℝ) : p(0) = p(1), p′(0) = p′(1)}`, the form
+{lit}`ρ(p, q) = ∫₀¹ p q″` is symmetric: {lit}`ρ(p, q) = ρ(q, p)`. -/
+theorem exercise_9A_10 (p q : Polynomial ℝ)
+    (hp0 : p.eval 0 = p.eval 1)
+    (hp1 : (Polynomial.derivative p).eval 0 = (Polynomial.derivative p).eval 1)
+    (hq0 : q.eval 0 = q.eval 1)
+    (hq1 : (Polynomial.derivative q).eval 0 = (Polynomial.derivative q).eval 1) :
+    (∫ x in (0 : ℝ)..1,
+        p.eval x * (Polynomial.derivative (Polynomial.derivative q)).eval x) =
+      (∫ x in (0 : ℝ)..1,
+        q.eval x * (Polynomial.derivative (Polynomial.derivative p)).eval x) := by
+  sorry
 
 end LADR.Section_9A
