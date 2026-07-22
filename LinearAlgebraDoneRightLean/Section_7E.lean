@@ -351,46 +351,168 @@ does) would be disproportionate to their illustrative role. -/
 /-! # Exercises 7E -/
 
 /-- 7E.1 {lit}`T = 0` if and only if all singular values of {lit}`T` are {lit}`0`. -/
-theorem exercise_1 (T : V →ₗ[𝕜] W) :
+theorem exercise_7E_1 (T : V →ₗ[𝕜] W) :
     T = 0 ↔ ∀ i, singularValues T i = 0 := by
   sorry
 
 /-- 7E.2 For {lit}`s > 0`, {lit}`s` is a singular value of {lit}`T` iff there exist
 nonzero {lit}`v ∈ V`, {lit}`w ∈ W` with {lit}`T v = s w` and {lit}`T* w = s v`
 (a *Schmidt pair*). -/
-theorem exercise_2 (T : V →ₗ[𝕜] W) {s : ℝ} (hs : 0 < s) :
+theorem exercise_7E_2 (T : V →ₗ[𝕜] W) {s : ℝ} (hs : 0 < s) :
     (∃ i, singularValues T i = s) ↔
       ∃ (v : V) (w : W), v ≠ 0 ∧ w ≠ 0 ∧
         T v = (s : 𝕜) • w ∧ LinearMap.adjoint T w = (s : 𝕜) • v := by
   sorry
 
+/-- 7E.3 There is an operator on {lit}`ℂ²` whose only eigenvalue is {lit}`0` but
+whose singular values are {lit}`5, 0`. -/
+theorem exercise_7E_3 :
+    ∃ T : EuclideanSpace ℂ (Fin 2) →ₗ[ℂ] EuclideanSpace ℂ (Fin 2),
+      (∀ μ : ℂ, HasEigenvalue T μ ↔ μ = 0) ∧
+      (∀ s : ℝ, (∃ i, singularValues T i = s) ↔ s = 5 ∨ s = 0) := by
+  sorry
+
+/-- 7E.4 With {lit}`s₁` the largest and {lit}`sₙ` the smallest singular value,
+{lit}`{‖Tv‖ : ‖v‖ = 1} = [sₙ, s₁]`. -/
+theorem exercise_7E_4 (T : V →ₗ[𝕜] W) (s₁ sₙ : ℝ)
+    (h1 : IsGreatest (Set.range (singularValues T)) s₁)
+    (hn : IsLeast (Set.range (singularValues T)) sₙ) :
+    {r : ℝ | ∃ v : V, ‖v‖ = 1 ∧ ‖T v‖ = r} = Set.Icc sₙ s₁ := by
+  sorry
+
+/-- 7E.5 The operator {lit}`T(x, y) = (−4y, x)` on {lit}`ℂ²` has singular values
+{lit}`4, 1`. -/
+theorem exercise_7E_5 (T : EuclideanSpace ℂ (Fin 2) →ₗ[ℂ] EuclideanSpace ℂ (Fin 2))
+    (hT : ∀ z : EuclideanSpace ℂ (Fin 2), T z = !₂[-4 * z 1, z 0]) :
+    ∀ s : ℝ, (∃ i, singularValues T i = s) ↔ s = 4 ∨ s = 1 := by
+  sorry
+
+/-! 7E.6 (deferred): find the singular values of the differentiation operator
+{lit}`D p = p′` on {lit}`𝒫₂(ℝ)` with the {lit}`L²` inner product of Example 6.34.
+Needs that specific {lit}`L²` inner product together with a numeric computation of
+the singular values; deferred. -/
+
+/-- 7E.7 For self-adjoint {lit}`T` (or {lit}`𝔽 = ℂ` and {lit}`T` normal), the
+singular values are the absolute values of the eigenvalues. -/
+theorem exercise_7E_7 (T : V →ₗ[𝕜] V) (hT : LinearMap.IsSymmetric T) :
+    {s : ℝ | ∃ i, singularValues T i = s} =
+      {s : ℝ | ∃ μ : 𝕜, HasEigenvalue T μ ∧ ‖μ‖ = s} := by
+  sorry
+
+/-- 7E.8(a) In an SVD, {lit}`f₁, …, fₘ` is an orthonormal basis of {lit}`range T`. -/
+theorem exercise_7E_8a {m : ℕ} (T : V →ₗ[𝕜] W) (e : Fin m → V) (f : Fin m → W)
+    (s : Fin m → ℝ) (hs : ∀ i, 0 < s i) (he : Orthonormal 𝕜 e) (hf : Orthonormal 𝕜 f)
+    (hT : ∀ v, T v = ∑ i, (s i : 𝕜) • ⟪e i, v⟫_𝕜 • f i) :
+    Submodule.span 𝕜 (Set.range f) = LinearMap.range T := by
+  sorry
+
+/-- 7E.8(b) In an SVD, {lit}`e₁, …, eₘ` is an orthonormal basis of
+{lit}`(null T)⟂`. -/
+theorem exercise_7E_8b {m : ℕ} (T : V →ₗ[𝕜] W) (e : Fin m → V) (f : Fin m → W)
+    (s : Fin m → ℝ) (hs : ∀ i, 0 < s i) (he : Orthonormal 𝕜 e) (hf : Orthonormal 𝕜 f)
+    (hT : ∀ v, T v = ∑ i, (s i : 𝕜) • ⟪e i, v⟫_𝕜 • f i) :
+    Submodule.span 𝕜 (Set.range e) = (LinearMap.ker T)ᗮ := by
+  sorry
+
+/-- 7E.8(c) In an SVD, {lit}`s₁, …, sₘ` are the positive singular values of
+{lit}`T`. -/
+theorem exercise_7E_8c {m : ℕ} (T : V →ₗ[𝕜] W) (e : Fin m → V) (f : Fin m → W)
+    (s : Fin m → ℝ) (hs : ∀ i, 0 < s i) (he : Orthonormal 𝕜 e) (hf : Orthonormal 𝕜 f)
+    (hT : ∀ v, T v = ∑ i, (s i : 𝕜) • ⟪e i, v⟫_𝕜 • f i) :
+    {r : ℝ | 0 < r ∧ ∃ i, singularValues T i = r} = {r : ℝ | ∃ i, s i = r} := by
+  sorry
+
 /-- 7E.8(d) Given a singular value decomposition with orthonormal lists {lit}`e`,
 {lit}`f` and positive {lit}`sₖ`, each {lit}`eₖ` is an eigenvector of {lit}`T* T`
 with eigenvalue {lit}`sₖ²`. -/
-theorem exercise_8d {m : ℕ} (T : V →ₗ[𝕜] W) (e : Fin m → V) (f : Fin m → W)
+theorem exercise_7E_8d {m : ℕ} (T : V →ₗ[𝕜] W) (e : Fin m → V) (f : Fin m → W)
     (s : Fin m → ℝ) (hs : ∀ i, 0 < s i) (he : Orthonormal 𝕜 e) (hf : Orthonormal 𝕜 f)
     (hT : ∀ v, T v = ∑ i, (s i : 𝕜) • ⟪e i, v⟫_𝕜 • f i) (k : Fin m) :
     (LinearMap.adjoint T ∘ₗ T) (e k) = ((s k) ^ 2 : 𝕜) • e k := by
   sorry
 
 /-- 7E.8(e) With the same data, {lit}`T T* w = ∑ sₖ² ⟨w, fₖ⟩ fₖ`. -/
-theorem exercise_8e {m : ℕ} (T : V →ₗ[𝕜] W) (e : Fin m → V) (f : Fin m → W)
+theorem exercise_7E_8e {m : ℕ} (T : V →ₗ[𝕜] W) (e : Fin m → V) (f : Fin m → W)
     (s : Fin m → ℝ) (hs : ∀ i, 0 < s i) (he : Orthonormal 𝕜 e) (hf : Orthonormal 𝕜 f)
     (hT : ∀ v, T v = ∑ i, (s i : 𝕜) • ⟪e i, v⟫_𝕜 • f i) (w : W) :
     T (LinearMap.adjoint T w) = ∑ i, ((s i) ^ 2 : 𝕜) • ⟪f i, w⟫_𝕜 • f i := by
   sorry
 
 /-- 7E.9 {lit}`T` and {lit}`T*` have the same positive singular values. -/
-theorem exercise_9 (T : V →ₗ[𝕜] W) :
+theorem exercise_7E_9 (T : V →ₗ[𝕜] W) :
     {s : ℝ | 0 < s ∧ ∃ i, singularValues T i = s} =
       {s : ℝ | 0 < s ∧ ∃ j, singularValues (LinearMap.adjoint T) j = s} := by
+  sorry
+
+/-- 7E.10 If {lit}`T` is invertible, then {lit}`T⁻¹` has singular values the
+reciprocals of those of {lit}`T`. -/
+theorem exercise_7E_10 (T : V ≃ₗ[𝕜] V) :
+    {r : ℝ | ∃ i, singularValues (T.symm : V →ₗ[𝕜] V) i = r} =
+      {r : ℝ | ∃ i, singularValues (T : V →ₗ[𝕜] V) i ≠ 0 ∧
+        r = (singularValues (T : V →ₗ[𝕜] V) i)⁻¹} := by
   sorry
 
 /-- 7E.11(a) For any orthonormal basis {lit}`c` of {lit}`V`,
 {lit}`∑ ‖T cⱼ‖² = ∑ sⱼ²` (the sum of squared singular values is basis
 independent). -/
-theorem exercise_11a (T : V →ₗ[𝕜] W) (c : OrthonormalBasis (Fin (finrank 𝕜 V)) 𝕜 V) :
+theorem exercise_7E_11a (T : V →ₗ[𝕜] W) (c : OrthonormalBasis (Fin (finrank 𝕜 V)) 𝕜 V) :
     ∑ j, ‖T (c j)‖ ^ 2 = ∑ i, (singularValues T i) ^ 2 := by
+  sorry
+
+/-- 7E.11(b) If {lit}`W = V` and {lit}`T` is positive, then
+{lit}`∑ ⟨T vⱼ, vⱼ⟩ = ∑ sⱼ`. -/
+theorem exercise_7E_11b (T : V →ₗ[𝕜] V) (hT : T.IsPositive)
+    (c : OrthonormalBasis (Fin (finrank 𝕜 V)) 𝕜 V) :
+    RCLike.re (∑ j, ⟪c j, T (c j)⟫_𝕜) = ∑ i, singularValues T i := by
+  sorry
+
+/-- 7E.12(a) There is an operator whose {lit}`T²` singular values are not the
+squares of the singular values of {lit}`T`. -/
+theorem exercise_7E_12a :
+    ∃ T : EuclideanSpace 𝕜 (Fin 2) →ₗ[𝕜] EuclideanSpace 𝕜 (Fin 2),
+      {r : ℝ | ∃ i, singularValues (T ∘ₗ T) i = r} ≠
+        {r : ℝ | ∃ i, singularValues T i ^ 2 = r} := by
+  sorry
+
+/-- 7E.12(b) For normal {lit}`T`, the singular values of {lit}`T²` are the squares
+of the singular values of {lit}`T`. -/
+theorem exercise_7E_12b (T : V →ₗ[𝕜] V) (hN : IsStarNormal T) :
+    {r : ℝ | ∃ i, singularValues (T ∘ₗ T) i = r} =
+      {r : ℝ | ∃ i, singularValues T i ^ 2 = r} := by
+  sorry
+
+/-- 7E.13 {lit}`T₁, T₂` have the same singular values iff {lit}`T₁ = S₁ T₂ S₂` for
+unitary {lit}`S₁, S₂`. -/
+theorem exercise_7E_13 (T₁ T₂ : V →ₗ[𝕜] V) :
+    ({r : ℝ | ∃ i, singularValues T₁ i = r} = {r : ℝ | ∃ i, singularValues T₂ i = r}) ↔
+      ∃ S₁ S₂ : V →ₗ[𝕜] V, LADR.Section_7D.IsUnitary S₁ ∧ LADR.Section_7D.IsUnitary S₂ ∧
+        T₁ = S₁ ∘ₗ T₂ ∘ₗ S₂ := by
+  sorry
+
+/-- 7E.14 With {lit}`sₙ` the smallest singular value, {lit}`sₙ ‖v‖ ≤ ‖Tv‖` for all
+{lit}`v`. -/
+theorem exercise_7E_14 (T : V →ₗ[𝕜] W) (sₙ : ℝ)
+    (hn : IsLeast (Set.range (singularValues T)) sₙ) (v : V) :
+    sₙ * ‖v‖ ≤ ‖T v‖ := by
+  sorry
+
+/-- 7E.15 If {lit}`λ` is an eigenvalue of {lit}`T` then
+{lit}`s₁ ≥ |λ| ≥ sₙ` (largest and smallest singular values). -/
+theorem exercise_7E_15 (T : V →ₗ[𝕜] V) (s₁ sₙ : ℝ)
+    (h1 : IsGreatest (Set.range (singularValues T)) s₁)
+    (hn : IsLeast (Set.range (singularValues T)) sₙ)
+    (μ : 𝕜) (hμ : HasEigenvalue T μ) : ‖μ‖ ≤ s₁ ∧ sₙ ≤ ‖μ‖ := by
+  sorry
+
+/-- 7E.16 {lit}`(T*)† = (T†)*`. -/
+theorem exercise_7E_16 (T : V →ₗ[𝕜] W) :
+    LADR.Section_6C.pinv (LinearMap.adjoint T) =
+      LinearMap.adjoint (LADR.Section_6C.pinv T) := by
+  sorry
+
+/-- 7E.17 {lit}`T` is self-adjoint iff {lit}`T†` is self-adjoint. -/
+theorem exercise_7E_17 (T : V →ₗ[𝕜] V) :
+    LinearMap.IsSymmetric T ↔ LinearMap.IsSymmetric (LADR.Section_6C.pinv T) := by
   sorry
 
 end LADR.Section_7E
