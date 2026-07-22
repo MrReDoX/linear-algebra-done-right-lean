@@ -3,7 +3,11 @@ import Mathlib.LinearAlgebra.Charpoly.ToMatrix
 import Mathlib.LinearAlgebra.Matrix.Charpoly.Coeff
 import Mathlib.LinearAlgebra.Matrix.Charpoly.Eigs
 import Mathlib.Analysis.InnerProductSpace.Trace
+import Mathlib.Analysis.InnerProductSpace.Adjoint
+import Mathlib.Analysis.InnerProductSpace.Positive
 import Mathlib.Analysis.Complex.Polynomial.Basic
+import Mathlib.LinearAlgebra.Eigenspace.Basic
+import Mathlib.LinearAlgebra.Matrix.Notation
 import Mathlib.Tactic.Linter.Style
 import CompanionHelper
 
@@ -126,14 +130,101 @@ section Exercises
 variable {F : Type*} [Field F]
   {V : Type*} [AddCommGroup V] [Module F V] [FiniteDimensional F V]
 
+/-- 8D.1 For {lit}`T u = ⟨u, v⟩ w` on an inner product space, {lit}`tr T = ⟨w, v⟩`. -/
+theorem exercise_8D_1 {𝕜 E : Type*} [RCLike 𝕜] [NormedAddCommGroup E]
+    [InnerProductSpace 𝕜 E] [FiniteDimensional 𝕜 E] (v w : E) (T : E →ₗ[𝕜] E)
+    (hT : ∀ u, T u = ⟪v, u⟫_𝕜 • w) :
+    LinearMap.trace 𝕜 E T = ⟪v, w⟫_𝕜 := by
+  sorry
+
 /-- 8D.2 If {lit}`P² = P` then {lit}`tr P = dim (range P)`. -/
 theorem exercise_8D_2 (P : V →ₗ[F] V) (hP : P ∘ₗ P = P) :
     LinearMap.trace F V P = (finrank F (LinearMap.range P) : F) := by
   sorry
 
-/-- 8D.7 If {lit}`tr (S ∘ₗ T) = 0` for all {lit}`S ∈ ℒ(V)`, then {lit}`T = 0`. -/
-theorem exercise_8D_7 (T : V →ₗ[F] V)
+/-- 8D.3 If {lit}`T⁵ = T` over {lit}`ℂ`, then the real and imaginary parts of
+{lit}`tr T` are both integers. -/
+theorem exercise_8D_3 {V : Type*} [AddCommGroup V] [Module ℂ V] [FiniteDimensional ℂ V]
+    (T : V →ₗ[ℂ] V) (h : T ^ 5 = T) :
+    (∃ a : ℤ, (LinearMap.trace ℂ V T).re = a) ∧
+      (∃ b : ℤ, (LinearMap.trace ℂ V T).im = b) := by
+  sorry
+
+/-- 8D.4 {lit}`tr T* = conj (tr T)`. -/
+theorem exercise_8D_4 {𝕜 E : Type*} [RCLike 𝕜] [NormedAddCommGroup E]
+    [InnerProductSpace 𝕜 E] [FiniteDimensional 𝕜 E] (T : E →ₗ[𝕜] E) :
+    LinearMap.trace 𝕜 E (LinearMap.adjoint T) = (starRingEnd 𝕜) (LinearMap.trace 𝕜 E T) := by
+  sorry
+
+/-- 8D.5 A positive operator with trace {lit}`0` is {lit}`0`. -/
+theorem exercise_8D_5 {𝕜 E : Type*} [RCLike 𝕜] [NormedAddCommGroup E]
+    [InnerProductSpace 𝕜 E] [FiniteDimensional 𝕜 E] (T : E →ₗ[𝕜] E) (hT : T.IsPositive)
+    (h : LinearMap.trace 𝕜 E T = 0) : T = 0 := by
+  sorry
+
+/-- 8D.6 For orthogonal projections {lit}`P, Q`, {lit}`tr(PQ) ≥ 0`. -/
+theorem exercise_8D_6 {𝕜 E : Type*} [RCLike 𝕜] [NormedAddCommGroup E]
+    [InnerProductSpace 𝕜 E] [FiniteDimensional 𝕜 E] (P Q : E →ₗ[𝕜] E)
+    (hP : LinearMap.adjoint P = P ∧ P ∘ₗ P = P)
+    (hQ : LinearMap.adjoint Q = Q ∧ Q ∘ₗ Q = Q) :
+    0 ≤ RCLike.re (LinearMap.trace 𝕜 E (P ∘ₗ Q)) := by
+  sorry
+
+/-- 8D.7 For the given {lit}`3×3` matrix on {lit}`ℂ³` with eigenvalues {lit}`−48`
+and {lit}`24`, the third eigenvalue is {lit}`36` (the eigenvalues sum to the
+trace). -/
+theorem exercise_8D_7 (T : (Fin 3 → ℂ) →ₗ[ℂ] (Fin 3 → ℂ))
+    (hT : LinearMap.toMatrix' T = !![51, -12, -21; 60, -40, -28; 57, -68, 1])
+    (h1 : Module.End.HasEigenvalue T (-48)) (h2 : Module.End.HasEigenvalue T 24) :
+    Module.End.HasEigenvalue T 36 := by
+  sorry
+
+/-- 8D.8 Counterexample: {lit}`tr(ST) = (tr S)(tr T)` can fail. -/
+theorem exercise_8D_8 :
+    ¬ ∀ (E : Type) [AddCommGroup E] [Module F E] [FiniteDimensional F E]
+      (S T : E →ₗ[F] E),
+      LinearMap.trace F E (S ∘ₗ T) =
+        LinearMap.trace F E S * LinearMap.trace F E T := by
+  sorry
+
+/-- 8D.9 If {lit}`tr (S ∘ₗ T) = 0` for all {lit}`S ∈ ℒ(V)`, then {lit}`T = 0`. -/
+theorem exercise_8D_9 (T : V →ₗ[F] V)
     (h : ∀ S : V →ₗ[F] V, LinearMap.trace F V (S ∘ₗ T) = 0) : T = 0 := by
+  sorry
+
+/-- 8D.10 The trace is the only linear functional {lit}`τ` with {lit}`τ(ST) = τ(TS)`
+and {lit}`τ(I) = dim V`. -/
+theorem exercise_8D_10 (τ : (V →ₗ[F] V) →ₗ[F] F)
+    (hcomm : ∀ S T : V →ₗ[F] V, τ (S ∘ₗ T) = τ (T ∘ₗ S))
+    (hid : τ LinearMap.id = (finrank F V : F)) :
+    ∀ T : V →ₗ[F] V, τ T = LinearMap.trace F V T := by
+  sorry
+
+/-- 8D.11 {lit}`tr(T*T) = ∑ₖ ∑ⱼ |⟨T eₖ, fⱼ⟩|²` for orthonormal bases {lit}`e`,
+{lit}`f` (Frobenius norm; basis independent). -/
+theorem exercise_8D_11 {𝕜 : Type*} [RCLike 𝕜] {E G : Type*}
+    [NormedAddCommGroup E] [InnerProductSpace 𝕜 E] [FiniteDimensional 𝕜 E]
+    [NormedAddCommGroup G] [InnerProductSpace 𝕜 G] [FiniteDimensional 𝕜 G]
+    {n m : ℕ} (T : E →ₗ[𝕜] G) (e : OrthonormalBasis (Fin n) 𝕜 E)
+    (f : OrthonormalBasis (Fin m) 𝕜 G) :
+    LinearMap.trace 𝕜 E (LinearMap.adjoint T ∘ₗ T) =
+      ((∑ k, ∑ j, ‖⟪f j, T (e k)⟫_𝕜‖ ^ 2 : ℝ) : 𝕜) := by
+  sorry
+
+/-- 8D.12 (a) {lit}`⟨S, T⟩ = tr(T*S)` defines an inner product on {lit}`ℒ(V, W)`
+(the Frobenius / Hilbert–Schmidt inner product). -/
+theorem exercise_8D_12a {𝕜 : Type*} [RCLike 𝕜] {E G : Type*}
+    [NormedAddCommGroup E] [InnerProductSpace 𝕜 E] [FiniteDimensional 𝕜 E]
+    [NormedAddCommGroup G] [InnerProductSpace 𝕜 G] [FiniteDimensional 𝕜 G] :
+    ∃ core : InnerProductSpace.Core 𝕜 (E →ₗ[𝕜] G),
+      ∀ S T : E →ₗ[𝕜] G,
+        core.inner S T = LinearMap.trace 𝕜 E (LinearMap.adjoint T ∘ₗ S) := by
+  sorry
+
+/-- 8D.13 There exist {lit}`S, T ∈ ℒ(𝒫(𝔽))` with {lit}`ST − TS = I` (impossible in
+finite dimensions by 8.57). -/
+theorem exercise_8D_13 :
+    ∃ S T : Polynomial F →ₗ[F] Polynomial F, S ∘ₗ T - T ∘ₗ S = LinearMap.id := by
   sorry
 
 end Exercises
