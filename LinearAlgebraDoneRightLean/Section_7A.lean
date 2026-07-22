@@ -7,6 +7,8 @@ import Mathlib.LinearAlgebra.Matrix.ToLin
 import Mathlib.LinearAlgebra.Matrix.Rank
 import Mathlib.FieldTheory.Minpoly.Field
 import Mathlib.Data.List.TFAE
+import Mathlib.MeasureTheory.Integral.IntervalIntegral.Basic
+import Mathlib.RingTheory.Polynomial.Basic
 import Mathlib.Tactic.Linarith
 import Mathlib.Tactic.Linter.Style
 import CompanionHelper
@@ -443,11 +445,37 @@ theorem exercise_7A_13 {V : Type*} [NormedAddCommGroup V] [InnerProductSpace ℝ
       minpoly ℝ 𝒜 = Polynomial.X ^ 2 - 1 := by
   sorry
 
-/-! 7A.14 (deferred): on {lit}`𝒫₂(ℝ)` with {lit}`⟨p, q⟩ = ∫₀¹ pq` and
-{lit}`T(ax² + bx + c) = bx`, show {lit}`T` is not self-adjoint even though its
-matrix in the basis {lit}`1, x, x²` is its own conjugate transpose. Needs the
-custom {lit}`L²` inner product on {lit}`𝒫₂(ℝ)`, which the pinned mathlib does not
-provide as an instance; deferred. -/
+/-! 7A.14 The {lit}`L²` inner product {lit}`⟨p, q⟩ = ∫₀¹ pq` on {lit}`𝒫₂(ℝ)`,
+modelled as {name}`Polynomial.degreeLT` {lit}`ℝ 3`. mathlib has no instance for
+this, so we build it from an {name}`InnerProductSpace.Core` (the analytic axioms —
+symmetry, positivity, definiteness — are left as `sorry`, like the exercises). -/
+
+noncomputable def l2Core_7A14 : InnerProductSpace.Core ℝ (Polynomial.degreeLT ℝ 3) where
+  inner p q := ∫ x in (0 : ℝ)..1, ((p : Polynomial ℝ).eval x) * ((q : Polynomial ℝ).eval x)
+  conj_inner_symm := by sorry
+  re_inner_nonneg := by sorry
+  add_left := by sorry
+  smul_left := by sorry
+  definite := by sorry
+
+noncomputable instance : NormedAddCommGroup (Polynomial.degreeLT ℝ 3) :=
+  l2Core_7A14.toNormedAddCommGroup
+
+noncomputable instance : InnerProductSpace ℝ (Polynomial.degreeLT ℝ 3) :=
+  InnerProductSpace.ofCore _
+
+noncomputable instance : FiniteDimensional ℝ (Polynomial.degreeLT ℝ 3) :=
+  Module.Finite.equiv (Polynomial.degreeLTEquiv ℝ 3).symm
+
+/-- 7A.14 With {lit}`⟨p, q⟩ = ∫₀¹ pq` on {lit}`𝒫₂(ℝ)` and {lit}`T(ax² + bx + c) =
+bx`, the operator {lit}`T` is not self-adjoint — even though its matrix with
+respect to {lit}`1, x, x²` equals its own conjugate transpose. -/
+theorem exercise_7A_14
+    (T : (Polynomial.degreeLT ℝ 3) →ₗ[ℝ] (Polynomial.degreeLT ℝ 3))
+    (hT : ∀ p : Polynomial.degreeLT ℝ 3,
+      (T p : Polynomial ℝ) = Polynomial.C ((p : Polynomial ℝ).coeff 1) * Polynomial.X) :
+    ¬ LinearMap.IsSymmetric T := by
+  sorry
 
 /-- 7A.15 (a) For invertible {lit}`T`, {lit}`T` is self-adjoint iff {lit}`T⁻¹` is
 self-adjoint. -/
