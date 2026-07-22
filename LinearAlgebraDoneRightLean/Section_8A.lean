@@ -15,6 +15,7 @@ import Mathlib.LinearAlgebra.FiniteDimensional.Basic
 import Mathlib.LinearAlgebra.FiniteDimensional.Lemmas
 import Mathlib.RingTheory.Nilpotent.Basic
 import Mathlib.RingTheory.Nilpotent.Defs
+import Mathlib.Analysis.InnerProductSpace.Adjoint
 import Mathlib.Tactic.Linarith
 import Mathlib.Tactic.Linter.Style
 import LinearAlgebraDoneRightLean.Section_3A
@@ -524,6 +525,15 @@ theorem exercise_8A_14 [Finite F V] (T : V →ₗ[F] V) (hnil : IsNilpotent T)
     (hne : T ≠ 0) : ¬ ((⨆ μ : F, Module.End.eigenspace T μ) = ⊤) := by
   sorry
 
+/-- 8A.15 Over {lit}`ℂ`, {lit}`T` is diagonalizable iff every generalized
+eigenvector is an eigenvector (i.e. each generalized eigenspace equals the
+corresponding eigenspace). -/
+theorem exercise_8A_15 {V : Type*} [AddCommGroup V] [Module ℂ V] [Finite ℂ V]
+    (T : V →ₗ[ℂ] V) :
+    (⨆ μ : ℂ, Module.End.eigenspace T μ) = ⊤ ↔
+      ∀ μ : ℂ, maxGenEigenspace T μ = Module.End.eigenspace T μ := by
+  sorry
+
 /-- 8A.16 (a) -/
 theorem exercise_8A_16a :
     ∃ (S T : (Fin 2 → ℝ) →ₗ[ℝ] (Fin 2 → ℝ)),
@@ -554,6 +564,12 @@ theorem exercise_8A_19 [Finite F V] (T : V →ₗ[F] V) (hnil : ¬ IsNilpotent T
     IsCompl (ker (T ^ (finrank F V - 1))) (range (T ^ (finrank F V - 1))) := by
   sorry
 
+/-- 8A.20 On an inner product space, a normal nilpotent operator is {lit}`0`. -/
+theorem exercise_8A_20 {𝕜 : Type*} [RCLike 𝕜] {E : Type*} [NormedAddCommGroup E]
+    [InnerProductSpace 𝕜 E] [FiniteDimensional 𝕜 E] (T : E →ₗ[𝕜] E)
+    (hN : IsStarNormal T) (hnil : IsNilpotent T) : T = 0 := by
+  sorry
+
 /-- 8A.21 -/
 theorem exercise_8A_21 [Finite F V] (T : V →ₗ[F] V)
     (h : ker (T ^ (finrank F V - 1)) ≠ ker (T ^ finrank F V)) :
@@ -573,5 +589,14 @@ theorem exercise_8A_23 :
     ∃ T : (Fin 3 → ℝ) →ₗ[ℝ] (Fin 3 → ℝ),
       (∀ lam : ℝ, HasEigenvalue T lam → lam = 0) ∧ ¬ IsNilpotent T := by
   sorry
+
+/-! 8A.24 (deferred): for each item in Example 8.15, exhibit a basis putting the
+nilpotent operator into the strictly-upper-triangular normal form of 8.18(c). This
+depends on the matrix-of-a-basis normal-form theory (8.18(c)), which is deferred in
+this section. -/
+
+/-! 8A.25 (deferred): on an inner product space, a nilpotent operator has an
+orthonormal basis giving the strictly-upper-triangular form of 8.18(c). Same
+dependency on the deferred 8.18(c) normal form. -/
 
 end LADR.Section_8A
