@@ -16,6 +16,8 @@ import Mathlib.Analysis.Complex.Polynomial.Basic
 import Mathlib.Data.Complex.Basic
 import Mathlib.Data.Real.Basic
 import Mathlib.RingTheory.Nilpotent.Defs
+import Mathlib.Analysis.InnerProductSpace.Adjoint
+import Mathlib.Analysis.InnerProductSpace.Positive
 import Mathlib.Tactic.Linarith
 import Mathlib.Tactic.Ring
 import Mathlib.Tactic.Linter.Style
@@ -403,6 +405,10 @@ theorem exercise_9C_3 [Finite F V] (T : V →ₗ[F] V) (h : IsNilpotent T) :
     LinearMap.det (LinearMap.id + T) = 1 := by
   sorry
 
+/-! 9C.4 (deferred): {lit}`S` is unitary iff {lit}`|det S| = ‖S‖ = 1`. Deferred —
+it mixes the determinant with the operator norm {lit}`‖S‖` of Section 7F, whose
+inner-product-space norm machinery is outside this determinant-focused section. -/
+
 /-- 9C.5 The determinant of a block upper-triangular matrix is the product of the
 determinants of the diagonal blocks. -/
 @[avoiding Matrix.det_fromBlocks_zero₂₁]
@@ -417,6 +423,15 @@ by {lit}`sign σ`. -/
 theorem exercise_9C_6 {n : ℕ} (A : Matrix (Fin n) (Fin n) F)
     (σ : Equiv.Perm (Fin n)) :
     (A.submatrix id σ).det = Equiv.Perm.sign σ * A.det := by
+  sorry
+
+/-- 9C.7 For invertible {lit}`T` with characteristic polynomials {lit}`p` (of
+{lit}`T`) and {lit}`q` (of {lit}`T⁻¹`), {lit}`q(z) = z^{dim V} · p(1/z) / p(0)` for
+every nonzero {lit}`z`. -/
+theorem exercise_9C_7 [Finite F V] (T : V ≃ₗ[F] V) (z : F) (hz : z ≠ 0) :
+    (LinearMap.charpoly (T.symm : V →ₗ[F] V)).eval z =
+      z ^ finrank F V * (LinearMap.charpoly (T : V →ₗ[F] V)).eval (1 / z) /
+        (LinearMap.charpoly (T : V →ₗ[F] V)).eval 0 := by
   sorry
 
 /-- 9C.8 An operator on a finite-dimensional real vector space with no
@@ -441,6 +456,52 @@ theorem exercise_9C_10 {V : Type*} [AddCommGroup V] [Module ℝ V] [Finite ℝ V
     (hdim : Odd (finrank ℝ V)) (T : V →ₗ[ℝ] V) :
     ∃ γ : ℝ, HasEigenvalue T γ := by
   sorry
+
+/-- 9C.11 Counterexample: over {lit}`ℝ`, {lit}`det T > 0` does not imply that
+{lit}`T` has a square root. -/
+theorem exercise_9C_11 :
+    ∃ (n : ℕ) (T : (Fin n → ℝ) →ₗ[ℝ] (Fin n → ℝ)),
+      0 < LinearMap.det T ∧ ¬ ∃ S : (Fin n → ℝ) →ₗ[ℝ] (Fin n → ℝ), S ∘ₗ S = T := by
+  sorry
+
+/-! 9C.12 (deferred): for invertible {lit}`S`, {lit}`p(z) = det(zS − T)` is a
+polynomial of degree {lit}`dim V` with leading coefficient {lit}`det S`. Deferred —
+establishing that {lit}`z ↦ det(zS − T)` is a polynomial (and reading off its
+degree and leading coefficient) needs the determinant-as-polynomial-in-a-parameter
+development not set up here. -/
+
+/-! 9C.13 (deferred): over {lit}`ℂ` with {lit}`n = dim V > 2`, the coefficient of
+{lit}`z^{n−2}` (resp. {lit}`z`) in the characteristic polynomial is the elementary
+symmetric polynomial {lit}`e₂` (resp. {lit}`±e_{n−1}`) of the eigenvalues. Deferred
+— a faithful statement needs `Multiset.esymm` of the charpoly roots with the exact
+signs, which is fiddly to pin down as a stub. -/
+
+/-- 9C.14 For a positive operator {lit}`T` with positive square root {lit}`R`,
+{lit}`det √T = √(det T)`. -/
+theorem exercise_9C_14 {𝕜 E : Type*} [RCLike 𝕜] [NormedAddCommGroup E]
+    [InnerProductSpace 𝕜 E] [FiniteDimensional 𝕜 E] (T R : E →ₗ[𝕜] E)
+    (hT : T.IsPositive) (hR : R.IsPositive) (hRT : R ∘ₗ R = T) :
+    LinearMap.det R = ((Real.sqrt (RCLike.re (LinearMap.det T)) : ℝ) : 𝕜) := by
+  sorry
+
+/-- 9C.15 Via the polar decomposition, {lit}`|det T| = √(det(T*T))`. -/
+theorem exercise_9C_15 {𝕜 E : Type*} [RCLike 𝕜] [NormedAddCommGroup E]
+    [InnerProductSpace 𝕜 E] [FiniteDimensional 𝕜 E] (T : E →ₗ[𝕜] E) :
+    ‖LinearMap.det T‖ =
+      Real.sqrt (RCLike.re (LinearMap.det (LinearMap.adjoint T ∘ₗ T))) := by
+  sorry
+
+/-! 9C.16 (deferred): for {lit}`g(x) = det(I + xT)`, {lit}`g′(0) = tr T`. Deferred —
+it needs the derivative (`deriv`) of the determinant as a function of a real/complex
+parameter, i.e. analytic machinery beyond this section. -/
+
+/-! 9C.17 (deferred): find the volume of the ellipsoid
+{lit}`{x²/a² + y²/b² + z²/c² < 1}` via an operator image of a ball. Deferred with
+the measure-theoretic volume results (9.58–9.61) absent from the pin. -/
+
+/-! 9C.18–9C.20 (deferred): Hadamard's inequality (9.66) and its equality case /
+matrix-entry bound. Deferred — Hadamard's inequality itself is not developed in
+this project, and 9C.19/20 build directly on it. -/
 
 /-- 9C.21 The determinant is the unique multiplicative function on complex square
 matrices that agrees with the product of diagonal entries on diagonal matrices. -/
