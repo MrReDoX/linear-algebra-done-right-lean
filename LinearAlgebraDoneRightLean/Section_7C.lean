@@ -1,6 +1,10 @@
 import Mathlib.Analysis.InnerProductSpace.Adjoint
 import Mathlib.Analysis.InnerProductSpace.Positive
 import Mathlib.Analysis.InnerProductSpace.Spectrum
+import Mathlib.Analysis.InnerProductSpace.PiL2
+import Mathlib.LinearAlgebra.Matrix.PosDef
+import Mathlib.FieldTheory.Minpoly.Field
+import LinearAlgebraDoneRightLean.Section_6C
 import Mathlib.Tactic.Linter.Style
 import CompanionHelper
 
@@ -200,20 +204,174 @@ theorem positive_sqrt_unique {T R S : V →ₗ[𝕜] V} (hR : R.IsPositive) (hRT
 
 /-! # Exercises 7C -/
 
-/-- 7C (orthogonal projections are positive; a special case of {lit}`R* R`).
-For an orthogonal projection {lit}`P` (self-adjoint idempotent), {lit}`P` is
-positive. -/
-theorem exercise_projection_isPositive (P : V →ₗ[𝕜] V)
-    (hsa : LinearMap.adjoint P = P) (hidem : P ∘ₗ P = P) : P.IsPositive := by
-  have h : LinearMap.adjoint P ∘ₗ P = P := by rw [hsa, hidem]
-  rw [← h]; exact adjoint_comp_self_isPositive P
+/-- 7C.1 If both {lit}`T` and {lit}`−T` are positive, then {lit}`T = 0`. -/
+theorem exercise_7C_1 (T : V →ₗ[𝕜] V) (hT : T.IsPositive) (hnT : (-T).IsPositive) :
+    T = 0 := by
+  sorry
 
-omit [FiniteDimensional 𝕜 V] in
-/-- 7C.1-style: a positive operator {lit}`T` satisfies {lit}`⟨Tv, v⟩ = 0 ⟹ Tv = 0`
-(via its positive square root); here the weaker fact that {lit}`T` is
-self-adjoint. -/
-theorem exercise_isPositive_isSymmetric {T : V →ₗ[𝕜] V} (hT : T.IsPositive) :
-    LinearMap.IsSymmetric T :=
-  hT.isSymmetric
+/-- 7C.2 The tridiagonal operator on {lit}`𝔽⁴` with matrix
+{lit}`[[2,−1,0,0],[−1,2,−1,0],[0,−1,2,−1],[0,0,−1,2]]` is an invertible positive
+operator (its matrix is positive definite). -/
+theorem exercise_7C_2 :
+    (Matrix.of ![![2, -1, 0, 0], ![-1, 2, -1, 0], ![0, -1, 2, -1], ![0, 0, -1, 2]] :
+      Matrix (Fin 4) (Fin 4) ℝ).PosDef := by
+  sorry
+
+/-- 7C.3 The operator on {lit}`𝔽ⁿ` whose matrix is all {lit}`1`s is a positive
+operator (its matrix is positive semidefinite). -/
+theorem exercise_7C_3 {n : ℕ} :
+    (Matrix.of (fun _ _ => 1) : Matrix (Fin n) (Fin n) ℝ).PosSemidef := by
+  sorry
+
+/-- 7C.4 For {lit}`n > 1` there is an {lit}`n×n` Hermitian matrix with all entries
+positive whose operator is not positive. -/
+theorem exercise_7C_4 {n : ℕ} (hn : 1 < n) :
+    ∃ A : Matrix (Fin n) (Fin n) ℝ,
+      (∀ i j, 0 < A i j) ∧ A.IsHermitian ∧ ¬ A.PosSemidef := by
+  sorry
+
+/-- 7C.5 A self-adjoint {lit}`T` is positive iff for every orthonormal basis, all
+diagonal entries {lit}`⟨T eₖ, eₖ⟩` of its matrix are nonnegative. -/
+theorem exercise_7C_5 (T : V →ₗ[𝕜] V) (hT : LinearMap.IsSymmetric T) :
+    T.IsPositive ↔ ∀ (n : ℕ) (e : OrthonormalBasis (Fin n) 𝕜 V) (i : Fin n),
+      0 ≤ RCLike.re ⟪e i, T (e i)⟫_𝕜 := by
+  sorry
+
+/-- 7C.6 The sum of two positive operators is positive. -/
+theorem exercise_7C_6 (S T : V →ₗ[𝕜] V) (hS : S.IsPositive) (hT : T.IsPositive) :
+    (S + T).IsPositive := by
+  sorry
+
+/-- 7C.7 If {lit}`S` is an invertible positive operator and {lit}`T` is positive,
+then {lit}`S + T` is invertible. -/
+theorem exercise_7C_7 (S T : V →ₗ[𝕜] V) (hS : S.IsPositive) (hSinv : Function.Bijective S)
+    (hT : T.IsPositive) : Function.Bijective (S + T) := by
+  sorry
+
+/-- 7C.8 {lit}`T` is positive iff its pseudoinverse {lit}`T†` is positive. -/
+theorem exercise_7C_8 (T : V →ₗ[𝕜] V) :
+    T.IsPositive ↔ (LADR.Section_6C.pinv T).IsPositive := by
+  sorry
+
+/-- 7C.9 If {lit}`T` is positive on {lit}`V` and {lit}`S ∈ ℒ(W, V)`, then
+{lit}`S* T S` is positive on {lit}`W`. -/
+theorem exercise_7C_9 {W : Type*} [NormedAddCommGroup W] [InnerProductSpace 𝕜 W]
+    [FiniteDimensional 𝕜 W] (T : V →ₗ[𝕜] V) (hT : T.IsPositive) (S : W →ₗ[𝕜] V) :
+    (LinearMap.adjoint S ∘ₗ T ∘ₗ S).IsPositive := by
+  sorry
+
+/-- 7C.10 If {lit}`T` is positive, {lit}`Tv = w` and {lit}`Tw = v`, then
+{lit}`v = w`. -/
+theorem exercise_7C_10 (T : V →ₗ[𝕜] V) (hT : T.IsPositive) (v w : V)
+    (h1 : T v = w) (h2 : T w = v) : v = w := by
+  sorry
+
+/-- 7C.11 If {lit}`T` is positive and {lit}`U` is invariant, then {lit}`T|U` is
+positive. -/
+theorem exercise_7C_11 (T : V →ₗ[𝕜] V) (hT : T.IsPositive) (U : Submodule 𝕜 V)
+    (hU : ∀ u ∈ U, T u ∈ U) : (T.restrict hU).IsPositive := by
+  sorry
+
+/-- 7C.12 If {lit}`T` is positive, then {lit}`Tᵏ` is positive for every positive
+integer {lit}`k`. -/
+theorem exercise_7C_12 (T : V →ₗ[𝕜] V) (hT : T.IsPositive) (k : ℕ) (hk : 0 < k) :
+    (T ^ k).IsPositive := by
+  sorry
+
+/-- 7C.13 For self-adjoint {lit}`T` and {lit}`α ∈ ℝ`: (a) {lit}`T − αI` is positive
+iff {lit}`α` is ≤ every eigenvalue; (b) {lit}`αI − T` is positive iff {lit}`α` is
+≥ every eigenvalue. -/
+theorem exercise_7C_13 (T : V →ₗ[𝕜] V) (hT : LinearMap.IsSymmetric T) (α : ℝ) :
+    ((T - (α : 𝕜) • LinearMap.id).IsPositive ↔
+        ∀ μ : 𝕜, HasEigenvalue T μ → α ≤ RCLike.re μ) ∧
+      (((α : 𝕜) • LinearMap.id - T).IsPositive ↔
+        ∀ μ : 𝕜, HasEigenvalue T μ → RCLike.re μ ≤ α) := by
+  sorry
+
+/-- 7C.14 If {lit}`T` is positive and {lit}`v₁, …, vₘ ∈ V`, then
+{lit}`∑ⱼ ∑ₖ ⟨T vₖ, vⱼ⟩ ≥ 0`. -/
+theorem exercise_7C_14 (T : V →ₗ[𝕜] V) (hT : T.IsPositive) {m : ℕ} (v : Fin m → V) :
+    0 ≤ RCLike.re (∑ j, ∑ k, ⟪v j, T (v k)⟫_𝕜) := by
+  sorry
+
+/-- 7C.15 For self-adjoint {lit}`T` there exist positive {lit}`A, B` with
+{lit}`T = A − B`, {lit}`(A + B)² = T*T` (so {lit}`A + B = √(T*T)`), and
+{lit}`AB = BA = 0`. -/
+theorem exercise_7C_15 (T : V →ₗ[𝕜] V) (hT : LinearMap.IsSymmetric T) :
+    ∃ A B : V →ₗ[𝕜] V, A.IsPositive ∧ B.IsPositive ∧ T = A - B ∧
+      (A + B) ∘ₗ (A + B) = LinearMap.adjoint T ∘ₗ T ∧ A ∘ₗ B = 0 ∧ B ∘ₗ A = 0 := by
+  sorry
+
+/-- 7C.16 For positive {lit}`T` with positive square root {lit}`R` ({lit}`R² = T`),
+{lit}`null R = null T` and {lit}`range R = range T`. -/
+theorem exercise_7C_16 (T R : V →ₗ[𝕜] V) (hT : T.IsPositive) (hR : R.IsPositive)
+    (hRT : R ∘ₗ R = T) :
+    LinearMap.ker R = LinearMap.ker T ∧ LinearMap.range R = LinearMap.range T := by
+  sorry
+
+/-- 7C.17 For positive {lit}`T` with positive square root {lit}`R`, there is a
+real-coefficient polynomial {lit}`p` with {lit}`R = p(T)`. -/
+theorem exercise_7C_17 (T R : V →ₗ[𝕜] V) (hT : T.IsPositive) (hR : R.IsPositive)
+    (hRT : R ∘ₗ R = T) :
+    ∃ p : Polynomial ℝ, R = Polynomial.aeval T (p.map (algebraMap ℝ 𝕜)) := by
+  sorry
+
+/-- 7C.18 For positive {lit}`S, T`, the product {lit}`ST` is positive iff
+{lit}`S` and {lit}`T` commute. -/
+theorem exercise_7C_18 (S T : V →ₗ[𝕜] V) (hS : S.IsPositive) (hT : T.IsPositive) :
+    (S ∘ₗ T).IsPositive ↔ S ∘ₗ T = T ∘ₗ S := by
+  sorry
+
+/-- 7C.19 The identity operator on {lit}`𝔽²` has infinitely many self-adjoint
+square roots. -/
+theorem exercise_7C_19 :
+    {R : EuclideanSpace ℝ (Fin 2) →ₗ[ℝ] EuclideanSpace ℝ (Fin 2) |
+      LinearMap.IsSymmetric R ∧ R ∘ₗ R = LinearMap.id}.Infinite := by
+  sorry
+
+/-- 7C.20 {lit}`T` is positive iff there exist {lit}`v₁, …, vₙ` with
+{lit}`⟨T eₖ, eⱼ⟩ = ⟨vₖ, vⱼ⟩` for an orthonormal basis {lit}`e` (Gram/Cholesky
+characterization). -/
+theorem exercise_7C_20 {n : ℕ} (T : V →ₗ[𝕜] V) (e : OrthonormalBasis (Fin n) 𝕜 V) :
+    T.IsPositive ↔ ∃ v : Fin n → V, ∀ j k, ⟪e j, T (e k)⟫_𝕜 = ⟪v j, v k⟫_𝕜 := by
+  sorry
+
+/-- 7C.21 The {lit}`n×n` Hilbert matrix ({lit}`1/(j+k−1)` entries) gives a positive
+invertible operator (its matrix is positive definite). -/
+theorem exercise_7C_21 {n : ℕ} (hn : 0 < n) :
+    (Matrix.of (fun j k : Fin n => (1 : ℝ) / ((j : ℝ) + (k : ℝ) + 1))).PosDef := by
+  sorry
+
+/-- 7C.22 If {lit}`T` is positive, {lit}`‖u‖ = 1`, and {lit}`u` maximizes
+{lit}`‖Tv‖` over unit vectors, then {lit}`u` is an eigenvector for the largest
+eigenvalue. -/
+theorem exercise_7C_22 (T : V →ₗ[𝕜] V) (hT : T.IsPositive) (u : V) (hu : ‖u‖ = 1)
+    (hmax : ∀ v, ‖v‖ = 1 → ‖T v‖ ≤ ‖T u‖) :
+    ∃ μ : 𝕜, T u = μ • u ∧
+      ∀ ν : 𝕜, HasEigenvalue T ν → RCLike.re ν ≤ RCLike.re μ := by
+  sorry
+
+/-- 7C.23 (a) {lit}`⟨u, v⟩_T = ⟨T u, v⟩` is an inner product iff {lit}`T` is an
+invertible positive operator. -/
+theorem exercise_7C_23a (T : V →ₗ[𝕜] V) :
+    (∃ core : InnerProductSpace.Core 𝕜 V, ∀ u v : V, core.inner u v = ⟪T u, v⟫_𝕜) ↔
+      (T.IsPositive ∧ Function.Bijective T) := by
+  sorry
+
+/-- 7C.23 (b) Every inner product on {lit}`V` is of the form
+{lit}`⟨u, v⟩_T = ⟨T u, v⟩` for some positive invertible {lit}`T`. -/
+theorem exercise_7C_23b (core : InnerProductSpace.Core 𝕜 V) :
+    ∃ T : V →ₗ[𝕜] V, T.IsPositive ∧ Function.Bijective T ∧
+      ∀ u v : V, core.inner u v = ⟪T u, v⟫_𝕜 := by
+  sorry
+
+/-- 7C.24 For positive {lit}`S, T`, {lit}`null(S + T) = null S ∩ null T`. -/
+theorem exercise_7C_24 (S T : V →ₗ[𝕜] V) (hS : S.IsPositive) (hT : T.IsPositive) :
+    LinearMap.ker (S + T) = LinearMap.ker S ⊓ LinearMap.ker T := by
+  sorry
+
+/-! 7C.25 (deferred): for the second-derivative operator {lit}`T` of Exercise
+7A.31(b), {lit}`−T` is a positive operator. Depends on the trigonometric
+{lit}`L²` function space of 7A.31, which is itself deferred. -/
 
 end LADR.Section_7C
