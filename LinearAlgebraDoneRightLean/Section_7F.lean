@@ -2,6 +2,7 @@ import Mathlib.Analysis.InnerProductSpace.Adjoint
 import Mathlib.Analysis.InnerProductSpace.Spectrum
 import Mathlib.Analysis.InnerProductSpace.PiL2
 import Mathlib.Analysis.Normed.Operator.NNNorm
+import Mathlib.Analysis.InnerProductSpace.Dual
 import Mathlib.Topology.Algebra.Module.FiniteDimension
 import LinearAlgebraDoneRightLean.Section_7C
 import LinearAlgebraDoneRightLean.Section_7D
@@ -341,59 +342,233 @@ here. -/
 /-! # Exercises 7F -/
 
 /-- 7F.1 Reverse triangle inequality: {lit}`| ‖S‖ − ‖T‖ | ≤ ‖S − T‖`. -/
-theorem exercise_1 (S T : V →ₗ[𝕜] W) : |opNorm S - opNorm T| ≤ opNorm (S - T) := by
+theorem exercise_7F_1 (S T : V →ₗ[𝕜] W) : |opNorm S - opNorm T| ≤ opNorm (S - T) := by
+  sorry
+
+/-- 7F.2 For self-adjoint (or complex normal) {lit}`T`,
+{lit}`‖T‖ = max{|λ| : λ eigenvalue}`. -/
+theorem exercise_7F_2 (T : V →ₗ[𝕜] V) (hT : LinearMap.IsSymmetric T) :
+    IsGreatest {r : ℝ | ∃ μ : 𝕜, HasEigenvalue T μ ∧ ‖μ‖ = r} (opNorm T) := by
   sorry
 
 /-- 7F.3 {lit}`‖T v‖ = ‖T‖ ‖v‖ ⟺ T* T v = ‖T‖² v`. -/
-theorem exercise_3 (T : V →ₗ[𝕜] W) (v : V) :
+theorem exercise_7F_3 (T : V →ₗ[𝕜] W) (v : V) :
     ‖T v‖ = opNorm T * ‖v‖ ↔
       (LinearMap.adjoint T ∘ₗ T) v = ((opNorm T ^ 2 : ℝ) : 𝕜) • v := by
   sorry
 
+/-- 7F.4 If {lit}`‖T v‖ = ‖T‖ ‖v‖` and {lit}`⟨u, v⟩ = 0`, then
+{lit}`⟨T u, T v⟩ = 0`. -/
+theorem exercise_7F_4 (T : V →ₗ[𝕜] W) (v : V) (hv : ‖T v‖ = opNorm T * ‖v‖)
+    (u : V) (huv : ⟪u, v⟫_𝕜 = 0) : ⟪T u, T v⟫_𝕜 = 0 := by
+  sorry
+
 /-- 7F.5 Submultiplicativity: for {lit}`T ∈ ℒ(V, U)` and {lit}`S ∈ ℒ(U, W)`,
 {lit}`‖S T‖ ≤ ‖S‖ ‖T‖`. -/
-theorem exercise_5 {U : Type*} [NormedAddCommGroup U] [InnerProductSpace 𝕜 U]
+theorem exercise_7F_5 {U : Type*} [NormedAddCommGroup U] [InnerProductSpace 𝕜 U]
     [FiniteDimensional 𝕜 U] (T : V →ₗ[𝕜] U) (S : U →ₗ[𝕜] W) :
     opNorm (S ∘ₗ T) ≤ opNorm S * opNorm T := by
   sorry
 
+/-- 7F.6 Counterexample: {lit}`‖ST‖ = ‖TS‖` can fail. -/
+theorem exercise_7F_6 :
+    ¬ ∀ (E : Type) [NormedAddCommGroup E] [InnerProductSpace 𝕜 E] [FiniteDimensional 𝕜 E]
+      (S T : E →ₗ[𝕜] E), opNorm (S ∘ₗ T) = opNorm (T ∘ₗ S) := by
+  sorry
+
+/-- 7F.7 {lit}`d(S, T) = ‖S − T‖` is a metric on {lit}`ℒ(V, W)`. -/
+theorem exercise_7F_7 :
+    (∀ S T : V →ₗ[𝕜] W, opNorm (S - T) = 0 ↔ S = T) ∧
+      (∀ S T : V →ₗ[𝕜] W, opNorm (S - T) = opNorm (T - S)) ∧
+      (∀ S T R : V →ₗ[𝕜] W, opNorm (S - R) ≤ opNorm (S - T) + opNorm (T - R)) := by
+  sorry
+
+/-- 7F.8(a) If {lit}`‖I − T‖ < 1`, then {lit}`T` is invertible. -/
+theorem exercise_7F_8a (T : V →ₗ[𝕜] V) (h : opNorm (1 - T) < 1) :
+    Function.Bijective T := by
+  sorry
+
+/-- 7F.8(b) If {lit}`S` is invertible and {lit}`‖S − T‖ < 1/‖S⁻¹‖`, then {lit}`T`
+is invertible. -/
+theorem exercise_7F_8b (S : V ≃ₗ[𝕜] V) (T : V →ₗ[𝕜] V)
+    (h : opNorm ((S : V →ₗ[𝕜] V) - T) < 1 / opNorm (S.symm : V →ₗ[𝕜] V)) :
+    Function.Bijective T := by
+  sorry
+
+/-- 7F.9 Every operator is a limit of invertible operators: for every {lit}`ε > 0`
+there is an invertible {lit}`S` with {lit}`0 < ‖T − S‖ < ε`. -/
+theorem exercise_7F_9 (T : V →ₗ[𝕜] V) (ε : ℝ) (hε : 0 < ε) :
+    ∃ S : V →ₗ[𝕜] V, Function.Bijective S ∧ 0 < opNorm (T - S) ∧ opNorm (T - S) < ε := by
+  sorry
+
+/-- 7F.10 If {lit}`dim V > 1` and {lit}`T` is not invertible, {lit}`T` is a limit of
+non-invertible operators. -/
+theorem exercise_7F_10 (h : 1 < finrank 𝕜 V) (T : V →ₗ[𝕜] V)
+    (hni : ¬ Function.Bijective T) (ε : ℝ) (hε : 0 < ε) :
+    ∃ S : V →ₗ[𝕜] V, ¬ Function.Bijective S ∧ 0 < opNorm (T - S) ∧ opNorm (T - S) < ε := by
+  sorry
+
+/-- 7F.11 Over {lit}`ℂ`, every operator is a limit of diagonalizable operators. -/
+theorem exercise_7F_11 {E : Type*} [NormedAddCommGroup E] [InnerProductSpace ℂ E]
+    [FiniteDimensional ℂ E] (T : E →ₗ[ℂ] E) (ε : ℝ) (hε : 0 < ε) :
+    ∃ S : E →ₗ[ℂ] E,
+      (∃ b : Module.Basis (Fin (finrank ℂ E)) ℂ E, ∀ i, ∃ μ : ℂ, S (b i) = μ • b i) ∧
+        0 < opNorm (T - S) ∧ opNorm (T - S) < ε := by
+  sorry
+
 /-- 7F.12 For a positive operator {lit}`T` with positive square root {lit}`R`,
 {lit}`‖R‖ = √‖T‖`. -/
-theorem exercise_12 {T R : V →ₗ[𝕜] V} (hT : T.IsPositive) (hR : R.IsPositive)
+theorem exercise_7F_12 {T R : V →ₗ[𝕜] V} (hT : T.IsPositive) (hR : R.IsPositive)
     (hRT : R ∘ₗ R = T) : opNorm R = Real.sqrt (opNorm T) := by
   sorry
 
 /-- 7F.13 For positive operators {lit}`S, T`,
 {lit}`‖S − T‖ ≤ max{‖S‖, ‖T‖} ≤ ‖S + T‖`. -/
-theorem exercise_13 {S T : V →ₗ[𝕜] V} (hS : S.IsPositive) (hT : T.IsPositive) :
+theorem exercise_7F_13 {S T : V →ₗ[𝕜] V} (hS : S.IsPositive) (hT : T.IsPositive) :
     opNorm (S - T) ≤ max (opNorm S) (opNorm T) ∧
       max (opNorm S) (opNorm T) ≤ opNorm (S + T) := by
+  sorry
+
+/-- 7F.14 If {lit}`‖P_U − P_W‖ < 1`, then {lit}`dim U = dim W`. -/
+theorem exercise_7F_14 (U W' : Submodule 𝕜 V)
+    (h : opNorm ((U.starProjection : V →ₗ[𝕜] V) - (W'.starProjection : V →ₗ[𝕜] V)) < 1) :
+    finrank 𝕜 U = finrank 𝕜 W' := by
+  sorry
+
+/-- 7F.15 For {lit}`T(z₁,z₂,z₃) = (z₃, 2z₁, 3z₂)` on {lit}`𝔽³`, there is a unitary
+{lit}`S` with {lit}`T = S√(T*T)` (polar decomposition). -/
+theorem exercise_7F_15 (T : EuclideanSpace 𝕜 (Fin 3) →ₗ[𝕜] EuclideanSpace 𝕜 (Fin 3))
+    (hT : ∀ z : EuclideanSpace 𝕜 (Fin 3), T z = !₂[z 2, 2 * z 0, 3 * z 1]) :
+    ∃ S R : EuclideanSpace 𝕜 (Fin 3) →ₗ[𝕜] EuclideanSpace 𝕜 (Fin 3),
+      IsUnitary S ∧ R.IsPositive ∧ R ∘ₗ R = LinearMap.adjoint T ∘ₗ T ∧ T = S ∘ₗ R := by
+  sorry
+
+/-- 7F.16 If {lit}`S` is positive invertible, there is {lit}`δ > 0` such that every
+self-adjoint {lit}`T` with {lit}`‖S − T‖ < δ` is positive. -/
+theorem exercise_7F_16 (S : V →ₗ[𝕜] V) (hS : S.IsPositive) (hSinv : Function.Bijective S) :
+    ∃ δ > 0, ∀ T : V →ₗ[𝕜] V, LinearMap.IsSymmetric T → opNorm (S - T) < δ →
+      T.IsPositive := by
+  sorry
+
+/-! 7F.17 (deferred): the Riesz functional {lit}`φ_u(v) = ⟨v, u⟩` has
+{lit}`‖φ_u‖ = ‖u‖`, where {lit}`‖φ_u‖` is the norm of {lit}`φ_u` as a map into the
+scalar field {lit}`𝔽` viewed as an inner product space. Deferred — this file's
+`opNorm` (and the continuous-dual norm) require inner-product/`CompleteSpace`
+instances on {lit}`𝔽`-as-`𝔽`-inner-product-space that the pin does not resolve
+here. (`InnerProductSpace.toDual` is a linear isometry, so the fact itself is
+standard.) -/
+
+/-- 7F.18(a) For an orthonormal basis {lit}`e`,
+{lit}`max ‖Teₖ‖ ≤ ‖T‖ ≤ (∑ ‖Teₖ‖²)^(1/2)`. -/
+theorem exercise_7F_18a (T : V →ₗ[𝕜] W) (e : OrthonormalBasis (Fin (finrank 𝕜 V)) 𝕜 V) :
+    (∀ k, ‖T (e k)‖ ≤ opNorm T) ∧ opNorm T ≤ Real.sqrt (∑ k, ‖T (e k)‖ ^ 2) := by
+  sorry
+
+/-- 7F.18(b) {lit}`‖T‖ = (∑ ‖Teₖ‖²)^(1/2)` iff {lit}`dim range T ≤ 1`. -/
+theorem exercise_7F_18b (T : V →ₗ[𝕜] W) (e : OrthonormalBasis (Fin (finrank 𝕜 V)) 𝕜 V) :
+    opNorm T = Real.sqrt (∑ k, ‖T (e k)‖ ^ 2) ↔ finrank 𝕜 (LinearMap.range T) ≤ 1 := by
   sorry
 
 /-- 7F.19 The C-star identity {lit}`‖T* T‖ = ‖T‖²`, the starting point for the
 theory of C-star-algebras. -/
 @[avoiding ContinuousLinearMap.norm_adjoint_comp_self]
-theorem exercise_19 (T : V →ₗ[𝕜] W) :
+theorem exercise_7F_19 (T : V →ₗ[𝕜] W) :
     opNorm (LinearMap.adjoint T ∘ₗ T) = opNorm T ^ 2 := by
   sorry
 
 /-- 7F.20 For a normal operator {lit}`T` and {lit}`k ≥ 1`, {lit}`‖Tᵏ‖ = ‖T‖ᵏ`. -/
-theorem exercise_20 {T : V →ₗ[𝕜] V}
+theorem exercise_7F_20 {T : V →ₗ[𝕜] V}
     (hT : LinearMap.adjoint T ∘ₗ T = T ∘ₗ LinearMap.adjoint T) (k : ℕ) (hk : 0 < k) :
     opNorm (T ^ k) = opNorm T ^ k := by
   sorry
 
+/-- 7F.21 If {lit}`dim V, dim W > 1`, the operator norm on {lit}`ℒ(V, W)` does not
+come from an inner product. -/
+theorem exercise_7F_21 (hV : 1 < finrank 𝕜 V) (hW : 1 < finrank 𝕜 W) :
+    ¬ ∃ core : InnerProductSpace.Core 𝕜 (V →ₗ[𝕜] W),
+      ∀ T : V →ₗ[𝕜] W, opNorm T = Real.sqrt (RCLike.re (core.inner T T)) := by
+  sorry
+
+/-! 7F.22 (deferred): {lit}`min{‖T|U‖ : dim U = k} = s_{n−k+1}` (Courant–Fischer
+min-max). Deferred — a faithful statement requires the singular values indexed in
+decreasing order, whereas this file's `singularValues` is unsorted; matching the
+{lit}`n−k+1` index would misstate the result. -/
+
+/-- 7F.23 Every {lit}`T ∈ ℒ(V, W)` is uniformly continuous. -/
+theorem exercise_7F_23 (T : V →ₗ[𝕜] W) : UniformContinuous T := by
+  sorry
+
+/-- 7F.24 For invertible {lit}`T`, {lit}`‖T⁻¹‖ = ‖T‖⁻¹` iff {lit}`T/‖T‖` is
+unitary. -/
+theorem exercise_7F_24 (T : V ≃ₗ[𝕜] V) :
+    opNorm (T.symm : V →ₗ[𝕜] V) = (opNorm (T : V →ₗ[𝕜] V))⁻¹ ↔
+      IsUnitary (((opNorm (T : V →ₗ[𝕜] V))⁻¹ : 𝕜) • (T : V →ₗ[𝕜] V)) := by
+  sorry
+
+/-- 7F.25 For {lit}`T v = ⟨v, u⟩ x` with {lit}`u ≠ 0`,
+{lit}`√(T*T) v = (‖x‖/‖u‖) ⟨v, u⟩ u`. -/
+theorem exercise_7F_25 (u x : V) (hu : u ≠ 0) (T : V →ₗ[𝕜] V)
+    (hT : ∀ v, T v = ⟪u, v⟫_𝕜 • x) (R : V →ₗ[𝕜] V) (hR : R.IsPositive)
+    (hRT : R ∘ₗ R = LinearMap.adjoint T ∘ₗ T) (v : V) :
+    R v = ((((‖x‖ / ‖u‖ : ℝ) : 𝕜)) * ⟪u, v⟫_𝕜) • u := by
+  sorry
+
+/-- 7F.26 {lit}`T` is invertible iff there is a unique unitary {lit}`S` with
+{lit}`T = S√(T*T)`. -/
+theorem exercise_7F_26 (T : V →ₗ[𝕜] V) :
+    Function.Bijective T ↔
+      ∃! S : V →ₗ[𝕜] V, IsUnitary S ∧ ∃ R : V →ₗ[𝕜] V, R.IsPositive ∧
+        R ∘ₗ R = LinearMap.adjoint T ∘ₗ T ∧ T = S ∘ₗ R := by
+  sorry
+
+/-- 7F.27 The unitary {lit}`S v = ∑ ⟨v, eₖ⟩ fₖ` from an SVD of {lit}`T` is unitary
+and is a closest unitary operator to {lit}`T`. -/
+theorem exercise_7F_27 {n : ℕ} (T : V →ₗ[𝕜] V) (e f : Fin n → V) (s : Fin n → ℝ)
+    (he : Orthonormal 𝕜 e) (hf : Orthonormal 𝕜 f)
+    (hT : ∀ v, T v = ∑ k, (s k : 𝕜) • ⟪e k, v⟫_𝕜 • f k)
+    (S : V →ₗ[𝕜] V) (hS : ∀ v, S v = ∑ k, ⟪e k, v⟫_𝕜 • f k) :
+    IsUnitary S ∧ ∀ E : V →ₗ[𝕜] V, IsUnitary E → opNorm (T - S) ≤ opNorm (T - E) := by
+  sorry
+
 /-- 7F.28 A "right" polar decomposition: {lit}`T = √(T T*) ∘ S` for a unitary
 {lit}`S`. Here {lit}`R` is the positive square root of {lit}`T T*`. -/
-theorem exercise_28 (T : V →ₗ[𝕜] V) :
+theorem exercise_7F_28 (T : V →ₗ[𝕜] V) :
     ∃ S R : V →ₗ[𝕜] V, IsUnitary S ∧ R.IsPositive ∧
       R ∘ₗ R = T ∘ₗ LinearMap.adjoint T ∧ T = R ∘ₗ S := by
   sorry
 
+/-- 7F.29(a) There is a unitary {lit}`S` with {lit}`T T* = S (T* T) S*`. -/
+theorem exercise_7F_29a (T : V →ₗ[𝕜] V) :
+    ∃ S : V →ₗ[𝕜] V, IsUnitary S ∧
+      T ∘ₗ LinearMap.adjoint T =
+        S ∘ₗ (LinearMap.adjoint T ∘ₗ T) ∘ₗ LinearMap.adjoint S := by
+  sorry
+
+/-- 7F.29(b) {lit}`T` and {lit}`T*` have the same singular values. -/
+theorem exercise_7F_29b (T : V →ₗ[𝕜] V) :
+    {r : ℝ | ∃ i, LADR.Section_7E.singularValues T i = r} =
+      {r : ℝ | ∃ i, LADR.Section_7E.singularValues (LinearMap.adjoint T) i = r} := by
+  sorry
+
 /-- 7F.30 Uniqueness of the positive factor: if {lit}`S` is unitary, {lit}`R` is
 positive, and {lit}`T = S R`, then {lit}`R = √(T* T)`, i.e. {lit}`R ∘ R = T* T`. -/
-theorem exercise_30 {T S R : V →ₗ[𝕜] V} (hS : IsUnitary S) (hR : R.IsPositive)
+theorem exercise_7F_30 {T S R : V →ₗ[𝕜] V} (hS : IsUnitary S) (hR : R.IsPositive)
     (hT : T = S ∘ₗ R) : R ∘ₗ R = LinearMap.adjoint T ∘ₗ T := by
   sorry
+
+/-- 7F.31 Over {lit}`ℂ`, a normal {lit}`T` has a polar decomposition {lit}`T = SR`
+where {lit}`S` and {lit}`R = √(T*T)` are simultaneously diagonalizable. -/
+theorem exercise_7F_31 {E : Type*} [NormedAddCommGroup E] [InnerProductSpace ℂ E]
+    [FiniteDimensional ℂ E] (T : E →ₗ[ℂ] E) (hN : IsStarNormal T) :
+    ∃ (S R : E →ₗ[ℂ] E) (m : ℕ) (b : OrthonormalBasis (Fin m) ℂ E),
+      IsUnitary S ∧ R.IsPositive ∧ R ∘ₗ R = LinearMap.adjoint T ∘ₗ T ∧ T = S ∘ₗ R ∧
+        (∀ i, ∃ μ : ℂ, S (b i) = μ • b i) ∧ (∀ i, ∃ ν : ℂ, R (b i) = ν • b i) := by
+  sorry
+
+/-! 7F.32 (deferred): with {lit}`s₁, …, sₘ` the positive singular values and an
+orthonormal basis {lit}`e` of {lit}`(null T)⟂`, the image
+{lit}`T(E(e₁/s₁, …, eₘ/sₘ))` of the ellipsoid is the unit ball of {lit}`range T`.
+Deferred with the ellipsoid/volume geometry (7.95–7.111) — it needs the
+set-image/measure machinery that the pinned mathlib does not package here. -/
 
 end LADR.Section_7F
