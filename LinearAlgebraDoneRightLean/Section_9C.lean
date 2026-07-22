@@ -18,6 +18,8 @@ import Mathlib.Data.Real.Basic
 import Mathlib.RingTheory.Nilpotent.Defs
 import Mathlib.Analysis.InnerProductSpace.Adjoint
 import Mathlib.Analysis.InnerProductSpace.Positive
+import Mathlib.Analysis.InnerProductSpace.PiL2
+import Mathlib.MeasureTheory.Measure.Lebesgue.EqHaar
 import Mathlib.Tactic.Linarith
 import Mathlib.Tactic.Ring
 import Mathlib.Tactic.Linter.Style
@@ -495,9 +497,16 @@ theorem exercise_9C_15 {𝕜 E : Type*} [RCLike 𝕜] [NormedAddCommGroup E]
 it needs the derivative (`deriv`) of the determinant as a function of a real/complex
 parameter, i.e. analytic machinery beyond this section. -/
 
-/-! 9C.17 (deferred): find the volume of the ellipsoid
-{lit}`{x²/a² + y²/b² + z²/c² < 1}` via an operator image of a ball. Deferred with
-the measure-theoretic volume results (9.58–9.61) absent from the pin. -/
+/-- 9C.17 The ellipsoid is the image of the open unit ball under the diagonal
+operator {lit}`T = diag(a, b, c)`, so its volume is {lit}`abc` times the volume of
+the unit ball ({name}`MeasureTheory.Measure.addHaar_image_linearMap`). -/
+theorem exercise_9C_17 (a b c : ℝ) (ha : 0 < a) (hb : 0 < b) (hc : 0 < c)
+    (T : EuclideanSpace ℝ (Fin 3) →ₗ[ℝ] EuclideanSpace ℝ (Fin 3))
+    (hT : ∀ x : EuclideanSpace ℝ (Fin 3), T x = !₂[a * x 0, b * x 1, c * x 2]) :
+    MeasureTheory.volume (T '' {x | ‖x‖ < 1}) =
+      ENNReal.ofReal (a * b * c) *
+        MeasureTheory.volume {x : EuclideanSpace ℝ (Fin 3) | ‖x‖ < 1} := by
+  sorry
 
 /-! 9C.18–9C.20 (deferred): Hadamard's inequality (9.66) and its equality case /
 matrix-entry bound. Deferred — Hadamard's inequality itself is not developed in
