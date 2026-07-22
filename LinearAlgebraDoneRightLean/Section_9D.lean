@@ -412,6 +412,14 @@ theorem exercise_9D_5 {m n : ℕ} (A : Matrix (Fin m) (Fin n) F) :
       A.rank ≤ 1 := by
   sorry
 
+/-- 9D.6 Analogously to 9D.5, the {lit}`m×n` matrices of rank at most two are
+exactly the sums of two outer products {lit}`v₁w₁ᵀ + v₂w₂ᵀ`. -/
+theorem exercise_9D_6 {m n : ℕ} (A : Matrix (Fin m) (Fin n) F) :
+    (∃ v : Fin 2 → (Fin m → F), ∃ w : Fin 2 → (Fin n → F),
+        ∀ j k, A j k = ∑ i, v i j * w i k) ↔
+      A.rank ≤ 2 := by
+  sorry
+
 /-- 9D.7 If {lit}`dim V > 2` and {lit}`dim W > 2`, then the sums of two elementary
 tensors do not exhaust {lit}`V ⊗ W`. -/
 theorem exercise_9D_7 [Finite F V] [Finite F W]
@@ -443,5 +451,19 @@ theorem exercise_9D_10 [Finite F V] [Finite F W] (S : V →ₗ[F] V) (T : W →�
     Function.Bijective (TensorProduct.map S T) ↔
       (Function.Bijective S ∧ Function.Bijective T) := by
   sorry
+
+/-! 9D.11 (deferred): for inner product spaces {lit}`V, W`,
+{lit}`(S ⊗ T)* = S* ⊗ T*`. Deferred — it needs the inner product on the tensor
+product {lit}`V ⊗ W` (to form the adjoint there), which the pinned mathlib does not
+provide. -/
+
+/-! 9D.12 (deferred): there is a unique inner product on
+{lit}`V₁ ⊗ ⋯ ⊗ Vₘ` with {lit}`⟨v₁ ⊗ ⋯ ⊗ vₘ, u₁ ⊗ ⋯ ⊗ uₘ⟩ = ∏ ⟨vᵢ, uᵢ⟩`. Deferred —
+this is exactly the tensor-product inner product (LADR 9.80–9.83) absent from the
+pin; see the README deferral note for 9D. -/
+
+/-! 9D.13 (deferred): properties of {lit}`V₁ ⊗ ⋯ ⊗ Vₘ` as an inner product space
+via the inner product of 9D.12. Deferred — depends on the deferred 9D.12 tensor
+inner product. -/
 
 end LADR.Section_9D
