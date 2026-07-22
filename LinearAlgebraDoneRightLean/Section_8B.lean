@@ -12,6 +12,8 @@ import Mathlib.LinearAlgebra.Eigenspace.Triangularizable
 import Mathlib.LinearAlgebra.Eigenspace.Zero
 import Mathlib.LinearAlgebra.FiniteDimensional.Basic
 import Mathlib.RingTheory.Nilpotent.Basic
+import Mathlib.Analysis.InnerProductSpace.Adjoint
+import Mathlib.Data.Matrix.Block
 import Mathlib.Tactic.Linarith
 import Mathlib.Tactic.Linter.Style
 import LinearAlgebraDoneRightLean.Section_5A
@@ -346,6 +348,16 @@ theorem exercise_8B_5 {V : Type*} [AddCommGroup V] [Module ℂ V] [Finite ℂ V]
     IsCompl (ker (T ^ (finrank ℂ V - 2))) (range (T ^ (finrank ℂ V - 2))) := by
   sorry
 
+/-- 8B.6 The exponent of {lit}`z − λ` in the minimal polynomial of {lit}`T` is the
+smallest {lit}`m > 0` such that {lit}`(T − λI)^m = 0` on {lit}`G(λ, T)`. -/
+theorem exercise_8B_6 {V : Type*} [AddCommGroup V] [Module ℂ V] [Finite ℂ V]
+    (T : V →ₗ[ℂ] V) (μ : ℂ) (hμ : HasEigenvalue T μ) (m : ℕ) (hm : 0 < m) :
+    (minpoly ℂ T).rootMultiplicity μ = m ↔
+      (∀ v ∈ maxGenEigenspace T μ, ((T - μ • (1 : Module.End ℂ V)) ^ m) v = 0) ∧
+        ∀ k, 0 < k → (∀ v ∈ maxGenEigenspace T μ,
+          ((T - μ • (1 : Module.End ℂ V)) ^ k) v = 0) → m ≤ k := by
+  sorry
+
 /-- 8B.7 If {lit}`λ` is an eigenvalue of {lit}`T` with multiplicity {lit}`d`,
 then {lit}`G(λ, T) = null(T − λI)^d`. When {lit}`d < dim V` this improves
 8.20. -/
@@ -373,6 +385,15 @@ theorem exercise_8B_9 {V : Type*} [AddCommGroup V] [Module ℂ V] [Finite ℂ V]
     (T : V →ₗ[ℂ] V) :
     ∃ D N : V →ₗ[ℂ] V, T = D + N ∧
       (⨆ μ : ℂ, Module.End.eigenspace D μ) = ⊤ ∧ IsNilpotent N ∧ D * N = N * D := by
+  sorry
+
+/-- 8B.10 On a complex inner product space, {lit}`∑ |λₖ|² ≤ ∑ ‖T eₖ‖²`, where the
+{lit}`λₖ` are the eigenvalues with multiplicity (the roots of the characteristic
+polynomial) and {lit}`e` is an orthonormal basis. -/
+theorem exercise_8B_10 {E : Type*} [NormedAddCommGroup E] [InnerProductSpace ℂ E]
+    [FiniteDimensional ℂ E] (T : E →ₗ[ℂ] E)
+    (e : OrthonormalBasis (Fin (finrank ℂ E)) ℂ E) :
+    ((charpoly T).roots.map (fun μ => ‖μ‖ ^ 2)).sum ≤ ∑ i, ‖T (e i)‖ ^ 2 := by
   sorry
 
 /-- 8B.11 An operator on {lit}`ℂ⁴` whose characteristic polynomial is
@@ -450,6 +471,31 @@ theorem exercise_8B_17 {V : Type*} [AddCommGroup V] [Module ℂ V] [Finite ℂ V
     charpoly P = X ^ (finrank ℂ (ker P)) * (X - C 1) ^ (finrank ℂ (range P)) := by
   sorry
 
+/-! 8B.18 (deferred): for an eigenvalue {lit}`λ` of {lit}`T`, four numbers coincide
+— (a) the exponent of {lit}`z − λ` in the minimal polynomial, (b) the nilpotency
+index of {lit}`(T − λI)` on {lit}`G(λ, T)`, (c) the smallest {lit}`m` with
+{lit}`null(T − λI)^m = null(T − λI)^{m+1}`, and (d) the analogous range
+stabilization index. Deferred — a faithful statement of the full four-way equality
+is lengthy; each pairwise equality follows from this section's
+generalized-eigenspace results. -/
+
+/-- 8B.19 For a unitary {lit}`S` over {lit}`ℂ`, the constant term of the
+characteristic polynomial has absolute value 1. -/
+theorem exercise_8B_19 {E : Type*} [NormedAddCommGroup E] [InnerProductSpace ℂ E]
+    [FiniteDimensional ℂ E] (S : E →ₗ[ℂ] E)
+    (hS : LinearMap.adjoint S ∘ₗ S = 1 ∧ S ∘ₗ LinearMap.adjoint S = 1) :
+    ‖(charpoly S).coeff 0‖ = 1 := by
+  sorry
+
+/-- 8B.20 If {lit}`V = V₁ ⊕ ⋯ ⊕ Vₘ` with each {lit}`Vₖ` invariant under {lit}`T`,
+then {lit}`charpoly T = ∏ charpoly (T|Vₖ)`. -/
+theorem exercise_8B_20 {V : Type*} [AddCommGroup V] [Module ℂ V] [Finite ℂ V]
+    (T : V →ₗ[ℂ] V) {m : ℕ} (Vs : Fin m → Submodule ℂ V)
+    (hne : ∀ k, Vs k ≠ ⊥) (hindep : iSupIndep Vs) (hsup : ⨆ k, Vs k = ⊤)
+    (hinv : ∀ k, ∀ v ∈ Vs k, T v ∈ Vs k) :
+    charpoly T = ∏ k, charpoly (T.restrict (hinv k)) := by
+  sorry
+
 /-- 8B.21 If {lit}`p, q ∈ 𝒫(ℂ)` are monic with the same zeros and {lit}`q` is a
 polynomial multiple of {lit}`p`, then there is an operator on {lit}`ℂ^{deg q}`
 with characteristic polynomial {lit}`q` and minimal polynomial {lit}`p`. -/
@@ -458,5 +504,18 @@ theorem exercise_8B_21 (p q : Polynomial ℂ) (hp : p.Monic) (hq : q.Monic)
     ∃ T : (Fin q.natDegree → ℂ) →ₗ[ℂ] (Fin q.natDegree → ℂ),
       charpoly T = q ∧ minpoly ℂ T = p := by
   sorry
+
+/-- 8B.22 The product of two block-diagonal matrices (matching block sizes) is the
+block-diagonal matrix of the blockwise products. -/
+theorem exercise_8B_22 {m p : ℕ} (A B : Fin m → Matrix (Fin p) (Fin p) ℂ) :
+    Matrix.blockDiagonal A * Matrix.blockDiagonal B =
+      Matrix.blockDiagonal (fun k => A k * B k) := by
+  sorry
+
+/-! 8B.23 (deferred): for {lit}`F = ℝ` and {lit}`λ ∈ ℂ`, the complexification
+{lit}`T_ℂ` satisfies (a) {lit}`u + iv ∈ G(λ, T_ℂ) ↔ u − iv ∈ G(λ̄, T_ℂ)`,
+(b) equal multiplicities of {lit}`λ` and {lit}`λ̄`, and (c),(d) an odd-dimensional
+{lit}`V` forces a real eigenvalue. Deferred — this needs the complexification
+{lit}`T_ℂ` (Exercise 3B.33), which is not developed in this project. -/
 
 end LADR.Section_8B
