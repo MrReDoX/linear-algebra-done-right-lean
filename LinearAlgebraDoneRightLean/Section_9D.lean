@@ -6,6 +6,8 @@ import Mathlib.LinearAlgebra.Dual.Lemmas
 import Mathlib.LinearAlgebra.Multilinear.Basic
 import Mathlib.LinearAlgebra.PiTensorProduct
 import Mathlib.LinearAlgebra.Matrix.Trace
+import Mathlib.Analysis.InnerProductSpace.TensorProduct
+import Mathlib.Analysis.InnerProductSpace.Adjoint
 import Mathlib.RingTheory.Flat.Basic
 import Mathlib.Data.Matrix.Basic
 import Mathlib.Data.Real.Basic
@@ -452,18 +454,36 @@ theorem exercise_9D_10 [Finite F V] [Finite F W] (S : V →ₗ[F] V) (T : W →�
       (Function.Bijective S ∧ Function.Bijective T) := by
   sorry
 
-/-! 9D.11 (deferred): for inner product spaces {lit}`V, W`,
-{lit}`(S ⊗ T)* = S* ⊗ T*`. Deferred — it needs the inner product on the tensor
-product {lit}`V ⊗ W` (to form the adjoint there), which the pinned mathlib does not
-provide. -/
+open scoped InnerProductSpace in
+/-- 9D.11 For inner product spaces {lit}`V, W` and {lit}`S ∈ ℒ(V)`, {lit}`T ∈ ℒ(W)`,
+the adjoint of {lit}`S ⊗ T` on {lit}`V ⊗ W` is {lit}`S* ⊗ T*`. (mathlib's tensor
+inner product is {name}`TensorProduct.instInnerProductSpace`.) -/
+theorem exercise_9D_11 {𝕜 : Type*} [RCLike 𝕜] {E G : Type*}
+    [NormedAddCommGroup E] [InnerProductSpace 𝕜 E] [FiniteDimensional 𝕜 E]
+    [NormedAddCommGroup G] [InnerProductSpace 𝕜 G] [FiniteDimensional 𝕜 G]
+    (S : E →ₗ[𝕜] E) (T : G →ₗ[𝕜] G) :
+    LinearMap.adjoint (TensorProduct.map S T) =
+      TensorProduct.map (LinearMap.adjoint S) (LinearMap.adjoint T) := by
+  sorry
 
-/-! 9D.12 (deferred): there is a unique inner product on
-{lit}`V₁ ⊗ ⋯ ⊗ Vₘ` with {lit}`⟨v₁ ⊗ ⋯ ⊗ vₘ, u₁ ⊗ ⋯ ⊗ uₘ⟩ = ∏ ⟨vᵢ, uᵢ⟩`. Deferred —
-this is exactly the tensor-product inner product (LADR 9.80–9.83) absent from the
-pin; see the README deferral note for 9D. -/
+open scoped InnerProductSpace in
+/-- 9D.12 The inner product on {lit}`V ⊗ W` (LADR 9.80) satisfies
+{lit}`⟨v ⊗ w, u ⊗ u'⟩ = ⟨v, u⟩⟨w, u'⟩`, and hence {lit}`‖v ⊗ w‖ = ‖v‖‖w‖`. -/
+theorem exercise_9D_12 {𝕜 : Type*} [RCLike 𝕜] {E G : Type*}
+    [NormedAddCommGroup E] [InnerProductSpace 𝕜 E]
+    [NormedAddCommGroup G] [InnerProductSpace 𝕜 G]
+    (v u : E) (w u' : G) :
+    (⟪v ⊗ₜ[𝕜] w, u ⊗ₜ[𝕜] u'⟫_𝕜 = ⟪v, u⟫_𝕜 * ⟪w, u'⟫_𝕜) ∧
+      ‖v ⊗ₜ[𝕜] w‖ = ‖v‖ * ‖w‖ := by
+  sorry
 
-/-! 9D.13 (deferred): properties of {lit}`V₁ ⊗ ⋯ ⊗ Vₘ` as an inner product space
-via the inner product of 9D.12. Deferred — depends on the deferred 9D.12 tensor
-inner product. -/
+/-- 9D.13 With that inner product, the tensor products {lit}`eᵢ ⊗ fⱼ` of orthonormal
+families are orthonormal (so an orthonormal basis of {lit}`V ⊗ W`). -/
+theorem exercise_9D_13 {𝕜 : Type*} [RCLike 𝕜] {E G : Type*}
+    [NormedAddCommGroup E] [InnerProductSpace 𝕜 E]
+    [NormedAddCommGroup G] [InnerProductSpace 𝕜 G]
+    {ι κ : Type*} {e : ι → E} {f : κ → G} (he : Orthonormal 𝕜 e) (hf : Orthonormal 𝕜 f) :
+    Orthonormal 𝕜 (fun p : ι × κ => e p.1 ⊗ₜ[𝕜] f p.2) := by
+  sorry
 
 end LADR.Section_9D
