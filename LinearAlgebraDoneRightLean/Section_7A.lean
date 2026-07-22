@@ -4,6 +4,9 @@ import Mathlib.Analysis.InnerProductSpace.Symmetric
 import Mathlib.Analysis.InnerProductSpace.PiL2
 import Mathlib.Analysis.InnerProductSpace.Projection.FiniteDimensional
 import Mathlib.LinearAlgebra.Matrix.ToLin
+import Mathlib.LinearAlgebra.Matrix.Rank
+import Mathlib.FieldTheory.Minpoly.Field
+import Mathlib.Data.List.TFAE
 import Mathlib.Tactic.Linarith
 import Mathlib.Tactic.Linter.Style
 import CompanionHelper
@@ -39,7 +42,13 @@ theorem adjoint_inner (T : V →ₗ[𝕜] W) (v : V) (w : W) :
   (LinearMap.adjoint_inner_right T v w).symm
 
 /-! 7.3 Example: for fixed {lit}`u ∈ V`, {lit}`x ∈ W`, the map {lit}`T v = ⟨v, u⟩ x`
-has adjoint {lit}`T* w = ⟨w, x⟩ u`. -/
+has adjoint {lit}`T* w = ⟨w, x⟩ u` (reading Axler's {lit}`⟨v, u⟩` as {lit}`⟪u, v⟫`). -/
+
+example (u x : V) (T : V →ₗ[𝕜] V) (hT : ∀ v, T v = ⟪u, v⟫_𝕜 • x) (w : V) :
+    LinearMap.adjoint T w = ⟪x, w⟫_𝕜 • u := by
+  refine ext_inner_left 𝕜 fun v => ?_
+  rw [← adjoint_inner, hT, inner_smul_left, inner_smul_right, inner_conj_symm]
+  ring
 
 /-! 7.4 The adjoint of a linear map is a linear map: {lit}`T* ∈ ℒ(W, V)`. In
 mathlib {name}`LinearMap.adjoint` is already a (conjugate-linear) isomorphism of
@@ -335,6 +344,18 @@ theorem normal_iff_real_imag {V : Type*} [NormedAddCommGroup V]
 
 /-! # Exercises 7A -/
 
+/-- 7A.1 For the forward shift {lit}`T(z₁, …, zₙ) = (0, z₁, …, zₙ₋₁)` on
+{lit}`𝔽ⁿ`, the adjoint is the backward shift
+{lit}`T*(z₁, …, zₙ) = (z₂, …, zₙ, 0)`. -/
+theorem exercise_7A_1 {n : ℕ}
+    (T : EuclideanSpace 𝕜 (Fin (n + 1)) →ₗ[𝕜] EuclideanSpace 𝕜 (Fin (n + 1)))
+    (hT : ∀ (z : EuclideanSpace 𝕜 (Fin (n + 1))) (i : Fin (n + 1)),
+      T z i = Fin.cons (α := fun _ => 𝕜) 0 (Fin.init fun j => z j) i) :
+    ∀ (z : EuclideanSpace 𝕜 (Fin (n + 1))) (i : Fin (n + 1)),
+      LinearMap.adjoint T z i =
+        Fin.snoc (α := fun _ => 𝕜) (Fin.tail fun j => z j) 0 i := by
+  sorry
+
 /-- 7A.2 {lit}`T = 0 ⟺ T* = 0 ⟺ T*T = 0 ⟺ TT* = 0`. -/
 theorem exercise_7A_2 (T : V →ₗ[𝕜] W) :
     (T = 0 ↔ LinearMap.adjoint T = 0) ∧
@@ -353,12 +374,80 @@ theorem exercise_7A_4 (T : V →ₗ[𝕜] V) (U : Submodule 𝕜 V) :
     (∀ u ∈ U, T u ∈ U) ↔ (∀ w ∈ Uᗮ, LinearMap.adjoint T w ∈ Uᗮ) := by
   sorry
 
+/-- 7A.5 {lit}`∑ ‖Teₖ‖² = ∑ ‖T*fⱼ‖²` for orthonormal bases {lit}`e` of {lit}`V`
+and {lit}`f` of {lit}`W` — in particular the left sum is basis-independent. -/
+theorem exercise_7A_5 {n m : ℕ} (T : V →ₗ[𝕜] W)
+    (e : OrthonormalBasis (Fin n) 𝕜 V) (f : OrthonormalBasis (Fin m) 𝕜 W) :
+    ∑ i, ‖T (e i)‖ ^ 2 = ∑ j, ‖LinearMap.adjoint T (f j)‖ ^ 2 := by
+  sorry
+
+/-- 7A.6 (a) {lit}`T` injective ⟺ {lit}`T*` surjective; (b) {lit}`T` surjective
+⟺ {lit}`T*` injective. -/
+theorem exercise_7A_6 (T : V →ₗ[𝕜] W) :
+    (Function.Injective T ↔ Function.Surjective (LinearMap.adjoint T)) ∧
+      (Function.Surjective T ↔ Function.Injective (LinearMap.adjoint T)) := by
+  sorry
+
+/-- 7A.7 (a) {lit}`dim null T* = dim null T + dim W − dim V`; (b)
+{lit}`dim range T* = dim range T`. -/
+theorem exercise_7A_7 (T : V →ₗ[𝕜] W) :
+    finrank 𝕜 (LinearMap.ker (LinearMap.adjoint T)) =
+        finrank 𝕜 (LinearMap.ker T) + finrank 𝕜 W - finrank 𝕜 V ∧
+      finrank 𝕜 (LinearMap.range (LinearMap.adjoint T)) =
+        finrank 𝕜 (LinearMap.range T) := by
+  sorry
+
+/-- 7A.8 The row rank of a matrix equals its column rank (via 7A.7(b)). -/
+theorem exercise_7A_8 {m n : ℕ} (A : Matrix (Fin m) (Fin n) 𝕜) :
+    A.transpose.rank = A.rank := by
+  sorry
+
 /-- 7A.9 The product of two self-adjoint operators is self-adjoint iff they
 commute. -/
 theorem exercise_7A_9 (S T : V →ₗ[𝕜] V) (hS : LinearMap.IsSymmetric S)
     (hT : LinearMap.IsSymmetric T) :
     LinearMap.IsSymmetric (S ∘ₗ T) ↔ S ∘ₗ T = T ∘ₗ S := by
   sorry
+
+/-- 7A.10 For {lit}`𝔽 = ℂ`, {lit}`T` is self-adjoint iff {lit}`⟨Tv, v⟩ = ⟨T*v, v⟩`
+for all {lit}`v`. -/
+theorem exercise_7A_10 {V : Type*} [NormedAddCommGroup V] [InnerProductSpace ℂ V]
+    [FiniteDimensional ℂ V] (T : V →ₗ[ℂ] V) :
+    LinearMap.IsSymmetric T ↔
+      ∀ v, ⟪T v, v⟫_ℂ = ⟪LinearMap.adjoint T v, v⟫_ℂ := by
+  sorry
+
+/-- 7A.11 For {lit}`S(w, z) = (−z, w)` on {lit}`𝔽²`: (a) {lit}`S*(w, z) = (z, −w)`;
+(b) {lit}`S` is normal but not self-adjoint. -/
+theorem exercise_7A_11 (S : EuclideanSpace 𝕜 (Fin 2) →ₗ[𝕜] EuclideanSpace 𝕜 (Fin 2))
+    (hS : ∀ v : EuclideanSpace 𝕜 (Fin 2), S v = !₂[- v 1, v 0]) :
+    (∀ v : EuclideanSpace 𝕜 (Fin 2), LinearMap.adjoint S v = !₂[v 1, - v 0]) ∧
+      IsStarNormal S ∧ ¬ LinearMap.IsSymmetric S := by
+  sorry
+
+/-- 7A.12 {lit}`T` is normal iff {lit}`T = A + B` for commuting {lit}`A, B` with
+{lit}`A` self-adjoint and {lit}`B` skew ({lit}`B* = −B`). -/
+theorem exercise_7A_12 (T : V →ₗ[𝕜] V) :
+    IsStarNormal T ↔ ∃ A B : V →ₗ[𝕜] V, LinearMap.IsSymmetric A ∧
+      LinearMap.adjoint B = -B ∧ A ∘ₗ B = B ∘ₗ A ∧ T = A + B := by
+  sorry
+
+/-- 7A.13 For {lit}`𝔽 = ℝ`, the operator {lit}`𝒜 T = T*` on {lit}`ℒ(V)` has
+(a) eigenvalues {lit}`±1` and (b) minimal polynomial {lit}`z² − 1` (when
+{lit}`V ≠ 0`). -/
+theorem exercise_7A_13 {V : Type*} [NormedAddCommGroup V] [InnerProductSpace ℝ V]
+    [FiniteDimensional ℝ V] [Nontrivial V]
+    (𝒜 : (V →ₗ[ℝ] V) →ₗ[ℝ] (V →ₗ[ℝ] V))
+    (h𝒜 : ∀ T : V →ₗ[ℝ] V, 𝒜 T = LinearMap.adjoint T) :
+    (∀ μ : ℝ, HasEigenvalue 𝒜 μ ↔ μ = 1 ∨ μ = -1) ∧
+      minpoly ℝ 𝒜 = Polynomial.X ^ 2 - 1 := by
+  sorry
+
+/-! 7A.14 (deferred): on {lit}`𝒫₂(ℝ)` with {lit}`⟨p, q⟩ = ∫₀¹ pq` and
+{lit}`T(ax² + bx + c) = bx`, show {lit}`T` is not self-adjoint even though its
+matrix in the basis {lit}`1, x, x²` is its own conjugate transpose. Needs the
+custom {lit}`L²` inner product on {lit}`𝒫₂(ℝ)`, which the pinned mathlib does not
+provide as an instance; deferred. -/
 
 /-- 7A.15 (a) For invertible {lit}`T`, {lit}`T` is self-adjoint iff {lit}`T⁻¹` is
 self-adjoint. -/
@@ -367,9 +456,55 @@ theorem exercise_7A_15a (T : V ≃ₗ[𝕜] V) :
       LinearMap.IsSymmetric (T.symm : V →ₗ[𝕜] V) := by
   sorry
 
+/-- 7A.15 (b) For invertible {lit}`T`, {lit}`T` is normal iff {lit}`T⁻¹` is
+normal. -/
+theorem exercise_7A_15b (T : V ≃ₗ[𝕜] V) :
+    IsStarNormal (T : V →ₗ[𝕜] V) ↔ IsStarNormal (T.symm : V →ₗ[𝕜] V) := by
+  sorry
+
+/-- 7A.16 For {lit}`𝔽 = ℝ`: (a) the self-adjoint operators form a subspace of
+{lit}`ℒ(V)`; (b) of dimension {lit}`(dim V)(dim V + 1)/2`. -/
+theorem exercise_7A_16 {V : Type*} [NormedAddCommGroup V] [InnerProductSpace ℝ V]
+    [FiniteDimensional ℝ V] :
+    ∃ U : Submodule ℝ (V →ₗ[ℝ] V),
+      (∀ T, T ∈ U ↔ LinearMap.IsSymmetric T) ∧
+        finrank ℝ U = finrank ℝ V * (finrank ℝ V + 1) / 2 := by
+  sorry
+
+/-- 7A.17 For {lit}`𝔽 = ℂ` and {lit}`V ≠ 0`, the self-adjoint operators do not
+form a subspace of {lit}`ℒ(V)`. -/
+theorem exercise_7A_17 {V : Type*} [NormedAddCommGroup V] [InnerProductSpace ℂ V]
+    [FiniteDimensional ℂ V] [Nontrivial V] :
+    ¬ ∃ U : Submodule ℂ (V →ₗ[ℂ] V), ∀ T, T ∈ U ↔ LinearMap.IsSymmetric T := by
+  sorry
+
+/-- 7A.18 If {lit}`dim V ≥ 2`, the normal operators do not form a subspace of
+{lit}`ℒ(V)`. -/
+theorem exercise_7A_18 (h : 2 ≤ finrank 𝕜 V) :
+    ¬ ∃ U : Submodule 𝕜 (V →ₗ[𝕜] V), ∀ T, T ∈ U ↔ IsStarNormal T := by
+  sorry
+
 /-- 7A.19 If {lit}`‖T*v‖ ≤ ‖Tv‖` for every {lit}`v`, then {lit}`T` is normal. -/
 theorem exercise_7A_19 (T : V →ₗ[𝕜] V)
     (h : ∀ v, ‖LinearMap.adjoint T v‖ ≤ ‖T v‖) : IsStarNormal T := by
+  sorry
+
+/-- 7A.20 If {lit}`P² = P`, the following are equivalent: (a) {lit}`P` self-adjoint;
+(b) {lit}`P` normal; (c) {lit}`P = P_U` for some subspace {lit}`U`. -/
+theorem exercise_7A_20 (P : V →ₗ[𝕜] V) (hP : P ∘ₗ P = P) :
+    [LinearMap.IsSymmetric P, IsStarNormal P,
+      ∃ U : Submodule 𝕜 V, (U.starProjection : V →ₗ[𝕜] V) = P].TFAE := by
+  sorry
+
+/-! 7A.21 (deferred): for the differentiation operator {lit}`D p = p′` on
+{lit}`𝒫₈(ℝ)`, no inner product makes {lit}`D` normal. Faithfully stating this
+requires quantifying over all inner-product-space structures on {lit}`𝒫₈(ℝ)`,
+which is not expressible with mathlib's typeclass-based inner products; deferred. -/
+
+/-- 7A.22 There is an operator on {lit}`ℝ³` that is normal but not self-adjoint. -/
+theorem exercise_7A_22 :
+    ∃ T : EuclideanSpace ℝ (Fin 3) →ₗ[ℝ] EuclideanSpace ℝ (Fin 3),
+      IsStarNormal T ∧ ¬ LinearMap.IsSymmetric T := by
   sorry
 
 /-- 7A.23 If {lit}`T` is normal, {lit}`‖v‖ = ‖w‖ = 2`, {lit}`Tv = 3v`,
@@ -379,11 +514,65 @@ theorem exercise_7A_23 {T : V →ₗ[𝕜] V} (hT : IsStarNormal T) {v w : V}
     ‖T (v + w)‖ = 10 := by
   sorry
 
+/-- 7A.24 If the minimal polynomial of {lit}`T` is {lit}`∑ aₖ zᵏ + zᵐ`, then the
+minimal polynomial of {lit}`T*` has the conjugated coefficients — i.e. it is
+{lit}`(minpoly T)` with {lit}`conj` applied to each coefficient. -/
+theorem exercise_7A_24 (T : V →ₗ[𝕜] V) :
+    minpoly 𝕜 (LinearMap.adjoint T) = (minpoly 𝕜 T).map (starRingEnd 𝕜) := by
+  sorry
+
+/-- 7A.25 {lit}`T` is diagonalizable iff {lit}`T*` is diagonalizable (writing
+diagonalizability as the existence of an eigenvector basis). -/
+theorem exercise_7A_25 (T : V →ₗ[𝕜] V) :
+    (∃ b : Module.Basis (Fin (finrank 𝕜 V)) 𝕜 V, ∀ i, ∃ μ : 𝕜, T (b i) = μ • b i) ↔
+      (∃ b : Module.Basis (Fin (finrank 𝕜 V)) 𝕜 V, ∀ i,
+        ∃ μ : 𝕜, LinearMap.adjoint T (b i) = μ • b i) := by
+  sorry
+
+/-- 7A.26 For {lit}`T v = ⟨v, u⟩ x`, {lit}`T` is normal iff the list {lit}`u, x` is
+linearly dependent (part (b); part (a) is the real self-adjoint version). -/
+theorem exercise_7A_26 (u x : V) (T : V →ₗ[𝕜] V) (hT : ∀ v, T v = ⟪u, v⟫_𝕜 • x) :
+    IsStarNormal T ↔ ¬ LinearIndependent 𝕜 ![u, x] := by
+  sorry
+
 /-- 7A.27 If {lit}`T` is normal, then {lit}`null Tᵏ = null T` and
 {lit}`range Tᵏ = range T` for every positive integer {lit}`k`. -/
 theorem exercise_7A_27 {T : V →ₗ[𝕜] V} (hT : IsStarNormal T) (k : ℕ) (hk : 0 < k) :
     LinearMap.ker (T ^ k) = LinearMap.ker T ∧
       LinearMap.range (T ^ k) = LinearMap.range T := by
   sorry
+
+/-- 7A.28 If {lit}`T` is normal, then for every {lit}`λ` the minimal polynomial of
+{lit}`T` is not a polynomial multiple of {lit}`(z − λ)²`. -/
+theorem exercise_7A_28 {T : V →ₗ[𝕜] V} (hT : IsStarNormal T) (μ : 𝕜) :
+    ¬ (Polynomial.X - Polynomial.C μ) ^ 2 ∣ minpoly 𝕜 T := by
+  sorry
+
+/-- 7A.29 Counterexample: {lit}`‖Teₖ‖ = ‖T*eₖ‖` on some orthonormal basis does
+*not* imply {lit}`T` normal. -/
+theorem exercise_7A_29 :
+    ¬ ∀ (V : Type) [NormedAddCommGroup V] [InnerProductSpace 𝕜 V]
+      [FiniteDimensional 𝕜 V] (T : V →ₗ[𝕜] V) (n : ℕ) (e : OrthonormalBasis (Fin n) 𝕜 V),
+      (∀ k, ‖T (e k)‖ = ‖LinearMap.adjoint T (e k)‖) → IsStarNormal T := by
+  sorry
+
+/-- 7A.30 If {lit}`T ∈ ℒ(𝔽³)` is normal with {lit}`T(1,1,1) = (2,2,2)`, then every
+{lit}`(z₁, z₂, z₃) ∈ null T` has {lit}`z₁ + z₂ + z₃ = 0`. -/
+theorem exercise_7A_30 (T : EuclideanSpace 𝕜 (Fin 3) →ₗ[𝕜] EuclideanSpace 𝕜 (Fin 3))
+    (hT : IsStarNormal T) (h1 : T !₂[1, 1, 1] = !₂[2, 2, 2])
+    (z : EuclideanSpace 𝕜 (Fin 3)) (hz : T z = 0) :
+    z 0 + z 1 + z 2 = 0 := by
+  sorry
+
+/-! 7A.31 (deferred): on {lit}`span(1, cos x, …, cos nx, sin x, …, sin nx)` with
+{lit}`⟨f, g⟩ = ∫₋ₚᵢᵖⁱ fg`, show {lit}`D f = f′` satisfies {lit}`D* = −D` (normal,
+not self-adjoint) and {lit}`T f = f″` is self-adjoint. Needs the {lit}`L²` inner
+product on this trigonometric function space, absent from the pinned mathlib;
+deferred. -/
+
+/-! 7A.32 (deferred): under the Riesz identifications of {lit}`V` with {lit}`V′`
+and {lit}`W` with {lit}`W′` (6.58), the adjoint {lit}`T*` corresponds to the dual
+map {lit}`T′`. Deferred — the statement requires threading the Riesz
+identification between the continuous dual and {lit}`Module.Dual`. -/
 
 end LADR.Section_7A
