@@ -16,6 +16,8 @@ import Mathlib.Analysis.InnerProductSpace.Adjoint
 import Mathlib.Data.Matrix.Block
 import Mathlib.Tactic.Linarith
 import Mathlib.Tactic.Linter.Style
+import LinearAlgebraDoneRightLean.Section_1B
+import LinearAlgebraDoneRightLean.Section_3B
 import LinearAlgebraDoneRightLean.Section_5A
 import LinearAlgebraDoneRightLean.Section_5B
 import LinearAlgebraDoneRightLean.Section_8A
@@ -522,10 +524,24 @@ theorem exercise_8B_22 {m p : ℕ} (A B : Fin m → Matrix (Fin p) (Fin p) ℂ) 
       Matrix.blockDiagonal (fun k => A k * B k) := by
   sorry
 
-/-! 8B.23 (deferred): for {lit}`F = ℝ` and {lit}`λ ∈ ℂ`, the complexification
-{lit}`T_ℂ` satisfies (a) {lit}`u + iv ∈ G(λ, T_ℂ) ↔ u − iv ∈ G(λ̄, T_ℂ)`,
-(b) equal multiplicities of {lit}`λ` and {lit}`λ̄`, and (c),(d) an odd-dimensional
-{lit}`V` forces a real eigenvalue. Deferred — this needs the complexification
-{lit}`T_ℂ` (Exercise 3B.33), which is not developed in this project. -/
+open LADR.Section_1B (Complexification exercise_1B_8) in
+open LADR.Section_3B (complexification_map) in
+/-- 8B.23 (a) For {lit}`F = ℝ` and {lit}`λ ∈ ℂ`, the complexification {lit}`T_ℂ`
+(Exercise 3B.33) satisfies {lit}`u + iv ∈ G(λ, T_ℂ) ↔ u − iv ∈ G(λ̄, T_ℂ)`. In the
+{lit}`V × V` model, {lit}`u + iv = (u, v)` and {lit}`u − iv = (u, −v)`. -/
+theorem exercise_8B_23a {V : Type*} [AddCommGroup V] [Module ℝ V] [Finite ℝ V]
+    (T : V →ₗ[ℝ] V) (μ : ℂ) (u v : V) :
+    letI : Module ℂ (Complexification V) := exercise_1B_8 V
+    ((u, v) ∈ maxGenEigenspace (complexification_map T) μ ↔
+      (u, -v) ∈ maxGenEigenspace (complexification_map T) (starRingEnd ℂ μ)) := by
+  sorry
+
+/-- 8B.23 (c),(d) If {lit}`V` is a real vector space of odd dimension, then
+{lit}`T` has a (real) eigenvalue — obtained here via the complexification and the
+multiplicity count (an alternative proof of 5.34). -/
+theorem exercise_8B_23c {V : Type*} [AddCommGroup V] [Module ℝ V] [Finite ℝ V]
+    (T : V →ₗ[ℝ] V) (hodd : Odd (finrank ℝ V)) :
+    ∃ γ : ℝ, HasEigenvalue T γ := by
+  sorry
 
 end LADR.Section_8B
