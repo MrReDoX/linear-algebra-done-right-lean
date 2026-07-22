@@ -471,13 +471,23 @@ theorem exercise_8B_17 {V : Type*} [AddCommGroup V] [Module ℂ V] [Finite ℂ V
     charpoly P = X ^ (finrank ℂ (ker P)) * (X - C 1) ^ (finrank ℂ (range P)) := by
   sorry
 
-/-! 8B.18 (deferred): for an eigenvalue {lit}`λ` of {lit}`T`, four numbers coincide
-— (a) the exponent of {lit}`z − λ` in the minimal polynomial, (b) the nilpotency
-index of {lit}`(T − λI)` on {lit}`G(λ, T)`, (c) the smallest {lit}`m` with
-{lit}`null(T − λI)^m = null(T − λI)^{m+1}`, and (d) the analogous range
-stabilization index. Deferred — a faithful statement of the full four-way equality
-is lengthy; each pairwise equality follows from this section's
-generalized-eigenspace results. -/
+/-- 8B.18 For an eigenvalue {lit}`λ` of {lit}`T`, four numbers coincide. Here we
+state the equality of (a) the exponent of {lit}`z − λ` in the minimal polynomial
+with (c) the smallest {lit}`m` at which {lit}`null(T − λI)^m` stabilizes and (d) the
+smallest {lit}`m` at which {lit}`range(T − λI)^m` stabilizes. (Characterization (b),
+the nilpotency index on {lit}`G(λ, T)`, is Exercise 8B.6.) -/
+theorem exercise_8B_18 {V : Type*} [AddCommGroup V] [Module ℂ V] [Finite ℂ V]
+    (T : V →ₗ[ℂ] V) (μ : ℂ) (m : ℕ) (hm : 0 < m) :
+    (minpoly ℂ T).rootMultiplicity μ = m ↔
+      (ker ((T - μ • (1 : Module.End ℂ V)) ^ m) =
+          ker ((T - μ • (1 : Module.End ℂ V)) ^ (m + 1)) ∧
+        (∀ k, 0 < k → k < m → ker ((T - μ • (1 : Module.End ℂ V)) ^ k) ≠
+          ker ((T - μ • (1 : Module.End ℂ V)) ^ (k + 1))) ∧
+        range ((T - μ • (1 : Module.End ℂ V)) ^ m) =
+          range ((T - μ • (1 : Module.End ℂ V)) ^ (m + 1)) ∧
+        (∀ k, 0 < k → k < m → range ((T - μ • (1 : Module.End ℂ V)) ^ k) ≠
+          range ((T - μ • (1 : Module.End ℂ V)) ^ (k + 1)))) := by
+  sorry
 
 /-- 8B.19 For a unitary {lit}`S` over {lit}`ℂ`, the constant term of the
 characteristic polynomial has absolute value 1. -/
