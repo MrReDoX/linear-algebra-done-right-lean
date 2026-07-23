@@ -244,26 +244,32 @@ theorem uncurryTensor_unique (T : V ⊗[F] W →ₗ[F] U) (S : V →ₗ[F] W →
 
 /-! # Tensor Product of Inner Product Spaces -/
 
-/-! 9.80 Inner product on the tensor product of two inner product spaces —
-DEFERRED.
+/-! 9.80 / 9.82 Inner product on the tensor product of two inner product spaces.
 
-Axler's 9.80 asserts a unique inner product on {lit}`V ⊗ W` with
-{lit}`⟨v ⊗ w, u ⊗ x⟩ = ⟨v, u⟩⟨w, x⟩`. mathlib (pin v4.30.0-rc2) has no
-{name}`InnerProductSpace` instance on a general {name}`TensorProduct`: the only
-related development is {lit}`InnerProductSpace.canonicalContravariantTensor`,
-the single functional {lit}`E ⊗[ℝ] E → ℝ` corresponding to the inner product of a
-real space, which is neither a full inner product on the tensor product nor
-defined for a pair of distinct spaces. Constructing the inner product 9.82 and
-proving 9.80/9.83 would require building this instance from scratch (the
-orthonormal-basis construction of 9.81). We therefore state 9.80 as a proposition
-about a hypothetical inner product and defer its construction. -/
+The tensor product {lit}`V ⊗ W` of two inner product spaces carries a unique inner
+product determined by {lit}`⟨v ⊗ w, u ⊗ x⟩ = ⟨v, u⟩⟨w, x⟩`. In the pinned mathlib
+this is {name}`TensorProduct.instInnerProductSpace`, and the defining identity is
+{name}`TensorProduct.inner_tmul`. -/
 
-/-! 9.82 Definition: inner product on the tensor product — DEFERRED, see 9.80. -/
+open scoped InnerProductSpace in
+theorem inner_tmul_tensor {𝕜 : Type*} [RCLike 𝕜] {E G : Type*}
+    [NormedAddCommGroup E] [InnerProductSpace 𝕜 E]
+    [NormedAddCommGroup G] [InnerProductSpace 𝕜 G] (v u : E) (w x : G) :
+    ⟪v ⊗ₜ[𝕜] w, u ⊗ₜ[𝕜] x⟫_𝕜 = ⟪v, u⟫_𝕜 * ⟪w, x⟫_𝕜 :=
+  TensorProduct.inner_tmul 𝕜 v u w x
 
-/-! 9.83 Orthonormal basis of {lit}`V ⊗ W` — DEFERRED, see 9.80. Once the inner
-product of 9.82 is available, the tensor products {lit}`{eⱼ ⊗ fₖ}` of orthonormal
-bases form an orthonormal basis, since {lit}`⟨eⱼ ⊗ fₖ, e_M ⊗ f_N⟩ = ⟨eⱼ, e_M⟩⟨fₖ, f_N⟩`
-is {lit}`1` when {lit}`(j, k) = (M, N)` and {lit}`0` otherwise. -/
+/-! 9.83 Orthonormal basis of {lit}`V ⊗ W`: the tensor products {lit}`{eⱼ ⊗ fₖ}` of
+orthonormal families form an orthonormal family, since
+{lit}`⟨eⱼ ⊗ fₖ, e_M ⊗ f_N⟩ = ⟨eⱼ, e_M⟩⟨fₖ, f_N⟩` is {lit}`1` when
+{lit}`(j, k) = (M, N)` and {lit}`0` otherwise. -/
+
+theorem orthonormal_tmul {𝕜 : Type*} [RCLike 𝕜] {E G : Type*}
+    [NormedAddCommGroup E] [InnerProductSpace 𝕜 E]
+    [NormedAddCommGroup G] [InnerProductSpace 𝕜 G]
+    {ι κ : Type*} {e : ι → E} {f : κ → G}
+    (he : Orthonormal 𝕜 e) (hf : Orthonormal 𝕜 f) :
+    Orthonormal 𝕜 (fun p : ι × κ => e p.1 ⊗ₜ[𝕜] f p.2) :=
+  he.tmul hf
 
 /-! # Tensor Product of Multiple Vector Spaces -/
 
