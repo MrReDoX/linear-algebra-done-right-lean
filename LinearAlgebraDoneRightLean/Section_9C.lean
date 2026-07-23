@@ -288,12 +288,15 @@ equivalently {lit}`√det(T*T)`.
 singular-value decomposition, and 9.56(c) — inner-product machinery from
 Chapter 7 (Sections 7E–7F) not developed here. -/
 
-/-! 9.61 An operator {lit}`T ∈ ℒ(ℝⁿ)` changes volume by the factor
-{lit}`|det T|`: {lit}`volume T(Ω) = |det T| · volume Ω`.
-
-**Deferred.** This is a measure-theoretic statement (Section 7F) whose faithful
-formalization requires Lebesgue measure and the change-of-variables theory that
-sits outside linear algebra proper. -/
+/-- 9.61 An operator {lit}`T ∈ ℒ(ℝⁿ)` changes volume by the factor {lit}`|det T|`:
+{lit}`volume T(Ω) = |det T| · volume Ω`. This is mathlib's Haar change-of-variables
+{name}`MeasureTheory.Measure.addHaar_image_linearMap`. -/
+theorem volume_image_eq_9_61 {n : ℕ}
+    (T : EuclideanSpace ℝ (Fin n) →ₗ[ℝ] EuclideanSpace ℝ (Fin n))
+    (Ω : Set (EuclideanSpace ℝ (Fin n))) :
+    MeasureTheory.volume (T '' Ω) =
+      ENNReal.ofReal |LinearMap.det T| * MeasureTheory.volume Ω :=
+  MeasureTheory.Measure.addHaar_image_linearMap MeasureTheory.volume T Ω
 
 /-! 9.62 If {lit}`F = ℂ`, the characteristic polynomial of {lit}`T` equals
 {lit}`(z − λ₁)^{d₁} ⋯ (z − λₘ)^{dₘ}`, where {lit}`λ₁, …, λₘ` are the distinct
