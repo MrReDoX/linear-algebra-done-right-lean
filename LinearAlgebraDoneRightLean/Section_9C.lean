@@ -26,6 +26,8 @@ import Mathlib.Tactic.Linarith
 import Mathlib.Tactic.Ring
 import Mathlib.Tactic.Linter.Style
 import LinearAlgebraDoneRightLean.Section_3D
+import LinearAlgebraDoneRightLean.Section_7C
+import LinearAlgebraDoneRightLean.Section_7D
 import CompanionHelper
 
 /-!
@@ -217,15 +219,30 @@ theorem det_dualMap_eq [Finite F V] (T : V →ₗ[F] V) :
     LinearMap.det T.dualMap = LinearMap.det T :=
   LinearMap.det_dualMap T
 
-/-! 9.56 (c) {lit}`det(T*) = det T` for an operator on an inner-product space.
+/-! 9.56 (c) {lit}`det(T*) = conj(det T)` for an operator on an inner-product
+space. -/
 
-**Deferred.** Axler proves this by choosing an orthonormal basis, in which the
-matrix of the adjoint {lit}`T*` is the conjugate transpose of the matrix of
-{lit}`T`, and then invoking part (a). Formalizing it requires the inner-product /
-adjoint machinery of Chapter 7 (orthonormal bases, {lit}`ℳ(T*) = ℳ(T)*`), which
-is outside the scope of this section's imports. The real content — that the
-determinant is unchanged under transpose and dual — is captured by
-{lit}`det_transpose_matrix` and {lit}`det_dualMap_eq` above. -/
+section InnerProductDet
+
+open scoped ComplexConjugate
+
+variable {𝕜 : Type*} [RCLike 𝕜]
+  {E : Type*} [NormedAddCommGroup E] [InnerProductSpace 𝕜 E] [FiniteDimensional 𝕜 E]
+
+/-- 9.56 (c) The determinant of the adjoint is the conjugate of the determinant.
+Following Axler: in an orthonormal basis the matrix of {lit}`T*` is the conjugate
+transpose of the matrix of {lit}`T` ({name}`LinearMap.toMatrix_adjoint`), so the
+result follows from part (a) via {name}`Matrix.det_conjTranspose`. -/
+theorem det_adjoint_eq_conj (T : E →ₗ[𝕜] E) :
+    LinearMap.det (LinearMap.adjoint T) = conj (LinearMap.det T) := by
+  classical
+  let b := stdOrthonormalBasis 𝕜 E
+  rw [← LinearMap.det_toMatrix b.toBasis (LinearMap.adjoint T),
+    LinearMap.toMatrix_adjoint b b T, Matrix.det_conjTranspose,
+    ← LinearMap.det_toMatrix b.toBasis T]
+  rfl
+
+end InnerProductDet
 
 /-! 9.57 Helpful results in evaluating determinants. All follow from the fact
 that the determinant is an alternating multilinear form in the columns (9.45)
@@ -268,25 +285,70 @@ theorem det_updateRow_add_smul {n : ℕ} (A : Matrix (Fin n) (Fin n) F)
     (A.updateRow i (A i + c • A j)).det = A.det :=
   Matrix.det_updateRow_add_smul_self A h c
 
-/-! 9.58 Every unitary operator has determinant with absolute value {lit}`1`.
+section InnerProductDetOps
 
-**Deferred.** The proof uses {lit}`I = S*S` for a unitary {lit}`S` (7.53),
-{lit}`det(S*) = conj(det S)` (9.56(c)), and 9.49(a) to get {lit}`|det S|² = 1`.
-This requires inner-product-space structure, the adjoint, and 9.56(c) — all
-Chapter 7 machinery not available in this section's imports. -/
+open scoped ComplexConjugate
 
-/-! 9.59 Every positive operator has nonnegative determinant.
+variable {𝕜 : Type*} [RCLike 𝕜]
+  {E : Type*} [NormedAddCommGroup E] [InnerProductSpace 𝕜 E] [FiniteDimensional 𝕜 E]
 
-**Deferred.** By the spectral theorem there is an orthonormal basis of
-eigenvectors, so {lit}`det T` is a product of the (nonnegative) eigenvalues.
-This needs inner products, positivity, and the spectral theorem (Chapter 7). -/
+/-- 9.58 Every unitary operator has determinant with absolute value {lit}`1`.
+Following Axler: {lit}`S* S = I` (7.53), so {lit}`conj(det S)·det S = det(S*)·det S
+= det(S* S) = 1` using 9.56(c) ({name}`det_adjoint_eq_conj`); taking norms gives
+{lit}`‖det S‖² = 1`. -/
+theorem det_unitary_norm_eq_one {S : E →ₗ[𝕜] E} (h : LADR.Section_7D.IsUnitary S) :
+    ‖LinearMap.det S‖ = 1 := by
+  have hSS : LinearMap.adjoint S ∘ₗ S = 1 :=
+    ((LADR.Section_7D.isUnitary_iff_adjoint S).mp h).1
+  have hdet : conj (LinearMap.det S) * LinearMap.det S = 1 := by
+    rw [← det_adjoint_eq_conj, ← LinearMap.det_comp, hSS, Module.End.one_eq_id,
+      LinearMap.det_id]
+  have hnorm := congrArg norm hdet
+  rw [norm_mul, RCLike.norm_conj, norm_one] at hnorm
+  nlinarith [norm_nonneg (LinearMap.det S)]
+
+/-- 9.59 Every positive operator has nonnegative determinant. Following Axler:
+a positive {lit}`T` has a positive (hence self-adjoint) square root {lit}`R` with
+{lit}`R² = T` (7.39), so {lit}`det T = (det R)²`; and {lit}`det R` is real because
+{lit}`R` self-adjoint gives {lit}`conj(det R) = det(R*) = det R` (9.56(c)). Hence
+{lit}`det T` is the square of a real number, so it is a nonnegative real. -/
+theorem det_positive_nonneg {T : E →ₗ[𝕜] E} (hT : T.IsPositive) :
+    ∃ c : ℝ, 0 ≤ c ∧ LinearMap.det T = (c : 𝕜) := by
+  obtain ⟨R, hR, hRT⟩ := LADR.Section_7C.exists_positive_sqrt hT
+  have hsym : LinearMap.adjoint R = R :=
+    (LinearMap.isSymmetric_iff_isSelfAdjoint R).mp hR.1
+  have hreal : conj (LinearMap.det R) = LinearMap.det R := by
+    rw [← det_adjoint_eq_conj, hsym]
+  have hdreal : ((RCLike.re (LinearMap.det R) : ℝ) : 𝕜) = LinearMap.det R :=
+    RCLike.conj_eq_iff_re.mp hreal
+  refine ⟨(RCLike.re (LinearMap.det R)) ^ 2, sq_nonneg _, ?_⟩
+  have hTd : LinearMap.det T = LinearMap.det R * LinearMap.det R := by
+    rw [← hRT, LinearMap.det_comp]
+  rw [hTd, ← hdreal]
+  push_cast
+  ring
 
 /-! 9.60 {lit}`|det T|` equals the product of the singular values of {lit}`T`,
 equivalently {lit}`√det(T*T)`.
 
-**Deferred.** The statement and proof rest on the adjoint {lit}`T*`, the
-singular-value decomposition, and 9.56(c) — inner-product machinery from
-Chapter 7 (Sections 7E–7F) not developed here. -/
+We prove the {lit}`√det(T*T)` characterization directly: {lit}`det(T* T) =
+conj(det T)·det T = ‖det T‖²` by 9.56(c) ({name}`det_adjoint_eq_conj`), so
+{lit}`‖det T‖ = √det(T* T)`. The equivalent *product of singular values* form is
+the determinant of the SVD factorization (7.70, Section 7E); with the singular
+values {lit}`s₁, …, sₙ` on the diagonal it reads {lit}`|det T| = s₁ ⋯ sₙ`. -/
+
+/-- 9.60 auxiliary: {lit}`det(T* T) = ‖det T‖²` (a nonnegative real). -/
+theorem det_adjoint_comp_self (T : E →ₗ[𝕜] E) :
+    LinearMap.det (LinearMap.adjoint T ∘ₗ T) = ((‖LinearMap.det T‖ ^ 2 : ℝ) : 𝕜) := by
+  rw [LinearMap.det_comp, det_adjoint_eq_conj, RCLike.conj_mul]; push_cast; ring
+
+/-- 9.60 ({lit}`√det(T*T)` form): {lit}`‖det T‖ = √det(T* T)`. -/
+theorem norm_det_eq_sqrt_det_adjoint_comp_self (T : E →ₗ[𝕜] E) :
+    ‖LinearMap.det T‖ =
+      Real.sqrt (RCLike.re (LinearMap.det (LinearMap.adjoint T ∘ₗ T))) := by
+  rw [det_adjoint_comp_self, RCLike.ofReal_re, Real.sqrt_sq (norm_nonneg _)]
+
+end InnerProductDetOps
 
 /-- 9.61 An operator {lit}`T ∈ ℒ(ℝⁿ)` changes volume by the factor {lit}`|det T|`:
 {lit}`volume T(Ω) = |det T| · volume Ω`. This is mathlib's Haar change-of-variables

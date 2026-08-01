@@ -111,9 +111,11 @@ and Cholesky in 7D, the matrix SVD `A = B D C*` and pseudoinverse SVD in 7E, bes
 rank-`k` approximation and the operator-norm ↔ largest-singular-value bridge in
 7F); the dimension theory of `PiTensorProduct` (9D 9.87/9.89/9.90 — the
 inner product on a binary tensor product, 9.80–9.83, is now proved); *measure-theoretic volume*
-(7F 7.108–7.111, and the volume/determinant results in 9C 9.58–9.61); and a
-handful of purely numeric worked examples. The Chapters 1–7C sections carry no
-`✓*` — every numbered result there is fully proved.
+(7F 7.108–7.111); and a handful of purely numeric worked examples. In 9C the
+determinant/adjoint results 9.56(c), 9.58, 9.59 and 9.60 are now proved (9.60 in
+its `‖det T‖ = √det(T*T)` form; the product-of-singular-values form follows from
+the SVD), leaving only Hadamard's inequality (9.66) deferred there. The Chapters
+1–7C sections carry no `✓*` — every numbered result there is fully proved.
 
 ## Building
 
