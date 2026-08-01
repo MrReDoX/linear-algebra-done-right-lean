@@ -104,21 +104,57 @@ theorem singularValues_le_opNorm (T : V →ₗ[𝕜] W) (i : Fin (finrank 𝕜 V
   rw [norm_image_svdBasis, (svdBasis T).orthonormal.1 i, mul_one] at h
   exact h
 
-/-! 7.88(a) / 7.85 {lit}`‖T‖` equals the largest singular value of {lit}`T`.
+/-- 7.88(a) / 7.85: the operator norm {lit}`‖T‖` equals the supremum of the
+singular values of {lit}`T` (a supremum, so the {lit}`V = 0` case is handled).
 
-**Deferred (upper bound).** The inequality {lit}`sₖ ≤ ‖T‖` is
-{lit}`singularValues_le_opNorm` above. The reverse bound
-{lit}`‖T‖ ≤ maxₖ sₖ` is the operator-norm ↔ singular-value bridge: from the SVD
-{lit}`T v = ∑ sₖ ⟨v, eₖ⟩ fₖ` one gets
-{lit}`‖T v‖² = ∑ sₖ² |⟨v, eₖ⟩|² ≤ (max sₖ)² ‖v‖²` via Parseval/Bessel (6.26/6.30).
-Formalizing this squared-norm expansion against the partially-orthonormal image
-frame {lit}`fₖ` (orthonormal only on the positive-singular-value indices) plus the
-{lit}`Finset.sup'`/`iSup` maximum (with the empty-index edge case when
-{lit}`V = 0`) is a sizeable analytic development; it is stated here in prose to
-avoid a `sorry` on a numbered theorem.
+Following Axler: the easy bound {lit}`singularValues_le_opNorm` gives one
+inequality; for the reverse, expand {lit}`‖T v‖²` as {lit}`⟨v, T* T v⟩` and use
+the eigenbasis of {lit}`T* T` together with Parseval to bound it by
+{lit}`(sup s)² ‖v‖²`, then take square roots. -/
+theorem opNorm_eq_iSup_singularValues (T : V →ₗ[𝕜] W) :
+    opNorm T = ⨆ i, singularValues T i := by
+  have hop_nn : 0 ≤ opNorm T := by rw [opNorm]; exact norm_nonneg _
+  have hbdd : BddAbove (Set.range (singularValues T)) := (Set.finite_range _).bddAbove
+  have hsup_nn : 0 ≤ ⨆ i, singularValues T i := Real.iSup_nonneg (singularValues_nonneg T)
+  refine le_antisymm ?_ (Real.iSup_le (singularValues_le_opNorm T) hop_nn)
+  rw [opNorm_le_iff hsup_nn]
+  intro v
+  set e := svdBasis T with he
+  set M := ⨆ i, singularValues T i with hM
+  have hsym := (adjComp_self_isPositive T).isSymmetric
+  have hTvadj : ⟪T v, T v⟫_𝕜 = ⟪v, (LinearMap.adjoint T ∘ₗ T) v⟫_𝕜 :=
+    (LinearMap.adjoint_inner_right T v (T v)).symm
+  have hq : ⟪v, (LinearMap.adjoint T ∘ₗ T) v⟫_𝕜
+      = ∑ i, (((singularValues T i) ^ 2 : ℝ) : 𝕜) * ((‖⟪e i, v⟫_𝕜‖ ^ 2 : ℝ) : 𝕜) := by
+    rw [← e.sum_inner_mul_inner v ((LinearMap.adjoint T ∘ₗ T) v)]
+    refine Finset.sum_congr rfl (fun i _ => ?_)
+    have h1 : ⟪e i, (LinearMap.adjoint T ∘ₗ T) v⟫_𝕜
+        = (((singularValues T i) ^ 2 : ℝ) : 𝕜) * ⟪e i, v⟫_𝕜 := by
+      rw [← hsym (e i) v, adjComp_apply_svdBasis, inner_smul_left, RCLike.conj_ofReal]
+    rw [h1]
+    have h2 : ⟪v, e i⟫_𝕜 * ⟪e i, v⟫_𝕜 = ((‖⟪e i, v⟫_𝕜‖ ^ 2 : ℝ) : 𝕜) := by
+      rw [← inner_conj_symm v (e i), RCLike.conj_mul, ← RCLike.ofReal_pow]
+    calc ⟪v, e i⟫_𝕜 * ((((singularValues T i) ^ 2 : ℝ) : 𝕜) * ⟪e i, v⟫_𝕜)
+        = (((singularValues T i) ^ 2 : ℝ) : 𝕜) * (⟪v, e i⟫_𝕜 * ⟪e i, v⟫_𝕜) := by ring
+      _ = (((singularValues T i) ^ 2 : ℝ) : 𝕜) * ((‖⟪e i, v⟫_𝕜‖ ^ 2 : ℝ) : 𝕜) := by rw [h2]
+  have hnormsq : ‖T v‖ ^ 2 = ∑ i, (singularValues T i) ^ 2 * ‖⟪e i, v⟫_𝕜‖ ^ 2 := by
+    have hcast : ((‖T v‖ ^ 2 : ℝ) : 𝕜)
+        = ((∑ i, (singularValues T i) ^ 2 * ‖⟪e i, v⟫_𝕜‖ ^ 2 : ℝ) : 𝕜) := by
+      rw [RCLike.ofReal_pow, ← inner_self_eq_norm_sq_to_K, hTvadj, hq]; push_cast; ring
+    exact_mod_cast hcast
+  have hbound : ∑ i, (singularValues T i) ^ 2 * ‖⟪e i, v⟫_𝕜‖ ^ 2 ≤ M ^ 2 * ‖v‖ ^ 2 := by
+    rw [← e.sum_sq_norm_inner_right v, Finset.mul_sum]
+    refine Finset.sum_le_sum (fun i _ => ?_)
+    exact mul_le_mul_of_nonneg_right
+      (pow_le_pow_left₀ (singularValues_nonneg T i) (le_ciSup hbdd i) 2) (sq_nonneg _)
+  have hsq : ‖T v‖ ^ 2 ≤ (M * ‖v‖) ^ 2 := by rw [hnormsq, mul_pow]; exact hbound
+  have h1 := Real.sqrt_le_sqrt hsq
+  rwa [Real.sqrt_sq (norm_nonneg _),
+    Real.sqrt_sq (mul_nonneg hsup_nn (norm_nonneg _))] at h1
 
-7.88(b) {lit}`‖T‖ = max{‖T v‖ : ‖v‖ = 1}` is likewise the restriction of 7.86 from
-the closed unit ball to the unit sphere, deferred for the same reason. -/
+/-! 7.88(b) {lit}`‖T‖ = max{‖T v‖ : ‖v‖ = 1}` is the restriction of 7.86 from the
+closed unit ball to the unit sphere; combined with 7.88(a) it is the sphere-max
+characterization, deferred here as a routine restatement. -/
 
 /-! 7.90 Example: norms
 
