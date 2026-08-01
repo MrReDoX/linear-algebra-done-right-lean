@@ -324,9 +324,9 @@ of {lit}`A`: with {lit}`e` the resulting orthonormal basis (mathlib's
 columns {lit}`eⱼ` and {lit}`Rⱼₖ = ⟨eⱼ, aₖ⟩`. Then {lit}`A = QR` (orthonormal
 expansion of each column), {lit}`Q` is unitary (its columns are orthonormal),
 {lit}`R` is upper triangular ({name}`InnerProductSpace.gramSchmidtOrthonormalBasis_inv_triangular`),
-and the diagonal {lit}`Rₖₖ = ‖gramSchmidt aₖ‖ > 0` is a positive real. The
-*uniqueness* half of 7.58 (via "a unitary upper-triangular matrix with positive
-diagonal is the identity") is not yet formalized. -/
+and the diagonal {lit}`Rₖₖ = ‖gramSchmidt aₖ‖ > 0` is a positive real.
+*Uniqueness* is `QR_unique` below, via the lemma that a unitary upper-triangular
+matrix with positive diagonal is the identity (`unitary_upperTri_eq_one`). -/
 
 /-- The diagonal Gram–Schmidt coefficient: {lit}`⟨ê i, f i⟩ = ‖gramSchmidt f i‖`,
 a positive real. This is the entry that becomes the (positive) diagonal of {lit}`R`
@@ -404,6 +404,107 @@ theorem QR_factorization {N : ℕ} (A : Matrix (Fin N) (Fin N) 𝕜)
     rw [ContinuousLinearEquiv.apply_symm_apply, Matrix.transpose_apply] at hLk
     rw [← hLk]
     exact Finset.sum_congr rfl fun x _ => mul_comm _ _
+
+/-- A unitary upper-triangular matrix with positive real diagonal is the identity.
+Since {lit}`U⁻¹ = U*` is upper triangular ({name}`Matrix.blockTriangular_inv_of_blockTriangular`)
+while {lit}`U*` is lower triangular, {lit}`U` is diagonal; being unitary with
+positive real diagonal then forces {lit}`U = I`. This is the key to QR uniqueness. -/
+theorem unitary_upperTri_eq_one {N : ℕ} (U : Matrix (Fin N) (Fin N) 𝕜)
+    (hU : U ∈ Matrix.unitaryGroup (Fin N) 𝕜) (hUT : U.BlockTriangular id)
+    (hdiag : ∀ i, 0 < RCLike.re (U i i) ∧ RCLike.im (U i i) = 0) : U = 1 := by
+  have hmem1 : star U * U = 1 := (Matrix.mem_unitaryGroup_iff').mp hU
+  have hmem2 : U * star U = 1 := (Matrix.mem_unitaryGroup_iff).mp hU
+  letI : Invertible U := ⟨star U, hmem1, hmem2⟩
+  have hUinv : U⁻¹ = star U := Matrix.inv_eq_left_inv hmem1
+  have hup : U⁻¹.BlockTriangular id := Matrix.blockTriangular_inv_of_blockTriangular hUT
+  rw [hUinv] at hup
+  have hoff : ∀ i j, i ≠ j → U i j = 0 := by
+    intro i j hij
+    rcases lt_or_gt_of_ne hij with h | h
+    · have hz := hup h
+      rw [Matrix.star_apply, star_eq_zero] at hz
+      exact hz
+    · exact hUT h
+  ext i j
+  rcases eq_or_ne i j with rfl | hij
+  · have hentry : (star U * U) i i = 1 := by rw [hmem1]; simp
+    rw [Matrix.mul_apply] at hentry
+    have hsum : ∑ k, (star U) i k * U k i = (star U) i i * U i i := by
+      refine Finset.sum_eq_single i (fun k _ hk => ?_) (fun h => absurd (Finset.mem_univ i) h)
+      rw [Matrix.star_apply, star_eq_zero.mpr (hoff k i hk), zero_mul]
+    rw [hsum, Matrix.star_apply, RCLike.star_def, RCLike.conj_mul] at hentry
+    have hnorm : ‖U i i‖ = 1 := by
+      have h2 : ‖U i i‖ ^ 2 = 1 := by exact_mod_cast hentry
+      rw [← Real.sqrt_sq (norm_nonneg _), h2, Real.sqrt_one]
+    obtain ⟨hre, him⟩ := hdiag i
+    have hval : U i i = ((RCLike.re (U i i) : ℝ) : 𝕜) := by
+      conv_lhs => rw [← RCLike.re_add_im (U i i)]
+      rw [him, RCLike.ofReal_zero, zero_mul, add_zero]
+    have hre1 : RCLike.re (U i i) = 1 := by
+      have h1 : |RCLike.re (U i i)| = 1 := by
+        rw [← RCLike.norm_ofReal (K := 𝕜), ← hval, hnorm]
+      rwa [abs_of_pos hre] at h1
+    rw [Matrix.one_apply_eq, hval, hre1, RCLike.ofReal_one]
+  · rw [hoff i j hij, Matrix.one_apply_ne hij]
+
+/-- 7.58 QR factorization (uniqueness). The unitary/upper-triangular/positive-diagonal
+factors of a QR factorization are unique. Following Axler: if {lit}`A = Q₁R₁ = Q₂R₂`,
+then {lit}`U = Q₂* Q₁ = R₂ R₁⁻¹` is unitary, upper triangular, and has positive
+diagonal, so {lit}`U = I` by `unitary_upperTri_eq_one`; hence {lit}`Q₁ = Q₂` and
+{lit}`R₁ = R₂`. -/
+theorem QR_unique {N : ℕ} (A Q₁ R₁ Q₂ R₂ : Matrix (Fin N) (Fin N) 𝕜)
+    (hQ₁ : Q₁ ∈ Matrix.unitaryGroup (Fin N) 𝕜) (hR₁t : R₁.BlockTriangular id)
+    (hR₁d : ∀ i, 0 < RCLike.re (R₁ i i) ∧ RCLike.im (R₁ i i) = 0) (hA₁ : A = Q₁ * R₁)
+    (hQ₂ : Q₂ ∈ Matrix.unitaryGroup (Fin N) 𝕜) (hR₂t : R₂.BlockTriangular id)
+    (hR₂d : ∀ i, 0 < RCLike.re (R₂ i i) ∧ RCLike.im (R₂ i i) = 0) (hA₂ : A = Q₂ * R₂) :
+    Q₁ = Q₂ ∧ R₁ = R₂ := by
+  have diagval : ∀ z : 𝕜, RCLike.im z = 0 → z = ((RCLike.re z : ℝ) : 𝕜) := by
+    intro z hz
+    conv_lhs => rw [← RCLike.re_add_im z]
+    rw [hz, RCLike.ofReal_zero, zero_mul, add_zero]
+  have hR₁ne : ∀ i, R₁ i i ≠ 0 := by
+    intro i h; have := (hR₁d i).1; rw [h] at this; simp at this
+  have hdet1 : R₁.det ≠ 0 := by
+    rw [Matrix.det_of_upperTriangular hR₁t]
+    exact Finset.prod_ne_zero_iff.mpr (fun i _ => hR₁ne i)
+  letI : Invertible R₁ := Matrix.invertibleOfIsUnitDet R₁ (isUnit_iff_ne_zero.mpr hdet1)
+  set U := star Q₂ * Q₁ with hUdef
+  have hQ₂s1 : star Q₂ * Q₂ = 1 := (Matrix.mem_unitaryGroup_iff').mp hQ₂
+  have hQ₂s2 : Q₂ * star Q₂ = 1 := (Matrix.mem_unitaryGroup_iff).mp hQ₂
+  have hUunit : U ∈ Matrix.unitaryGroup (Fin N) 𝕜 := mul_mem (Unitary.star_mem hQ₂) hQ₁
+  have hUR : U * R₁ = R₂ := by
+    have h : Q₁ * R₁ = Q₂ * R₂ := by rw [← hA₁, ← hA₂]
+    rw [hUdef, Matrix.mul_assoc, h, ← Matrix.mul_assoc, hQ₂s1, Matrix.one_mul]
+  have hUeq : U = R₂ * R₁⁻¹ := by
+    rw [← hUR, Matrix.mul_assoc, Matrix.mul_inv_of_invertible, Matrix.mul_one]
+  have hR₁invt : R₁⁻¹.BlockTriangular id := Matrix.blockTriangular_inv_of_blockTriangular hR₁t
+  have hUt : U.BlockTriangular id := hUeq ▸ hR₂t.mul hR₁invt
+  have hUd : ∀ i, 0 < RCLike.re (U i i) ∧ RCLike.im (U i i) = 0 := by
+    intro i
+    have hprod : (U * R₁) i i = U i i * R₁ i i := by
+      rw [Matrix.mul_apply]
+      refine Finset.sum_eq_single i (fun k _ hk => ?_) (fun h => absurd (Finset.mem_univ i) h)
+      rcases lt_or_gt_of_ne hk with hlt | hgt
+      · rw [hUt hlt, zero_mul]
+      · rw [hR₁t hgt, mul_zero]
+    rw [hUR] at hprod
+    obtain ⟨hr1, hi1⟩ := hR₁d i
+    obtain ⟨hr2, hi2⟩ := hR₂d i
+    have hR1v := diagval _ hi1
+    have hR2v := diagval _ hi2
+    have ha : ((RCLike.re (R₁ i i) : ℝ) : 𝕜) ≠ 0 := by rw [← hR1v]; exact hR₁ne i
+    have hUii : U i i = ((RCLike.re (R₂ i i) / RCLike.re (R₁ i i) : ℝ) : 𝕜) := by
+      rw [RCLike.ofReal_div, eq_div_iff ha, ← hR1v, ← hR2v]
+      exact hprod.symm
+    refine ⟨?_, ?_⟩
+    · rw [hUii, RCLike.ofReal_re]; positivity
+    · rw [hUii, RCLike.ofReal_im]
+  have hU1 : U = 1 := unitary_upperTri_eq_one U hUunit hUt hUd
+  refine ⟨?_, ?_⟩
+  · calc Q₁ = Q₂ * (star Q₂ * Q₁) := by rw [← Matrix.mul_assoc, hQ₂s2, Matrix.one_mul]
+      _ = Q₂ * 1 := by rw [← hUdef, hU1]
+      _ = Q₂ := Matrix.mul_one Q₂
+  · rw [← hUR, hU1, Matrix.one_mul]
 
 /-! 7.60 Example: QR factorization of a 3-by-3 matrix.
 
