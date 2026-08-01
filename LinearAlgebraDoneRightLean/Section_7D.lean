@@ -2,6 +2,7 @@ import Mathlib.Analysis.InnerProductSpace.Adjoint
 import Mathlib.Analysis.InnerProductSpace.Spectrum
 import Mathlib.Analysis.InnerProductSpace.LinearMap
 import Mathlib.Analysis.InnerProductSpace.PiL2
+import Mathlib.Analysis.InnerProductSpace.GramSchmidtOrtho
 import Mathlib.Analysis.SpecialFunctions.Trigonometric.Basic
 import Mathlib.LinearAlgebra.UnitaryGroup
 import Mathlib.LinearAlgebra.Matrix.Notation
@@ -317,16 +318,92 @@ theorem isUnitaryMatrix_iff_conjTranspose (Q : Matrix n n 𝕜) :
 
 If {lit}`A` is a square matrix with linearly independent columns, then
 {lit}`A = QR` with {lit}`Q` unitary and {lit}`R` upper triangular with positive
-diagonal, uniquely. The existence uses Gram–Schmidt applied to the columns of
-{lit}`A` (mathlib: {lit}`gramSchmidtOrthonormalBasis`), reading off
-{lit}`Rⱼₖ = ⟨vₖ, eⱼ⟩`; uniqueness uses the uniqueness of the Gram–Schmidt lists.
+diagonal. Following Axler, the construction is Gram–Schmidt applied to the columns
+of {lit}`A`: with {lit}`e` the resulting orthonormal basis (mathlib's
+{name}`InnerProductSpace.gramSchmidtOrthonormalBasis`), take {lit}`Q` to have
+columns {lit}`eⱼ` and {lit}`Rⱼₖ = ⟨eⱼ, aₖ⟩`. Then {lit}`A = QR` (orthonormal
+expansion of each column), {lit}`Q` is unitary (its columns are orthonormal),
+{lit}`R` is upper triangular ({name}`InnerProductSpace.gramSchmidtOrthonormalBasis_inv_triangular`),
+and the diagonal {lit}`Rₖₖ = ‖gramSchmidt aₖ‖ > 0` is a positive real. The
+*uniqueness* half of 7.58 (via "a unitary upper-triangular matrix with positive
+diagonal is the identity") is not yet formalized. -/
 
-This result is **deferred**: mathlib pins no packaged QR factorization, and
-assembling it here — the change of basis to the Gram–Schmidt orthonormal basis, the
-upper-triangularity of the coefficient matrix, positivity of the diagonal, and the
-uniqueness argument — is a substantial development beyond the scope of this section.
-It is stated here without a Lean declaration to avoid a `sorry` on a numbered
-theorem. -/
+/-- The diagonal Gram–Schmidt coefficient: {lit}`⟨ê i, f i⟩ = ‖gramSchmidt f i‖`,
+a positive real. This is the entry that becomes the (positive) diagonal of {lit}`R`
+in the QR factorization. -/
+theorem gramSchmidtNormed_inner_self {E : Type*} [NormedAddCommGroup E]
+    [InnerProductSpace 𝕜 E] {ι : Type*} [LinearOrder ι] [LocallyFiniteOrderBot ι]
+    [WellFoundedLT ι] {f : ι → E} (hf : LinearIndependent 𝕜 f) (i : ι) :
+    inner 𝕜 (InnerProductSpace.gramSchmidtNormed 𝕜 f i) (f i) =
+      ((‖InnerProductSpace.gramSchmidt 𝕜 f i‖ : ℝ) : 𝕜) := by
+  have hne : InnerProductSpace.gramSchmidt 𝕜 f i ≠ 0 :=
+    InnerProductSpace.gramSchmidt_ne_zero i hf
+  rw [InnerProductSpace.gramSchmidt_def' 𝕜 f i, inner_add_right, inner_sum]
+  have hzero : ∀ j ∈ Finset.Iio i, inner 𝕜 (InnerProductSpace.gramSchmidtNormed 𝕜 f i)
+      ((𝕜 ∙ InnerProductSpace.gramSchmidt 𝕜 f j).starProjection (f i)) = 0 := by
+    intro j hj
+    have hji : j ≠ i := ne_of_lt (Finset.mem_Iio.mp hj)
+    obtain ⟨a, ha⟩ := Submodule.mem_span_singleton.mp
+      ((𝕜 ∙ InnerProductSpace.gramSchmidt 𝕜 f j).starProjection_apply_mem (f i))
+    rw [← ha, inner_smul_right, InnerProductSpace.gramSchmidtNormed, inner_smul_left,
+      InnerProductSpace.gramSchmidt_orthogonal 𝕜 f (Ne.symm hji)]
+    simp
+  rw [Finset.sum_eq_zero hzero, add_zero, InnerProductSpace.gramSchmidtNormed,
+    inner_smul_left, inner_self_eq_norm_sq_to_K, map_inv₀, RCLike.conj_ofReal]
+  have hn : (‖InnerProductSpace.gramSchmidt 𝕜 f i‖ : 𝕜) ≠ 0 := by
+    rw [Ne, RCLike.ofReal_eq_zero]; exact norm_ne_zero_iff.mpr hne
+  field_simp
+
+/-- 7.58 QR factorization (existence). A square matrix with linearly independent
+columns factors as {lit}`A = QR` with {lit}`Q` unitary, {lit}`R` upper triangular,
+and the diagonal of {lit}`R` a positive real. -/
+theorem QR_factorization {N : ℕ} (A : Matrix (Fin N) (Fin N) 𝕜)
+    (hA : LinearIndependent 𝕜 (fun i => (EuclideanSpace.equiv (Fin N) 𝕜).symm (Aᵀ i))) :
+    ∃ Q R : Matrix (Fin N) (Fin N) 𝕜, Q ∈ Matrix.unitaryGroup (Fin N) 𝕜 ∧
+      (∀ i j, j < i → R i j = 0) ∧
+      (∀ i, 0 < RCLike.re (R i i) ∧ RCLike.im (R i i) = 0) ∧ A = Q * R := by
+  classical
+  set f : Fin N → EuclideanSpace 𝕜 (Fin N) :=
+    fun i => (EuclideanSpace.equiv (Fin N) 𝕜).symm (Aᵀ i) with hf
+  have h : Module.finrank 𝕜 (EuclideanSpace 𝕜 (Fin N)) = Fintype.card (Fin N) := by
+    simp [finrank_euclideanSpace]
+  set e := InnerProductSpace.gramSchmidtOrthonormalBasis h f with he
+  refine ⟨Matrix.of fun k j => e j k, Matrix.of fun j i => inner 𝕜 (e j) (f i),
+    ?_, ?_, ?_, ?_⟩
+  · rw [Matrix.mem_unitaryGroup_iff']
+    ext i j
+    simp only [Matrix.mul_apply, Matrix.star_apply, Matrix.of_apply, Matrix.one_apply,
+      RCLike.star_def]
+    have hortho := orthonormal_iff_ite.mp e.orthonormal i j
+    rw [PiLp.inner_apply] at hortho
+    simp only [RCLike.inner_apply] at hortho
+    rw [← hortho]
+    exact Finset.sum_congr rfl fun x _ => mul_comm _ _
+  · intro i j hji
+    simp only [Matrix.of_apply]
+    exact InnerProductSpace.gramSchmidtOrthonormalBasis_inv_triangular h f hji
+  · intro i
+    have hne : InnerProductSpace.gramSchmidtNormed 𝕜 f i ≠ 0 := by
+      have hlen : ‖InnerProductSpace.gramSchmidtNormed 𝕜 f i‖ = 1 :=
+        InnerProductSpace.gramSchmidtNormed_unit_length i hA
+      intro hz; rw [hz, norm_zero] at hlen; norm_num at hlen
+    have hei : e i = InnerProductSpace.gramSchmidtNormed 𝕜 f i :=
+      InnerProductSpace.gramSchmidtOrthonormalBasis_apply h hne
+    simp only [Matrix.of_apply, hei, gramSchmidtNormed_inner_self hA i]
+    have hpos : 0 < ‖InnerProductSpace.gramSchmidt 𝕜 f i‖ :=
+      norm_pos_iff.mpr (InnerProductSpace.gramSchmidt_ne_zero i hA)
+    exact ⟨by rw [RCLike.ofReal_re]; exact hpos, by rw [RCLike.ofReal_im]⟩
+  · ext k i
+    simp only [Matrix.mul_apply, Matrix.of_apply]
+    have hsum := e.sum_repr (f i)
+    have hL := congrArg (EuclideanSpace.equiv (Fin N) 𝕜) hsum
+    rw [map_sum] at hL
+    simp only [map_smul, OrthonormalBasis.repr_apply_apply] at hL
+    have hLk := congrFun hL k
+    simp only [Finset.sum_apply, Pi.smul_apply, smul_eq_mul] at hLk
+    rw [ContinuousLinearEquiv.apply_symm_apply, Matrix.transpose_apply] at hLk
+    rw [← hLk]
+    exact Finset.sum_congr rfl fun x _ => mul_comm _ _
 
 /-! 7.60 Example: QR factorization of a 3-by-3 matrix.
 
