@@ -94,7 +94,7 @@ the section's exercises.
 | 8D. Trace | ✓ | — | — |
 | 9A. Bilinear Forms and Quadratic Forms | ✓ | — | — |
 | 9B. Alternating Multilinear Forms | ✓ | — | — |
-| 9C. Determinants | ✓* | — | — |
+| 9C. Determinants | ✓ | — | — |
 | 9D. Tensor Products | ✓* | — | — |
 
 The whole book (Chapters 1–9) is now drafted. In every section, exercises
@@ -113,10 +113,11 @@ pseudoinverse SVD in 7E, best rank-`k` approximation and the operator-norm ↔
 largest-singular-value bridge in 7F); the dimension theory of `PiTensorProduct` (9D 9.87/9.89/9.90 — the
 inner product on a binary tensor product, 9.80–9.83, is now proved); *measure-theoretic volume*
 (7F 7.108–7.111); and a handful of purely numeric worked examples. In 9C the
-determinant/adjoint results 9.56(c), 9.58, 9.59 and 9.60 are now proved (9.60 in
-its `‖det T‖ = √det(T*T)` form; the product-of-singular-values form follows from
-the SVD), leaving only Hadamard's inequality (9.66) deferred there. The Chapters
-1–7C sections carry no `✓*` — every numbered result there is fully proved.
+determinant/adjoint results 9.56(c), 9.58, 9.59, 9.60 and Hadamard's inequality
+9.66 are now proved (9.60 in its `‖det T‖ = √det(T*T)` form; the
+product-of-singular-values form follows from the SVD) — 9C carries no remaining
+numbered-result deferral. The Chapters 1–7C sections carry no `✓*` — every
+numbered result there is fully proved.
 
 ## Building
 

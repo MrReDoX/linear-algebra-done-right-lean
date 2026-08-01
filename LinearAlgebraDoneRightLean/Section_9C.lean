@@ -437,12 +437,63 @@ theorem charpoly_coeff_det {n : ℕ} (A : Matrix (Fin n) (Fin n) F) :
   have h := Matrix.det_eq_sign_charpoly_coeff A
   rwa [Fintype.card_fin] at h
 
-/-! 9.66 Hadamard's inequality: for an {lit}`n×n` matrix {lit}`A` with columns
+open scoped Matrix in
+/-- 9.66 Hadamard's inequality: for an {lit}`n×n` matrix {lit}`A` with columns
 {lit}`v₁, …, vₙ`, {lit}`|det A| ≤ ∏ₖ ‖vₖ‖`.
 
-**Deferred.** Axler's proof uses the QR factorization (7.58), the fact that a
-unitary matrix has {lit}`|det| = 1` (9.58), and the standard inner-product norms
-on {lit}`Fⁿ`. These belong to Chapter 7 and are not available here. -/
+Following Axler: if the columns are dependent then {lit}`det A = 0` and the bound
+is trivial; otherwise take a QR factorization {lit}`A = QR` (7.58). Then
+{lit}`|det A| = |det R| = ∏ₖ |Rₖₖ|` (Q unitary has {lit}`|det| = 1` (9.58), R
+triangular), and {lit}`|Rₖₖ| ≤ ‖vₖ‖` because {lit}`‖vₖ‖² = (A*A)ₖₖ = (R*R)ₖₖ =
+∑ⱼ |Rⱼₖ|² ≥ |Rₖₖ|²` (using {lit}`Q*Q = I`). -/
+theorem hadamard_inequality {𝕜 : Type*} [RCLike 𝕜] {n : ℕ}
+    (A : Matrix (Fin n) (Fin n) 𝕜) :
+    ‖A.det‖ ≤ ∏ i, ‖(EuclideanSpace.equiv (Fin n) 𝕜).symm (Aᵀ i)‖ := by
+  classical
+  set col : Fin n → EuclideanSpace 𝕜 (Fin n) :=
+    fun i => (EuclideanSpace.equiv (Fin n) 𝕜).symm (Aᵀ i) with hcol
+  by_cases hindep : LinearIndependent 𝕜 col
+  · obtain ⟨Q, R, hQ, hRtri, _, hAQR⟩ := LADR.Section_7D.QR_factorization A hindep
+    have hRupper : R.BlockTriangular id := hRtri
+    have hQdet : ‖Q.det‖ = 1 := by
+      have hu := (unitary.mem_iff.mp (Matrix.det_of_mem_unitary hQ)).1
+      rw [RCLike.star_def, RCLike.conj_mul] at hu
+      have h2 : ‖Q.det‖ ^ 2 = 1 := by exact_mod_cast hu
+      rw [← Real.sqrt_sq (norm_nonneg Q.det), h2, Real.sqrt_one]
+    have hnormdet : ‖A.det‖ = ∏ i, ‖R i i‖ := by
+      rw [hAQR, Matrix.det_mul, norm_mul, hQdet, one_mul,
+        Matrix.det_of_upperTriangular hRupper, norm_prod]
+    rw [hnormdet]
+    refine Finset.prod_le_prod (fun i _ => norm_nonneg _) (fun i _ => ?_)
+    -- ‖R i i‖ ≤ ‖col i‖
+    have hARR : Aᴴ * A = Rᴴ * R := by
+      have hQQ : Qᴴ * Q = 1 := (Matrix.mem_unitaryGroup_iff').mp hQ
+      rw [hAQR, Matrix.conjTranspose_mul, Matrix.mul_assoc, ← Matrix.mul_assoc Qᴴ,
+        hQQ, Matrix.one_mul]
+    have hcolsq : ‖col i‖ ^ 2 = ∑ k, ‖A k i‖ ^ 2 := by
+      rw [hcol, EuclideanSpace.norm_eq, Real.sq_sqrt (by positivity)]
+      rfl
+    have hARentry : ∑ k, ‖A k i‖ ^ 2 = ∑ k, ‖R k i‖ ^ 2 := by
+      have hdiag := congrFun (congrFun hARR i) i
+      simp only [Matrix.mul_apply, Matrix.conjTranspose_apply, RCLike.star_def,
+        RCLike.conj_mul] at hdiag
+      have := congrArg RCLike.re hdiag
+      push_cast at this ⊢
+      simpa using this
+    have hge : ‖R i i‖ ^ 2 ≤ ‖col i‖ ^ 2 := by
+      rw [hcolsq, hARentry]
+      refine Finset.single_le_sum (f := fun k => ‖R k i‖ ^ 2) (fun k _ => ?_)
+        (Finset.mem_univ i)
+      positivity
+    have h1 := Real.sqrt_le_sqrt hge
+    rwa [Real.sqrt_sq (norm_nonneg _), Real.sqrt_sq (norm_nonneg _)] at h1
+  · have hdet0 : A.det = 0 := by
+      apply Matrix.det_eq_zero_of_not_linearIndependent_cols
+      intro hdep
+      exact hindep (hdep.map' ((EuclideanSpace.equiv (Fin n) 𝕜).symm.toLinearEquiv.toLinearMap)
+        (LinearMap.ker_eq_bot.mpr (EuclideanSpace.equiv (Fin n) 𝕜).symm.injective))
+    rw [hdet0, norm_zero]
+    exact Finset.prod_nonneg (fun i _ => norm_nonneg _)
 
 /-! 9.67 Determinant of a Vandermonde matrix:
 {lit}`det V(β₁, …, βₙ) = ∏_{1 ≤ j < k ≤ n} (βₖ − βⱼ)`
