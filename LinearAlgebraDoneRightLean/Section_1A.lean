@@ -6,6 +6,9 @@ import Mathlib.Tactic.Linarith
 import Mathlib.Tactic.Linter.Style
 import Mathlib.Tactic.Recall
 import Mathlib.Tactic.Ring
+-- Why there's no?
+import Mathlib.Tactic
+---
 import CompanionHelper
 
 /-!
@@ -43,7 +46,12 @@ example : (2 + 3 * I) * (4 + 5 * I) = -7 + 22 * I := by
 /-! 1.3 Properties of complex arithmetic -/
 
 @[avoiding Complex.commRing, Complex.instCommSemiring, Complex.instField]
-theorem exercise_1A_1 (α β : ℂ) : α + β = β + α := by sorry
+theorem exercise_1A_1 (α β : ℂ) : α + β = β + α := by
+  apply Complex.ext
+  · repeat rw [add_re]
+    rw [add_comm]
+  · repeat rw [add_im]
+    rw [add_comm]
 
 /-! 1.4 Example: commutativity of complex multiplication -/
 
@@ -54,24 +62,107 @@ theorem mul_comm_example (α β : ℂ) : α * β = β * α := by
   · simp only [Complex.mul_im]; ring
 
 @[avoiding Complex.commRing, Complex.instCommSemiring, Complex.instField]
-theorem exercise_1A_2 (α β γ : ℂ) : (α + β) + γ = α + (β + γ) := by sorry
+theorem exercise_1A_2 (α β γ : ℂ) : (α + β) + γ = α + (β + γ) := by
+  apply Complex.ext
+  · repeat rw [add_re]
+    ring
+  · repeat rw [add_im]
+    ring
 
 @[avoiding Complex.commRing, Complex.instCommSemiring, Complex.instField]
-theorem exercise_1A_3 (α β γ : ℂ) : (α * β) * γ = α * (β * γ) := by sorry
+theorem exercise_1A_3 (α β γ : ℂ) : (α * β) * γ = α * (β * γ) := by
+  apply Complex.ext
+  · simp only [Complex.mul_re, Complex.mul_im]
+    ring
+  · simp only [Complex.mul_re, Complex.mul_im]
+    ring
 
 @[avoiding Complex.commRing, Complex.instCommSemiring, Complex.instField]
-theorem exercise_1A_4 (α β γ : ℂ) : γ * (α + β) = γ * α + γ * β := by sorry
+theorem exercise_1A_4 (α β γ : ℂ) : γ * (α + β) = γ * α + γ * β := by
+  apply Complex.ext <;> simp <;> ring
 
 example (γ : ℂ) : γ + 0 = γ := add_zero γ
 example (γ : ℂ) : γ * 1 = γ := mul_one γ
 
 @[avoiding Complex.instNeg, Complex.instSub, Complex.commRing, Complex.instCommSemiring,
     Complex.instField]
-theorem exercise_1A_5 (α : ℂ) : ∃! β : ℂ, α + β = 0 := by sorry
+theorem exercise_1A_5 (α : ℂ) : ∃! β : ℂ, α + β = 0 := by
+  use ⟨-α.re, -α.im⟩
+  constructor <;> simp
+  · apply Complex.ext <;> simp
+  · intro y hy; apply Complex.ext
+    · simp
+      have : (α + y).re = 0 := by simp_all only [zero_re]
+      rw [add_re] at this
+      exact Eq.symm (neg_eq_of_add_eq_zero_right this)
+    · simp
+      have : (α + y).im = 0 := by simp_all only [zero_im]
+      rw [add_im] at  this
+      exact Eq.symm (neg_eq_of_add_eq_zero_right this)
 
 @[avoiding Complex.instInv, Complex.instDivInvMonoid, Complex.commRing, Complex.instCommSemiring,
     Complex.instField]
-theorem exercise_1A_6 (α : ℂ) (hα : α ≠ 0) : ∃! β : ℂ, α * β = 1 := by sorry
+theorem exercise_1A_6 (α : ℂ) (hα : α ≠ 0) : ∃! β : ℂ, α * β = 1 := by
+  have hns : normSq α ≠ 0 := fun h => hα (Complex.normSq_eq_zero.mp h)
+  refine ⟨⟨α.re / normSq α, -α.im / normSq α⟩, ?_, ?_⟩
+  · -- existence
+    apply Complex.ext
+    · -- real part
+      show α.re * (α.re / normSq α) - α.im * (-α.im / normSq α) = (1 : ℂ).re
+      rw [Complex.one_re, Complex.normSq_apply]
+      field_simp [hns]
+      have : α.re ^ 2 - -α.im ^ 2 = α.re ^ 2 + α.im ^ 2 := by simp
+      rw [this]
+      simp
+      simp_all only [ne_eq, map_eq_zero, not_false_eq_true, sub_neg_eq_add]
+      apply Aesop.BuiltinRules.not_intro
+      intro a
+      have h₁ : 0 ≤ α.re ^ 2 := sq_nonneg _
+      have h₂ : 0 ≤ α.im ^ 2 := sq_nonneg _
+      have hre_sq_zero : α.re ^ 2 = 0 := by
+        have hsum := a
+        have h₁ : α.re ^ 2 = 0 := by
+          have : α.re ^ 2 ≤ 0 := by
+            have := congrArg (fun x => x - α.im ^ 2) hsum
+            grind
+          -- exact le_antisymm this hre_sq_nonneg
+          grind
+        exact h₁
+      have : α.im = 0 := by
+        have hsum := a
+        have h₁ : α.im ^ 2 = 0:= by grind
+        grind
+      rw [Complex.ext_iff] at hα
+      simp_all only [zero_re, zero_im, and_true, ne_eq, OfNat.ofNat_ne_zero, not_false_eq_true, zero_pow, add_zero,
+        Std.le_refl, pow_eq_zero_iff]
+    · show α.re * (-α.im / normSq α) + α.im * (α.re / normSq α) = (1 : ℂ).im
+      rw [Complex.one_im]
+      have :
+        α.re * (-α.im / normSq α) + α.im * (α.re / normSq α)
+          = (α.re * -α.im + α.im * α.re) / normSq α := by
+        ring_nf
+      rw [this]
+      simp [hns]
+      grind
+  · rintro γ hγ
+    have h1 : α.re * γ.re - α.im * γ.im = 1 := by
+      simpa [Complex.mul_re, Complex.one_re] using congrArg Complex.re hγ
+    have h2 : α.re * γ.im + α.im * γ.re = 0 := by
+      simpa [Complex.mul_im, Complex.one_im] using congrArg Complex.im hγ
+    have key1 : normSq α * γ.re = α.re := by
+      rw [Complex.normSq_apply]
+      grind
+    have key2 : normSq α * γ.im = -α.im := by
+      rw [Complex.normSq_apply]
+      grind
+    apply Complex.ext
+    · show γ.re = α.re / normSq α
+      field_simp [hns]
+      grind
+    · show γ.im = -α.im / normSq α
+      field_simp [hns]
+      grind
+
 
 /-! 1.5 Definition: −α, subtraction, 1/α, division -/
 
@@ -151,43 +242,93 @@ Exercises 1A.1–1A.6 are stated inline in Properties 1.3 above. -/
 
 theorem exercise_1A_7 :
     ((-1 + Real.sqrt 3 * I) / 2) ^ 3 = 1 := by
-  sorry
+  field_simp
+  ring_nf
+  norm_cast
+  norm_num
+  apply Complex.ext <;> field_simp <;> ring_nf <;> norm_cast <;> norm_num <;> norm_cast
+  rw [@pow_three]
+  rw [← @pow_two]
+  rw [@Real.sq_sqrt']
+  simp
 
 theorem exercise_1A_8 :
     ∃ z w : ℂ, z ≠ w ∧ z ^ 2 = I ∧ w ^ 2 = I := by
-  sorry
+  use ⟨√2 / 2, √2 / 2⟩, ⟨-√2 / 2, -√2 / 2⟩
+  refine ⟨?_, ?_, ?_⟩
+  · intro h
+    simp at h
+    have : 2 * √2 = 0 := by
+      apply_fun (fun t ↦ t + √2) at h
+      ring_nf at h
+      simp_all only [mul_eq_zero, Nat.ofNat_nonneg, Real.sqrt_eq_zero, OfNat.ofNat_ne_zero, or_self]
+    rcases mul_eq_zero.mp this
+    · simp_all only [Real.sqrt_zero, neg_zero, mul_zero, OfNat.ofNat_ne_zero]
+    · simp_all only [neg_zero, mul_zero, Nat.ofNat_nonneg, Real.sqrt_eq_zero, OfNat.ofNat_ne_zero]
+  · apply Complex.ext <;> simp <;> rw [pow_two] <;> simp; field_simp; norm_num
+  · apply Complex.ext <;> simp <;> rw [pow_two] <;> simp; field_simp; norm_num
 
 theorem exercise_1A_9 :
     ∃ x : Fin 4 → ℝ,
       (![4, -3, 1, 7] : Fin 4 → ℝ) + (2 : ℝ) • x = ![5, 9, -6, 8] := by
-  sorry
+  use ![1/2, 6, -7/2, 1/2]
+  ext i
+  match i with
+  | 0 => norm_num
+  | 1 => norm_num
+  | 2 => simp; norm_num
+  | 3 => simp; norm_num
 
 theorem exercise_1A_10 :
     ¬ ∃ lam : ℂ, lam • (![2 - 3 * I, 5 + 4 * I, -6 + 7 * I] : Fin 3 → ℂ) =
       ![12 - 5 * I, 7 + 22 * I, -32 - 9 * I] := by
-  sorry
+  intro ⟨lam, hw⟩
+  have h0 := congr_fun hw 0
+  have h1 := congr_fun hw 1
+  have h2 := congr_fun hw 2
+  simp_all only [Nat.succ_eq_add_one, Nat.reduceAdd, Matrix.smul_cons, smul_eq_mul, Matrix.smul_empty,
+    Matrix.vecCons_inj, and_true, Fin.isValue, Pi.smul_apply, Matrix.cons_val_zero, Matrix.cons_val_one,
+    Matrix.cons_val]
+  obtain ⟨left, right⟩ := hw
+  obtain ⟨left_1, right⟩ := right
+  have neq0 : (2 - 3 * I) ≠ 0 := by intro h; rw [Complex.ext_iff] at h; simp at h;
+  have l₁ : lam = (12 - 5 * I) / (2 - 3 * I) := by rw [← left]; field_simp
+  have neq0₂ : -6 + 7 * I ≠ 0 := by intro h; rw [Complex.ext_iff] at h; simp at h;
+  have l₃ : lam = (-32 - 9 * I) / (-6 + 7 * I) := by rw [← right]; field_simp
+  rw [l₁] at l₃
+  rw [Complex.ext_iff] at l₃
+  have := l₃.left
+  simp [Complex.div_re] at this
+  unfold normSq at this
+  simp at this
+  norm_num at this
 
 @[avoiding Pi.addSemigroup]
 theorem exercise_1A_11 (x y z : Fin n → F) :
-    (x + y) + z = x + (y + z) := by sorry
+    (x + y) + z = x + (y + z) := by
+  ext i
+  simp; ring
 
 @[avoiding mul_smul, smul_smul]
 theorem exercise_1A_12 (a b : F) (x : Fin n → F) :
     (a * b) • x = a • (b • x) := by
-  sorry
+  ext i
+  simp; ring
 
 @[avoiding one_smul]
 theorem exercise_1A_13 (x : Fin n → F) : (1 : F) • x = x := by
-  sorry
+  ext i
+  simp
 
 @[avoiding smul_add]
 theorem exercise_1A_14 (γ : F) (x y : Fin n → F) :
     γ • (x + y) = γ • x + γ • y := by
-  sorry
+  ext i;
+  simp; ring
 
 @[avoiding add_smul]
 theorem exercise_1A_15 (a b : F) (x : Fin n → F) :
     (a + b) • x = a • x + b • x := by
-  sorry
+  ext i; simp; ring
 
 end LADR.Section_1A
