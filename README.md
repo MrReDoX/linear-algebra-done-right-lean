@@ -106,8 +106,9 @@ numbered results.
 \* A `✓*` marks a section that prose-defers one or more numbered results. These
 deferrals cluster around a few missing pieces: the *matrix-of-a-basis normal-form
 theory* — the strictly-upper-triangular normal form of a nilpotent operator
-8.18(c) is now proved (8A), leaving the block-diagonal and Jordan forms (8B
-8.31/8.35–8.38, 8C 8.41/8.44–8.46); *matrix factorizations* (the
+8.18(c) is now proved (8A) and, with it, the per-block content of the
+block-diagonal form 8.37 (8B); the diagonal-multiplicity count 8.31 and the
+Jordan forms (8C 8.44–8.46) remain; *matrix factorizations* (the
 QR factorization 7.58 is now fully proved via Gram–Schmidt, existence and
 uniqueness; Cholesky 7.63 remains in 7D; the matrix SVD `A = B D C*` remains in
 7E, and best rank-`k` approximation in 7F — the operator-norm ↔
