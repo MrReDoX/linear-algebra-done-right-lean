@@ -479,6 +479,27 @@ theorem riesz_bijective [FiniteDimensional 𝕜 V] :
     show ⟪v, u⟫_𝕜 = φ u
     rw [hsplit, horth, zero_add, ← hvφ, div_mul_cancel₀ _ hφv]
 
+/-- The Riesz vector of a linear functional: by 6.58 there is exactly one
+{lit}`w ∈ V` with {lit}`φ(u) = ⟨u, w⟩` for all {lit}`u` (Axler's {lit}`⟨u, w⟩`
+being mathlib's {lit}`⟪w, u⟫`), and this names it. -/
+noncomputable def rieszVector [FiniteDimensional 𝕜 V] (φ : V →ₗ[𝕜] 𝕜) : V :=
+  (riesz_bijective.existsUnique φ).choose
+
+@[simp] theorem innerₛₗ_rieszVector [FiniteDimensional 𝕜 V] (φ : V →ₗ[𝕜] 𝕜) :
+    innerₛₗ 𝕜 (rieszVector φ) = φ :=
+  (riesz_bijective.existsUnique φ).choose_spec.1
+
+/-- {lit}`φ(u) = ⟨u, rieszVector φ⟩` for every {lit}`u`. -/
+theorem rieszVector_spec [FiniteDimensional 𝕜 V] (φ : V →ₗ[𝕜] 𝕜) (u : V) :
+    φ u = ⟪rieszVector φ, u⟫_𝕜 := by
+  conv_lhs => rw [← innerₛₗ_rieszVector φ]
+  rfl
+
+/-- …and it is the only such vector. -/
+theorem rieszVector_unique [FiniteDimensional 𝕜 V] {φ : V →ₗ[𝕜] 𝕜} {w : V}
+    (hw : ∀ u : V, φ u = ⟪w, u⟫_𝕜) : rieszVector φ = w :=
+  ((riesz_bijective.existsUnique φ).choose_spec.2 w (by ext u; exact (hw u).symm)).symm
+
 /-! 6.61 Minimizing distance to a subspace
 
 If {lit}`U` is finite-dimensional, {lit}`v ∈ V`, and {lit}`u ∈ U`, then
@@ -503,6 +524,8 @@ theorem minimizing_distance (v : V) (u : V) (hu : u ∈ U) :
 /-! # Pseudoinverse -/
 
 section Pseudoinverse
+
+open scoped Pointwise
 
 variable [FiniteDimensional 𝕜 V]
   {W : Type*} [NormedAddCommGroup W] [InnerProductSpace 𝕜 W]
@@ -554,9 +577,35 @@ noncomputable def pinv (T : V →ₗ[𝕜] W) : W →ₗ[𝕜] V :=
   (Submodule.orthogonal (LinearMap.ker T)).subtype ∘ₗ (restrEquiv T).symm.toLinearMap ∘ₗ
     ((LinearMap.range T).orthogonalProjection : W →L[𝕜] (LinearMap.range T))
 
+@[inherit_doc] scoped postfix:max "†" => pinv
+
+/-- 6.69 (a) If {lit}`T` is invertible then {lit}`T† = T⁻¹`. Axler's proof reads
+this straight off the definition: {lit}`null T = {0}` gives
+{lit}`(null T)⟂ = V`, so {lit}`T|_(null T)⟂ = T`, and {lit}`range T = W` makes
+{lit}`P_(range T)` the identity on {lit}`W`. -/
+theorem pinv_eq_symm (e : V ≃ₗ[𝕜] W) : (e : V →ₗ[𝕜] W)† = (e.symm : W →ₗ[𝕜] V) := by
+  ext w
+  -- `(null T)⟂ = V`, so `e.symm w` lies in it
+  have hmem : e.symm w ∈ Submodule.orthogonal (LinearMap.ker (e : V →ₗ[𝕜] W)) := by
+    rw [LinearMap.ker_eq_bot.mpr e.injective, Submodule.bot_orthogonal_eq_top]
+    exact Submodule.mem_top
+  -- `range T = W`, so `P_(range T)` fixes `w`
+  have hw : w ∈ LinearMap.range (e : V →ₗ[𝕜] W) := ⟨e.symm w, by simp⟩
+  have hproj : (LinearMap.range (e : V →ₗ[𝕜] W)).orthogonalProjection w =
+      (⟨w, hw⟩ : LinearMap.range (e : V →ₗ[𝕜] W)) :=
+    Submodule.orthogonalProjection_mem_subspace_eq_self
+      (⟨w, hw⟩ : LinearMap.range (e : V →ₗ[𝕜] W))
+  -- and `T|_(null T)⟂` sends `e.symm w` to `w`, so its inverse sends `w` back
+  have hrestr : restrEquiv (e : V →ₗ[𝕜] W) ⟨e.symm w, hmem⟩ = ⟨w, hw⟩ := by
+    apply Subtype.ext
+    simp
+  show ((restrEquiv (e : V →ₗ[𝕜] W)).symm
+    ((LinearMap.range (e : V →ₗ[𝕜] W)).orthogonalProjection w) : V) = e.symm w
+  rw [hproj, ← hrestr, LinearEquiv.symm_apply_apply]
+
 /-- 6.69 (b) {lit}`T T† = P_(range T)`. -/
 theorem T_comp_pinv (T : V →ₗ[𝕜] W) :
-    T ∘ₗ pinv T = ((LinearMap.range T).starProjection : W →ₗ[𝕜] W) := by
+    T ∘ₗ T† = ((LinearMap.range T).starProjection : W →ₗ[𝕜] W) := by
   ext w
   simp only [LinearMap.comp_apply, pinv, Submodule.coe_subtype,
     ContinuousLinearMap.coe_coe, LinearEquiv.coe_coe]
@@ -565,7 +614,7 @@ theorem T_comp_pinv (T : V →ₗ[𝕜] W) :
 
 /-- 6.69 (c) {lit}`T† T = P_(null T)⟂`. -/
 theorem pinv_comp_T (T : V →ₗ[𝕜] W) :
-    pinv T ∘ₗ T = ((Submodule.orthogonal (LinearMap.ker T)).starProjection : V →ₗ[𝕜] V) := by
+    T† ∘ₗ T = ((Submodule.orthogonal (LinearMap.ker T)).starProjection : V →ₗ[𝕜] V) := by
   ext v
   simp only [LinearMap.comp_apply, pinv, Submodule.coe_subtype,
     ContinuousLinearMap.coe_coe, LinearEquiv.coe_coe]
@@ -588,66 +637,157 @@ theorem pinv_comp_T (T : V →ₗ[𝕜] W) :
       (Submodule.orthogonalProjection_mem_subspace_eq_self (⟨T v, ⟨v, rfl⟩⟩ : LinearMap.range T))
   rw [hproj, ← restrEquiv_coe, LinearEquiv.symm_apply_apply, Submodule.starProjection_apply]
 
-/-- 6.69 (a) If {lit}`T` is invertible then {lit}`T† = T⁻¹`. -/
-theorem pinv_eq_symm (e : V ≃ₗ[𝕜] W) : pinv (e : V →ₗ[𝕜] W) = (e.symm : W →ₗ[𝕜] V) := by
-  have hker : LinearMap.ker (e : V →ₗ[𝕜] W) = ⊥ := LinearMap.ker_eq_bot.mpr e.injective
-  have htop : Submodule.orthogonal (LinearMap.ker (e : V →ₗ[𝕜] W)) = ⊤ := by
-    rw [hker, Submodule.bot_orthogonal_eq_top]
-  have hcomp : pinv (e : V →ₗ[𝕜] W) ∘ₗ (e : V →ₗ[𝕜] W) = LinearMap.id := by
-    rw [pinv_comp_T]
-    ext x
-    have hmem : x ∈ Submodule.orthogonal (LinearMap.ker (e : V →ₗ[𝕜] W)) := by
-      rw [htop]; exact Submodule.mem_top
-    simpa using Submodule.starProjection_eq_self_iff.mpr hmem
-  ext w
-  have h := LinearMap.congr_fun hcomp (e.symm w)
-  simp only [LinearMap.comp_apply, LinearMap.id_coe, id_eq, LinearEquiv.coe_coe,
-    LinearEquiv.apply_symm_apply] at h
-  simpa using h
 
 /-- 6.70 (a) {lit}`T† b` is a *best approximate solution* of {lit}`T x = b`:
 {lit}`‖T (T† b) − b‖ ≤ ‖T x − b‖` for every {lit}`x`. -/
 theorem pinv_best_approx (T : V →ₗ[𝕜] W) (b : W) (x : V) :
-    ‖T (pinv T b) - b‖ ≤ ‖T x - b‖ := by
-  have h1 : T (pinv T b) = (LinearMap.range T).starProjection b := by
+    ‖T (T† b) - b‖ ≤ ‖T x - b‖ := by
+  have h1 : T (T† b) = (LinearMap.range T).starProjection b := by
     have := LinearMap.congr_fun (T_comp_pinv T) b; simpa using this
   rw [h1, show ‖(LinearMap.range T).starProjection b - b‖
         = ‖b - (LinearMap.range T).starProjection b‖ from norm_sub_rev _ _,
     show ‖T x - b‖ = ‖b - T x‖ from norm_sub_rev _ _]
   exact minimizing_distance (U := LinearMap.range T) b (T x) ⟨x, rfl⟩
 
-/-- 6.70 (b) Among the minimizers of {lit}`‖T x − b‖`, the solution {lit}`T† b`
-has the smallest norm: if {lit}`T x` also equals the best approximation
-{lit}`P_(range T) b` and {lit}`x ≠ T† b`, then {lit}`‖T† b‖ < ‖x‖`. -/
-theorem pinv_minimal_norm (T : V →ₗ[𝕜] W) (b : W) (x : V)
-    (hx : T x = T (pinv T b)) (hne : x ≠ pinv T b) : ‖pinv T b‖ < ‖x‖ := by
-  -- T† b ∈ (null T)⟂ and x − T† b ∈ null T, so they are orthogonal
-  have hpinv_mem : pinv T b ∈ Submodule.orthogonal (LinearMap.ker T) := by
-    show ((restrEquiv T).symm ((LinearMap.range T).orthogonalProjection b) : V) ∈ _
+omit [FiniteDimensional 𝕜 V] in
+/-- Membership in the coset {lit}`a + p` of a subspace {lit}`p`, written with
+mathlib's pointwise {lit}`+ᵥ`. -/
+theorem mem_vadd_coe_iff {p : Submodule 𝕜 V} {a v : V} :
+    v ∈ a +ᵥ (p : Set V) ↔ v - a ∈ p := by
+  constructor
+  · rintro ⟨y, hy, rfl⟩
+    simpa using hy
+  · intro h
+    exact ⟨v - a, h, by simp⟩
+
+/-- 6.70 (b) Among the vectors {lit}`v ∈ T†w + null T` — exactly those making
+{lit}`‖T v − w‖` as small as possible, by (a) — the solution {lit}`T†w` has the
+smallest norm: {lit}`‖T†w‖ ≤ ‖v‖`, with equality only for {lit}`v = T†w`. -/
+theorem pinv_minimal_norm (T : V →ₗ[𝕜] W) (w : W) (v : V)
+    (hv : v ∈ T† w +ᵥ (LinearMap.ker T : Set V)) (hne : v ≠ T† w) : ‖T† w‖ < ‖v‖ := by
+  -- T†w ∈ (null T)⟂ and v − T†w ∈ null T, so they are orthogonal
+  have hpinv_mem : T† w ∈ Submodule.orthogonal (LinearMap.ker T) := by
+    show ((restrEquiv T).symm ((LinearMap.range T).orthogonalProjection w) : V) ∈ _
     exact SetLike.coe_mem _
-  have hsub_mem : x - pinv T b ∈ LinearMap.ker T := by
-    rw [LinearMap.mem_ker, map_sub, hx, sub_self]
-  have horth : ⟪pinv T b, x - pinv T b⟫_𝕜 = 0 := by
+  have hsub_mem : v - T† w ∈ LinearMap.ker T := mem_vadd_coe_iff.mp hv
+  have horth : ⟪T† w, v - T† w⟫_𝕜 = 0 := by
     rw [inner_eq_zero_symm]
     exact (Submodule.mem_orthogonal _ _).mp hpinv_mem _ hsub_mem
-  have hadd : pinv T b + (x - pinv T b) = x := by abel
-  have hnorm : ‖x‖ ^ 2 = ‖pinv T b‖ ^ 2 + ‖x - pinv T b‖ ^ 2 := by
+  have hadd : T† w + (v - T† w) = v := by abel
+  have hnorm : ‖v‖ ^ 2 = ‖T† w‖ ^ 2 + ‖v - T† w‖ ^ 2 := by
     rw [pow_two, pow_two, pow_two]
     conv_lhs => rw [← hadd]
-    exact norm_add_sq_eq_norm_sq_add_norm_sq_of_inner_eq_zero (pinv T b) (x - pinv T b) horth
-  have hpos : 0 < ‖x - pinv T b‖ ^ 2 := by
-    have : x - pinv T b ≠ 0 := sub_ne_zero.mpr hne
+    exact norm_add_sq_eq_norm_sq_add_norm_sq_of_inner_eq_zero (T† w) (v - T† w) horth
+  have hpos : 0 < ‖v - T† w‖ ^ 2 := by
+    have : v - T† w ≠ 0 := sub_ne_zero.mpr hne
     positivity
-  have hlt : ‖pinv T b‖ ^ 2 < ‖x‖ ^ 2 := by rw [hnorm]; linarith
+  have hlt : ‖T† w‖ ^ 2 < ‖v‖ ^ 2 := by rw [hnorm]; linarith
   exact lt_of_pow_lt_pow_left₀ 2 (norm_nonneg _) hlt
+
+/-! 6.72 {lit}`T† w = (T|_(null T)⟂)⁻¹ (P_(range T) w)` — for us that *is* the
+definition of {name}`pinv`. What makes it usable for computing, as in 6.71, is
+the characterization it expresses: {lit}`T† w` is *the* vector
+{lit}`v ∈ (null T)⟂` with {lit}`T v = P_(range T) w`. -/
+
+theorem pinv_apply (T : V →ₗ[𝕜] W) (w : W) :
+    T† w = ((restrEquiv T).symm ((LinearMap.range T).orthogonalProjection w) : V) := rfl
+
+theorem pinv_mem_orthogonal (T : V →ₗ[𝕜] W) (w : W) :
+    T† w ∈ Submodule.orthogonal (LinearMap.ker T) := by
+  rw [pinv_apply]
+  exact SetLike.coe_mem _
+
+theorem pinv_eq_of (T : V →ₗ[𝕜] W) {w : W} {v : V}
+    (hmem : v ∈ Submodule.orthogonal (LinearMap.ker T))
+    (hT : T v = (LinearMap.range T).starProjection w) : T† w = v := by
+  have h1 : T (T† w) = (LinearMap.range T).starProjection w := by
+    have := LinearMap.congr_fun (T_comp_pinv T) w; simpa using this
+  have hsub : T† w - v ∈ LinearMap.ker T := by
+    rw [LinearMap.mem_ker, map_sub, h1, hT, sub_self]
+  have hsub' : T† w - v ∈ Submodule.orthogonal (LinearMap.ker T) :=
+    Submodule.sub_mem _ (pinv_mem_orthogonal T w) hmem
+  have hbot := inf_orthogonal_eq_bot (LinearMap.ker T)
+  rw [Submodule.eq_bot_iff] at hbot
+  exact sub_eq_zero.mp (hbot _ ⟨hsub, hsub'⟩)
+
+/-! 6.71 Example: pseudoinverse of a linear map from {lit}`𝔽⁴` to {lit}`𝔽³` -/
+
+/-- {lit}`T(a, b, c, d) = (a + b + c, 2c + d, 0)`, which is neither injective nor
+surjective. -/
+def T671 : EuclideanSpace 𝕜 (Fin 4) →ₗ[𝕜] EuclideanSpace 𝕜 (Fin 3) where
+  toFun v := !₂[v 0 + v 1 + v 2, 2 * v 2 + v 3, 0]
+  map_add' u v := by ext i; fin_cases i <;> simp <;> ring
+  map_smul' c v := by ext i; fin_cases i <;> simp <;> ring
+
+/-- {lit}`null T = {(a, b, c, d) : a + b + c = 0 and 2c + d = 0}`, which is
+spanned by {lit}`(−1, 1, 0, 0)`, {lit}`(−1, 0, 1, −2)`. -/
+theorem ker_T671 : LinearMap.ker (T671 (𝕜 := 𝕜)) =
+    Submodule.span 𝕜 {!₂[-1, 1, 0, 0], !₂[-1, 0, 1, -2]} := by
+  apply le_antisymm
+  · intro u hu
+    rw [LinearMap.mem_ker] at hu
+    have h0 : u 0 + u 1 + u 2 = 0 := by
+      have := congrArg (fun z : EuclideanSpace 𝕜 (Fin 3) => z 0) hu
+      simpa [T671] using this
+    have h1 : 2 * u 2 + u 3 = 0 := by
+      have := congrArg (fun z : EuclideanSpace 𝕜 (Fin 3) => z 1) hu
+      simpa [T671] using this
+    refine Submodule.mem_span_pair.mpr ⟨u 1, u 2, ?_⟩
+    ext i
+    fin_cases i <;> simp <;>
+      first
+        | linear_combination -h0
+        | linear_combination -h1
+  · rw [Submodule.span_le]
+    rintro _ (rfl | rfl) <;>
+      · rw [SetLike.mem_coe, LinearMap.mem_ker]
+        ext i
+        fin_cases i <;> simp [T671]
+
+/-- {lit}`range T = {(x, y, 0)}`, so {lit}`P_(range T)(x, y, z) = (x, y, 0)`. -/
+theorem starProjection_range_T671 (v : EuclideanSpace 𝕜 (Fin 3)) :
+    (LinearMap.range (T671 (𝕜 := 𝕜))).starProjection v = !₂[v 0, v 1, 0] := by
+  refine Submodule.eq_starProjection_of_mem_of_inner_eq_zero ⟨!₂[v 0, 0, 0, v 1], ?_⟩ ?_
+  · ext i; fin_cases i <;> simp [T671]
+  · rintro _ ⟨u, rfl⟩
+    simp [T671, PiLp.inner_apply, RCLike.inner_apply, Fin.sum_univ_three]
+
+/-- 6.71 Hence {lit}`T†(x, y, z) = (5x − 2y, 5x − 2y, x + 4y, −2x + 3y)/11`. -/
+theorem pinv_T671 (v : EuclideanSpace 𝕜 (Fin 3)) :
+    (T671 (𝕜 := 𝕜))† v = (11 : 𝕜)⁻¹ •
+      !₂[5 * v 0 - 2 * v 1, 5 * v 0 - 2 * v 1, v 0 + 4 * v 1, -2 * v 0 + 3 * v 1] := by
+  have h11 : (11 : 𝕜) ≠ 0 := by norm_num
+  refine pinv_eq_of _ ?_ ?_
+  · -- the answer is orthogonal to `null T`
+    intro u hu
+    rw [LinearMap.mem_ker] at hu
+    have h0 : u 0 + u 1 + u 2 = 0 := by
+      have := congrArg (fun z : EuclideanSpace 𝕜 (Fin 3) => z 0) hu
+      simpa [T671] using this
+    have h1 : 2 * u 2 + u 3 = 0 := by
+      have := congrArg (fun z : EuclideanSpace 𝕜 (Fin 3) => z 1) hu
+      simpa [T671] using this
+    have h0' : conj (u 0) + conj (u 1) + conj (u 2) = 0 := by
+      rw [← map_add, ← map_add, h0, map_zero]
+    have h1' : 2 * conj (u 2) + conj (u 3) = 0 := by
+      simpa [map_ofNat] using congrArg (starRingEnd 𝕜) h1
+    simp only [PiLp.inner_apply, RCLike.inner_apply, Fin.sum_univ_four, PiLp.smul_apply,
+      smul_eq_mul, Matrix.cons_val, Matrix.cons_val_zero, Matrix.cons_val_one]
+    field_simp
+    linear_combination (5 * v 0 - 2 * v 1) * h0' + (-2 * v 0 + 3 * v 1) * h1'
+  · -- and `T` sends it to `P_(range T) v`
+    rw [starProjection_range_T671]
+    ext i
+    fin_cases i <;> simp [T671] <;> field_simp <;> ring
 
 end Pseudoinverse
 
 /-! # Exercises 6C -/
 
-/-- 6C.1 {lit}`{v₁, …, vₘ}⟂ = (span(v₁, …, vₘ))⟂`. -/
+/-- 6C.1 {lit}`{v₁, …, vₘ}⟂ = (span(v₁, …, vₘ))⟂`, the orthogonal complement on
+the left being that of the *set* {lit}`{v₁, …, vₘ}` ({name}`setOrthogonal`). -/
 theorem exercise_6C_1 {m : ℕ} (v : Fin m → V) :
-    (Submodule.span 𝕜 (Set.range v))ᗮ = (⨅ i, (𝕜 ∙ v i)ᗮ) := by
+    setOrthogonal (𝕜 := 𝕜) (Set.range v) = (Submodule.span 𝕜 (Set.range v))ᗮ := by
   sorry
 
 /-- 6C.2 If a basis of {lit}`V` extends a basis {lit}`u₁, …, uₘ` of {lit}`U`, then
@@ -663,15 +803,22 @@ theorem exercise_6C_2 [FiniteDimensional 𝕜 V] {m n : ℕ}
       Submodule.span 𝕜 (Set.range fun j : Fin n => (e (Fin.natAdd m j) : V)) = Uᗮ := by
   sorry
 
+/-- 6C.3 The subspace {lit}`U = span((1,2,3,−4), (−5,4,3,2))` of {lit}`ℝ⁴`. -/
+noncomputable def U6C3 : Submodule ℝ (EuclideanSpace ℝ (Fin 4)) :=
+  Submodule.span ℝ {!₂[1, 2, 3, -4], !₂[-5, 4, 3, 2]}
+
+/-- 6C.3 answer: an orthonormal basis of {lit}`U` — two concrete vectors to be
+supplied. -/
+noncomputable def onb6C3 : Fin 2 → EuclideanSpace ℝ (Fin 4) := sorry
+
+/-- 6C.3 answer: an orthonormal basis of {lit}`U⟂`. -/
+noncomputable def onb6C3perp : Fin 2 → EuclideanSpace ℝ (Fin 4) := sorry
+
 /-- 6C.3 In {lit}`ℝ⁴`, with {lit}`U = span((1,2,3,−4), (−5,4,3,2))`, find an
 orthonormal basis of {lit}`U` and an orthonormal basis of {lit}`U⟂`. -/
 theorem exercise_6C_3 :
-    (∃ b : Fin 2 → EuclideanSpace ℝ (Fin 4), Orthonormal ℝ b ∧
-        Submodule.span ℝ (Set.range b) =
-          Submodule.span ℝ {!₂[1, 2, 3, -4], !₂[-5, 4, 3, 2]}) ∧
-      (∃ c : Fin 2 → EuclideanSpace ℝ (Fin 4), Orthonormal ℝ c ∧
-        Submodule.span ℝ (Set.range c) =
-          (Submodule.span ℝ {!₂[1, 2, 3, -4], !₂[-5, 4, 3, 2]})ᗮ) := by
+    (Orthonormal ℝ onb6C3 ∧ Submodule.span ℝ (Set.range onb6C3) = U6C3) ∧
+      (Orthonormal ℝ onb6C3perp ∧ Submodule.span ℝ (Set.range onb6C3perp) = U6C3ᗮ) := by
   sorry
 
 /-- 6C.4 Converse to 6.30(b): if {lit}`‖eₖ‖ = 1` for each {lit}`k` and Parseval's
@@ -705,27 +852,28 @@ theorem exercise_6C_7 (X Y : Submodule 𝕜 V) [FiniteDimensional 𝕜 X]
       ∀ x ∈ X, ∀ y ∈ Y, ⟪x, y⟫_𝕜 = 0 := by
   sorry
 
-/-- 6C.8 With {lit}`φ(u) = ⟨u, v⟩` on a finite-dimensional subspace {lit}`U` and
-{lit}`w ∈ U` the Riesz vector, {lit}`w = P_U v`. -/
-theorem exercise_6C_8 (U : Submodule 𝕜 V) [FiniteDimensional 𝕜 U] (v : V)
-    (w : U) (hw : ∀ u : U, ⟪(u : V), v⟫_𝕜 = ⟪(u : V), (w : V)⟫_𝕜) :
-    (w : V) = U.starProjection v := by
+/-- 6C.8 Let {lit}`φ(u) = ⟨u, v⟩` be the linear functional on a finite-dimensional
+subspace {lit}`U`, i.e. {lit}`φ = ⟪v, ·⟫` restricted to {lit}`U`, and let
+{lit}`w ∈ U` be *the* vector representing it given by the Riesz representation
+theorem applied to {lit}`U` (6.58 here, 6.42 in the book — the bijection
+{lit}`w ↦ φ_w` supplies both existence and uniqueness). Then {lit}`w = P_U v`. -/
+theorem exercise_6C_8 (U : Submodule 𝕜 V) [FiniteDimensional 𝕜 U] (v : V) :
+    ((rieszVector (V := U) ((innerₛₗ 𝕜 v).comp U.subtype) : U) : V) =
+      U.starProjection v := by
   sorry
 
 /-- 6C.9 If {lit}`P² = P` and {lit}`null P ⟂ range P`, then {lit}`P = P_U` for
 some subspace {lit}`U`. -/
 theorem exercise_6C_9 [FiniteDimensional 𝕜 V] (P : V →ₗ[𝕜] V) (hP : P ∘ₗ P = P)
     (horth : ∀ x ∈ LinearMap.ker P, ∀ y ∈ LinearMap.range P, ⟪x, y⟫_𝕜 = 0) :
-    ∃ (U : Submodule 𝕜 V) (_ : U.HasOrthogonalProjection),
-      (U.starProjection : V →ₗ[𝕜] V) = P := by
+    ∃ U : Submodule 𝕜 V, (U.starProjection : V →ₗ[𝕜] V) = P := by
   sorry
 
 /-- 6C.10 If {lit}`V` is finite-dimensional, {lit}`P² = P`, and {lit}`‖Pv‖ ≤ ‖v‖`
 for every {lit}`v`, then {lit}`P = P_U` for some subspace {lit}`U`. -/
 theorem exercise_6C_10 [FiniteDimensional 𝕜 V] (P : V →ₗ[𝕜] V)
     (hP : P ∘ₗ P = P) (hnorm : ∀ v, ‖P v‖ ≤ ‖v‖) :
-    ∃ (U : Submodule 𝕜 V) (_ : U.HasOrthogonalProjection),
-      (U.starProjection : V →ₗ[𝕜] V) = P := by
+    ∃ U : Submodule 𝕜 V, (U.starProjection : V →ₗ[𝕜] V) = P := by
   sorry
 
 /-- 6C.11 For {lit}`T ∈ ℒ(V)` and a finite-dimensional subspace {lit}`U`,
@@ -746,12 +894,26 @@ theorem exercise_6C_12 [FiniteDimensional 𝕜 V] (T : V →ₗ[𝕜] V)
       (U.starProjection : V →ₗ[𝕜] V) ∘ₗ T = T ∘ₗ (U.starProjection : V →ₗ[𝕜] V) := by
   sorry
 
-/-- 6C.13 For {lit}`𝔽 = ℝ` and {lit}`V` finite-dimensional, {lit}`v ↦ φ_v` with
-{lit}`φ_v(u) = ⟨u, v⟩` is a linear isomorphism of {lit}`V` onto its dual {lit}`V′`
-(parts (a) injectivity and (b) surjectivity together). -/
-theorem exercise_6C_13 {V : Type*} [NormedAddCommGroup V] [InnerProductSpace ℝ V]
-    [FiniteDimensional ℝ V] :
-    ∃ f : V ≃ₗ[ℝ] Module.Dual ℝ V, ∀ v u : V, f v u = ⟪u, v⟫_ℝ := by
+/-- 6C.13 For {lit}`𝔽 = ℝ`, the map {lit}`v ↦ φ_v` with {lit}`φ_v(u) = ⟨u, v⟩`
+(mathlib's {lit}`⟪v, u⟫`). Over {lit}`ℝ` it is genuinely linear — over {lit}`ℂ`
+it would only be conjugate-linear, as the caution accompanying 6.58 notes. -/
+noncomputable def phi6C13 {V : Type*} [NormedAddCommGroup V] [InnerProductSpace ℝ V] :
+    V →ₗ[ℝ] Module.Dual ℝ V where
+  toFun v := innerₛₗ ℝ v
+  map_add' u v := by ext w; simp [inner_add_left]
+  map_smul' c v := by ext w; simp [real_inner_smul_left]
+
+/-- 6C.13 (a) {lit}`v ↦ φ_v` is an injective linear map from {lit}`V` to
+{lit}`V′`. -/
+theorem exercise_6C_13a {V : Type*} [NormedAddCommGroup V] [InnerProductSpace ℝ V]
+    [FiniteDimensional ℝ V] : Function.Injective (phi6C13 (V := V)) := by
+  sorry
+
+/-- 6C.13 (b) With (a) and a dimension count, {lit}`v ↦ φ_v` is an isomorphism of
+{lit}`V` onto {lit}`V′`. (This is an alternative proof of Riesz for
+{lit}`𝔽 = ℝ`, so 6.42/6.58 may not be used here.) -/
+theorem exercise_6C_13b {V : Type*} [NormedAddCommGroup V] [InnerProductSpace ℝ V]
+    [FiniteDimensional ℝ V] : Function.Bijective (phi6C13 (V := V)) := by
   sorry
 
 /-- 6C.14 If {lit}`e₁, …, eₙ` is an orthonormal basis of {lit}`V`, then its dual
@@ -761,50 +923,69 @@ theorem exercise_6C_14 [FiniteDimensional 𝕜 V] {n : ℕ}
     e.toBasis.dualBasis i (e j) = ⟪e i, e j⟫_𝕜 := by
   sorry
 
+/-- 6C.15 The subspace {lit}`U = span((1,1,0,0), (1,1,1,2))` of {lit}`ℝ⁴`. -/
+noncomputable def U6C15 : Submodule ℝ (EuclideanSpace ℝ (Fin 4)) :=
+  Submodule.span ℝ {!₂[1, 1, 0, 0], !₂[1, 1, 1, 2]}
+
+/-- 6C.15 answer: the {lit}`u ∈ U` minimizing {lit}`‖u − (1,2,3,4)‖` — a concrete
+vector to be supplied (it is {lit}`P_U (1,2,3,4)`, by 6.61). -/
+noncomputable def min6C15 : EuclideanSpace ℝ (Fin 4) := sorry
+
 /-- 6C.15 In {lit}`ℝ⁴`, with {lit}`U = span((1,1,0,0), (1,1,1,2))`, find
-{lit}`u ∈ U` minimizing {lit}`‖u − (1,2,3,4)‖`. The minimizer is {lit}`P_U` of
-the target. -/
+{lit}`u ∈ U` minimizing {lit}`‖u − (1,2,3,4)‖`. -/
 theorem exercise_6C_15 :
-    ∃ u ∈ Submodule.span ℝ {(!₂[1, 1, 0, 0] : EuclideanSpace ℝ (Fin 4)),
-        !₂[1, 1, 1, 2]},
-      ∀ u' ∈ Submodule.span ℝ {(!₂[1, 1, 0, 0] : EuclideanSpace ℝ (Fin 4)),
-        !₂[1, 1, 1, 2]},
-        ‖u - !₂[1, 2, 3, 4]‖ ≤ ‖u' - !₂[1, 2, 3, 4]‖ := by
+    min6C15 ∈ U6C15 ∧
+      ∀ u ∈ U6C15, ‖min6C15 - !₂[1, 2, 3, 4]‖ ≤ ‖u - !₂[1, 2, 3, 4]‖ := by
   sorry
 
-/-- 6C.16 On {lit}`C[−1, 1]` with {lit}`⟨f, g⟩ = ∫₋₁¹ fg` (the space
-{name}`L2C` {lit}`(−1) 1`), and {lit}`U = {f : f(0) = 0}`, we have {lit}`U⟂ = {0}`
-while {lit}`U ≠ V` — so 6.49 ({lit}`V = U ⊕ U⟂`) and 6.52 ({lit}`U = (U⟂)⟂`) both
-fail without finite-dimensionality. -/
-theorem exercise_6C_16 (U : Submodule ℝ (L2C (-1) 1))
+/-- 6C.16 (a) On {lit}`C[−1, 1]` with {lit}`⟨f, g⟩ = ∫₋₁¹ fg` (the space
+{name}`L2C` {lit}`(−1) 1`), the subspace {lit}`U = {f : f(0) = 0}` has
+{lit}`U⟂ = {0}`. -/
+theorem exercise_6C_16a (U : Submodule ℝ (L2C (-1) 1))
     (hU : ∀ f, f ∈ U ↔
       (L2C.toCont f) ⟨0, Set.mem_Icc.mpr ⟨by norm_num, by norm_num⟩⟩ = 0) :
-    Uᗮ = ⊥ ∧ U ≠ ⊤ := by
+    Uᗮ = ⊥ := by
   sorry
+
+/-- 6C.16 (b) Hence 6.49 and 6.52 fail without the finite-dimensionality
+hypothesis: {lit}`V ≠ U ⊕ U⟂` (indeed {lit}`U + U⟂ = U ≠ V`) and
+{lit}`(U⟂)⟂ = V ≠ U`. -/
+theorem exercise_6C_16b (U : Submodule ℝ (L2C (-1) 1))
+    (hU : ∀ f, f ∈ U ↔
+      (L2C.toCont f) ⟨0, Set.mem_Icc.mpr ⟨by norm_num, by norm_num⟩⟩ = 0) :
+    ¬ IsCompl U Uᗮ ∧ Uᗮᗮ ≠ U := by
+  sorry
+
+/-- 6C.17 answer: the minimizing {lit}`p ∈ 𝒫₃(ℝ)` — a concrete polynomial to be
+supplied. -/
+noncomputable def p6C17 : Polynomial ℝ := sorry
 
 /-- 6C.17 Find {lit}`p ∈ 𝒫₃(ℝ)` with {lit}`p(0) = 0` and {lit}`p′(0) = 0`
 minimizing {lit}`∫₀¹ |2 + 3x − p(x)|²`. -/
 theorem exercise_6C_17 :
-    ∃ p : Polynomial ℝ, p.degree ≤ 3 ∧ p.eval 0 = 0 ∧
-      (Polynomial.derivative p).eval 0 = 0 ∧
+    p6C17.degree ≤ 3 ∧ p6C17.eval 0 = 0 ∧
+      (Polynomial.derivative p6C17).eval 0 = 0 ∧
       ∀ q : Polynomial ℝ, q.degree ≤ 3 → q.eval 0 = 0 →
         (Polynomial.derivative q).eval 0 = 0 →
-        (∫ x in (0 : ℝ)..1, |2 + 3 * x - p.eval x| ^ 2) ≤
+        (∫ x in (0 : ℝ)..1, |2 + 3 * x - p6C17.eval x| ^ 2) ≤
           (∫ x in (0 : ℝ)..1, |2 + 3 * x - q.eval x| ^ 2) := by
   sorry
 
+/-- 6C.18 answer: the minimizing {lit}`p ∈ 𝒫₅(ℝ)`. -/
+noncomputable def p6C18 : Polynomial ℝ := sorry
+
 /-- 6C.18 Find {lit}`p ∈ 𝒫₅(ℝ)` minimizing {lit}`∫₋ₚᵢᵖⁱ |sin x − p(x)|²`. -/
 theorem exercise_6C_18 :
-    ∃ p : Polynomial ℝ, p.degree ≤ 5 ∧
+    p6C18.degree ≤ 5 ∧
       ∀ q : Polynomial ℝ, q.degree ≤ 5 →
-        (∫ x in (-Real.pi)..Real.pi, |Real.sin x - p.eval x| ^ 2) ≤
+        (∫ x in (-Real.pi)..Real.pi, |Real.sin x - p6C18.eval x| ^ 2) ≤
           (∫ x in (-Real.pi)..Real.pi, |Real.sin x - q.eval x| ^ 2) := by
   sorry
 
 /-- 6C.19 If {lit}`V` is finite-dimensional and {lit}`P` is the orthogonal
 projection onto a subspace {lit}`U`, then {lit}`P† = P`. -/
 theorem exercise_6C_19 [FiniteDimensional 𝕜 V] (U : Submodule 𝕜 V) :
-    pinv (U.starProjection : V →ₗ[𝕜] V) = (U.starProjection : V →ₗ[𝕜] V) := by
+    (U.starProjection : V →ₗ[𝕜] V)† = (U.starProjection : V →ₗ[𝕜] V) := by
   sorry
 
 /-- 6C.20 If {lit}`V` is finite-dimensional and {lit}`T ∈ ℒ(V, W)`, then
@@ -812,22 +993,38 @@ theorem exercise_6C_19 [FiniteDimensional 𝕜 V] (U : Submodule 𝕜 V) :
 theorem exercise_6C_20 [FiniteDimensional 𝕜 V]
     {W : Type*} [NormedAddCommGroup W] [InnerProductSpace 𝕜 W] [FiniteDimensional 𝕜 W]
     (T : V →ₗ[𝕜] W) :
-    LinearMap.ker (pinv T) = (LinearMap.range T)ᗮ ∧
-      LinearMap.range (pinv T) = (LinearMap.ker T)ᗮ := by
+    LinearMap.ker T† = (LinearMap.range T)ᗮ ∧
+      LinearMap.range T† = (LinearMap.ker T)ᗮ := by
   sorry
 
-/-- 6C.21 For {lit}`T : 𝔽³ → 𝔽²`, {lit}`T(a,b,c) = (a+b+c, 2b+3c)`: find a formula
-for {lit}`T†`, and verify {lit}`T T† = P_(range T)` (6.69(b)) and
-{lit}`T† T = P_(null T)⟂` (6.69(c)). -/
-theorem exercise_6C_21
-    (T : EuclideanSpace 𝕜 (Fin 3) →ₗ[𝕜] EuclideanSpace 𝕜 (Fin 2))
-    (hT : ∀ v : EuclideanSpace 𝕜 (Fin 3),
-      T v 0 = v 0 + v 1 + v 2 ∧ T v 1 = 2 * v 1 + 3 * v 2) :
-    T ∘ₗ pinv T =
-        ((LinearMap.range T).starProjection : EuclideanSpace 𝕜 (Fin 2) →ₗ[𝕜] _) ∧
-      pinv T ∘ₗ T =
-        ((Submodule.orthogonal (LinearMap.ker T)).starProjection :
-          EuclideanSpace 𝕜 (Fin 3) →ₗ[𝕜] _) := by
+/-- 6C.21 {lit}`T ∈ ℒ(𝔽³, 𝔽²)`, {lit}`T(a, b, c) = (a + b + c, 2b + 3c)`. -/
+def T6C21 : EuclideanSpace 𝕜 (Fin 3) →ₗ[𝕜] EuclideanSpace 𝕜 (Fin 2) where
+  toFun v := !₂[v 0 + v 1 + v 2, 2 * v 1 + 3 * v 2]
+  map_add' u v := by ext i; fin_cases i <;> simp <;> ring
+  map_smul' c v := by ext i; fin_cases i <;> simp <;> ring
+
+/-- 6C.21 (a) answer: a formula for {lit}`T†(x, y)` — a concrete vector of
+{lit}`𝔽³`, to be supplied. -/
+noncomputable def pinv6C21 (v : EuclideanSpace 𝕜 (Fin 2)) : EuclideanSpace 𝕜 (Fin 3) :=
+  sorry
+
+/-- 6C.21 (a) For {lit}`(x, y) ∈ 𝔽²`, find a formula for {lit}`T†(x, y)`. -/
+theorem exercise_6C_21a (v : EuclideanSpace 𝕜 (Fin 2)) :
+    (T6C21 (𝕜 := 𝕜))† v = pinv6C21 v := by
+  sorry
+
+/-- 6C.21 (b) Verify {lit}`T T† = P_(range T)` (6.69(b)) for that formula. -/
+theorem exercise_6C_21b :
+    T6C21 ∘ₗ (T6C21 (𝕜 := 𝕜))† =
+      ((LinearMap.range (T6C21 (𝕜 := 𝕜))).starProjection :
+        EuclideanSpace 𝕜 (Fin 2) →ₗ[𝕜] _) := by
+  sorry
+
+/-- 6C.21 (c) Verify {lit}`T† T = P_(null T)⟂` (6.69(c)) for that formula. -/
+theorem exercise_6C_21c :
+    (T6C21 (𝕜 := 𝕜))† ∘ₗ T6C21 =
+      ((Submodule.orthogonal (LinearMap.ker (T6C21 (𝕜 := 𝕜)))).starProjection :
+        EuclideanSpace 𝕜 (Fin 3) →ₗ[𝕜] _) := by
   sorry
 
 /-- 6C.22 If {lit}`V` is finite-dimensional and {lit}`T ∈ ℒ(V, W)`, then
@@ -835,7 +1032,7 @@ theorem exercise_6C_21
 theorem exercise_6C_22 [FiniteDimensional 𝕜 V]
     {W : Type*} [NormedAddCommGroup W] [InnerProductSpace 𝕜 W] [FiniteDimensional 𝕜 W]
     (T : V →ₗ[𝕜] W) :
-    T ∘ₗ pinv T ∘ₗ T = T ∧ pinv T ∘ₗ T ∘ₗ pinv T = pinv T := by
+    T ∘ₗ T† ∘ₗ T = T ∧ T† ∘ₗ T ∘ₗ T† = T† := by
   sorry
 
 /-- 6C.23 If {lit}`V` and {lit}`W` are finite-dimensional and {lit}`T ∈ ℒ(V, W)`,
@@ -843,7 +1040,7 @@ then {lit}`(T†)† = T`. -/
 theorem exercise_6C_23 [FiniteDimensional 𝕜 V]
     {W : Type*} [NormedAddCommGroup W] [InnerProductSpace 𝕜 W] [FiniteDimensional 𝕜 W]
     (T : V →ₗ[𝕜] W) :
-    pinv (pinv T) = T := by
+    T†† = T := by
   sorry
 
 end LADR.Section_6C
