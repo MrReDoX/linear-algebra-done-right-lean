@@ -560,16 +560,90 @@ A matrix {lit}`B ∈ 𝔽ⁿ'ⁿ` is *positive definite* if {lit}`B* = B` and
 def IsPositiveDefinite {n : Type*} [Fintype n] (B : Matrix n n 𝕜) : Prop :=
   Bᴴ = B ∧ ∀ x : n → 𝕜, x ≠ 0 → 0 < RCLike.re (∑ i, conj (B.mulVec x i) * x i)
 
-/-! 7.63 Cholesky factorization
-
-Every positive definite matrix {lit}`B` factors uniquely as {lit}`B = R* R` with
-{lit}`R` upper triangular with positive diagonal. Axler's proof takes an invertible
-{lit}`A` with {lit}`B = A* A` (7.38) and a QR factorization {lit}`A = QR`, giving
-{lit}`B = R* Q* Q R = R* R`.
-
-This result is **deferred**: it is built directly on top of the QR factorization
-(7.58), which is itself deferred (no packaged QR factorization in mathlib). It is
-stated here without a Lean declaration to avoid a `sorry` on a numbered theorem. -/
+/-- 7.63 Cholesky factorization (existence). Every positive definite matrix `B`
+factors as `B = Rᴴ * R` with `R` upper triangular and positive real diagonal.
+Following Axler: the positive square root of `B` supplies an invertible `A` with
+`Aᴴ * A = B`; a QR factorization `A = Q * R` then gives
+`B = Rᴴ * Qᴴ * Q * R = Rᴴ * R`. -/
+theorem cholesky_factorization {N : ℕ} (B : Matrix (Fin N) (Fin N) 𝕜)
+    (hB : IsPositiveDefinite B) :
+    ∃ R : Matrix (Fin N) (Fin N) 𝕜, (∀ i j, j < i → R i j = 0) ∧
+      (∀ i, 0 < RCLike.re (R i i) ∧ RCLike.im (R i i) = 0) ∧ B = Rᴴ * R := by
+  classical
+  obtain ⟨hBherm, hBpos⟩ := hB
+  -- `toEuclideanLin` turns matrix product into composition of operators.
+  have hmul : ∀ M P : Matrix (Fin N) (Fin N) 𝕜,
+      (M * P).toEuclideanLin = M.toEuclideanLin ∘ₗ P.toEuclideanLin := by
+    intro M P; ext v
+    simp only [LinearMap.comp_apply, Matrix.toEuclideanLin_apply, WithLp.ofLp_toLp,
+      Matrix.mulVec_mulVec]
+  -- `re ⟪Bop v, v⟫` equals the positive-definite quadratic form at `ofLp v`.
+  have hre : ∀ v : EuclideanSpace 𝕜 (Fin N),
+      RCLike.re (⟪B.toEuclideanLin v, v⟫_𝕜)
+        = RCLike.re (∑ i, conj (B.mulVec (WithLp.ofLp v) i) * WithLp.ofLp v i) := by
+    intro v
+    rw [Matrix.toEuclideanLin_apply, PiLp.inner_apply, map_sum, map_sum]
+    refine Finset.sum_congr rfl fun i _ => ?_
+    rw [RCLike.inner_apply, mul_comm]
+  -- `Bop = toEuclideanLin B` is a positive operator.
+  have hBoppos : B.toEuclideanLin.IsPositive := by
+    rw [LADR.Section_7C.isPositive_iff_symmetric_nonneg]
+    refine ⟨?_, fun v => ?_⟩
+    · rw [LinearMap.isSymmetric_iff_isSelfAdjoint, LinearMap.isSelfAdjoint_iff',
+        ← Matrix.toEuclideanLin_conjTranspose_eq_adjoint, hBherm]
+    · rw [hre]
+      by_cases hv : WithLp.ofLp v = 0
+      · simp [hv]
+      · exact le_of_lt (hBpos _ hv)
+  -- positive square root `Rop` with `Rop ∘ Rop = Bop`.
+  obtain ⟨Rop, hRoppos, hRopRop⟩ := LADR.Section_7C.exists_positive_sqrt hBoppos
+  -- `Bop` is injective (strict positivity kills the kernel), hence so is `Rop`.
+  have hBopinj : Function.Injective B.toEuclideanLin := by
+    rw [← LinearMap.ker_eq_bot, LinearMap.ker_eq_bot']
+    intro v hv
+    by_contra hvne
+    have hx : WithLp.ofLp v ≠ 0 := fun h => hvne (by
+      have h2 := congrArg (WithLp.toLp 2) h; simpa using h2)
+    have hpos := hBpos _ hx
+    rw [← hre, hv] at hpos
+    simp at hpos
+  have hRopinj : Function.Injective Rop := by
+    rw [← LinearMap.ker_eq_bot, LinearMap.ker_eq_bot']
+    intro v hv
+    apply hBopinj
+    rw [map_zero, ← hRopRop, LinearMap.comp_apply, hv, map_zero]
+  -- matrix `A` of `Rop`; its columns are linearly independent.
+  set A := Matrix.toEuclideanLin.symm Rop with hAdef
+  have hARop : A.toEuclideanLin = Rop := LinearEquiv.apply_symm_apply _ _
+  have hAcol : ∀ i, (EuclideanSpace.equiv (Fin N) 𝕜).symm (Aᵀ i)
+      = Rop (EuclideanSpace.single i 1) := by
+    intro i
+    rw [← hARop, Matrix.toEuclideanLin_apply]
+    ext k
+    simp [EuclideanSpace.single, Matrix.mulVec_single, Matrix.transpose_apply]
+  have hA : LinearIndependent 𝕜 (fun i => (EuclideanSpace.equiv (Fin N) 𝕜).symm (Aᵀ i)) := by
+    have hbasis : LinearIndependent 𝕜
+        (fun i : Fin N => (EuclideanSpace.single i 1 : EuclideanSpace 𝕜 (Fin N))) := by
+      have h := (EuclideanSpace.basisFun (Fin N) 𝕜).orthonormal.linearIndependent
+      rwa [show (fun i : Fin N => (EuclideanSpace.single i 1 : EuclideanSpace 𝕜 (Fin N)))
+        = ⇑(EuclideanSpace.basisFun (Fin N) 𝕜) from
+          funext fun i => (EuclideanSpace.basisFun_apply i).symm]
+    have hmap := hbasis.map' (Rop : EuclideanSpace 𝕜 (Fin N) →ₗ[𝕜] EuclideanSpace 𝕜 (Fin N))
+      (LinearMap.ker_eq_bot.mpr hRopinj)
+    have heq : (fun i => (EuclideanSpace.equiv (Fin N) 𝕜).symm (Aᵀ i))
+        = ⇑Rop ∘ fun i => (EuclideanSpace.single i 1 : EuclideanSpace 𝕜 (Fin N)) := funext hAcol
+    rw [heq]; exact hmap
+  -- QR factorization of `A` and the Cholesky identity.
+  obtain ⟨Q, R, hQ, hRt, hRd, hAQR⟩ := QR_factorization A hA
+  refine ⟨R, hRt, hRd, ?_⟩
+  have hAA : Aᴴ * A = B := by
+    apply Matrix.toEuclideanLin.injective
+    rw [hmul, Matrix.toEuclideanLin_conjTranspose_eq_adjoint, hARop,
+      (LADR.Section_7C.isPositive_iff_symmetric_nonneg Rop).mp hRoppos |>.1.adjoint_eq, hRopRop]
+  have hQuni : Qᴴ * Q = 1 := by
+    rw [← Matrix.star_eq_conjTranspose]; exact (Matrix.mem_unitaryGroup_iff').mp hQ
+  rw [← hAA, hAQR, Matrix.conjTranspose_mul, Matrix.mul_assoc, ← Matrix.mul_assoc Qᴴ Q R,
+    hQuni, Matrix.one_mul]
 
 /-! # Exercises 7D -/
 
