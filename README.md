@@ -110,11 +110,12 @@ theory* — the strictly-upper-triangular normal form of a nilpotent operator
 block-diagonal form 8.37 and the diagonal-multiplicity count 8.31 are now
 proved (8B); the existence of square roots of invertible complex operators 8.41
 is now proved (8C, by gluing per-eigenspace roots along the generalized
-eigenspace decomposition), and the nilpotent Jordan basis 8.45 is now proved (8C,
-by Axler's induction on dimension, stated matrix-free via a family of cyclic
-chains that form a basis), leaving only the Jordan form over `ℂ` 8.46 — which
-glues the per-eigenspace nilpotent bases across the generalized eigenspace
-decomposition and is intrinsically about the matrix `ℳ(T, basis)`; *matrix factorizations* (the
+eigenspace decomposition), and the Jordan-form theorems are now proved (8C: the
+nilpotent Jordan basis 8.45 by Axler's induction on dimension, and the full Jordan
+form over `ℂ` 8.46 by applying 8.45 to each `(T − λ)|_{G(λ,T)}` and gluing along
+the generalized eigenspace decomposition) — both stated matrix-free via families
+of eigenvalue chains that form a basis, so only the Definition 8.44's literal
+`ℳ(T, basis)` phrasing stays in prose; *matrix factorizations* (the
 QR factorization 7.58 is now fully proved via Gram–Schmidt, existence and
 uniqueness; the Cholesky factorization 7.63 is now proved in 7D, existence and
 uniqueness, built on QR; and in 7F the matrix SVD `A = B D C*` 7.80, the

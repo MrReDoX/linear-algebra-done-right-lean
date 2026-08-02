@@ -508,6 +508,82 @@ theorem hasNilpotentJordanBasis (T : V →ₗ[ℂ] V) (hT : IsNilpotent T) :
         IH (finrank ℂ ↥W) hWlt (T.restrict hWinv) rfl hTW
       exact jordan_glue T m hm0 u hmop hu hWinv hcompl MW vW hMWpos hMWkill hLIW hspanW
 
+/-- A *Jordan basis* for {lit}`T` (8.44), stated matrix-free: a finite family of
+eigenvalue chains {lit}`(v i, (T − λᵢ)(v i), …)` that together form a basis of
+{lit}`V`, with {lit}`(T − λᵢ)ᴹ (v i) = 0` ending each chain. In the concatenated
+basis this is exactly the block-diagonal Jordan form — one block per chain, with
+eigenvalue {lit}`λᵢ` on the diagonal and {lit}`1`'s directly above it. -/
+def HasJordanBasis (T : V →ₗ[ℂ] V) : Prop :=
+  ∃ (ι : Type) (_ : Fintype ι) (M : ι → ℕ) (lam : ι → ℂ) (v : ι → V),
+    (∀ i, 0 < M i) ∧ (∀ i, ((T - lam i • 1) ^ (M i)) (v i) = 0) ∧
+    LinearIndependent ℂ
+      (fun p : Σ i, Fin (M i) => ((T - lam p.1 • 1) ^ (p.2 : ℕ)) (v p.1)) ∧
+    Submodule.span ℂ (Set.range
+      (fun p : Σ i, Fin (M i) => ((T - lam p.1 • 1) ^ (p.2 : ℕ)) (v p.1))) = ⊤
+
+set_option maxHeartbeats 800000 in
+/-- **8.46** Every operator on a finite-dimensional complex vector space has a
+Jordan basis. Axler's proof applies the nilpotent case 8.45 to each
+{lit}`(T − λ)|_{G(λ,T)}` (nilpotent by
+{name}`LADR.Section_8B.isNilpotent_restrict_sub_algebraMap`) and assembles the
+per-eigenspace bases along the generalized eigenspace decomposition
+({name}`LADR.Section_8B.isInternal_maxGenEigenspace`), via
+{name}`DirectSum.IsInternal.collectedBasis`; {name}`LADR.Section_8C.coe_restrict_pow`
+turns each nilpotent chain into a genuine {lit}`λ`-eigenvalue Jordan chain. -/
+theorem hasJordanBasis (T : V →ₗ[ℂ] V) : HasJordanBasis T := by
+  classical
+  have hInt := LADR.Section_8B.isInternal_maxGenEigenspace T
+  set A : ℂ → Submodule ℂ V := fun μ => maxGenEigenspace T μ with hA
+  have hmaps : ∀ μ : ℂ,
+      Set.MapsTo ((T : Module.End ℂ V) - algebraMap ℂ (Module.End ℂ V) μ) (A μ) (A μ) :=
+    fun μ => Module.End.mapsTo_maxGenEigenspace_of_comm
+      (Algebra.mul_sub_algebraMap_commutes T μ) μ
+  set N : ∀ μ : ℂ, ↥(A μ) →ₗ[ℂ] ↥(A μ) :=
+    fun μ => ((T : Module.End ℂ V) - algebraMap ℂ (Module.End ℂ V) μ).restrict (hmaps μ) with hNdef
+  have hNnil : ∀ μ, IsNilpotent (N μ) :=
+    fun μ => LADR.Section_8B.isNilpotent_restrict_sub_algebraMap T μ
+  have hJB : ∀ μ, ∃ (ιμ : Type) (_ : Fintype ιμ) (Mμ : ιμ → ℕ) (vμ : ιμ → ↥(A μ)),
+      (∀ i, 0 < Mμ i) ∧ (∀ i, (N μ ^ Mμ i) (vμ i) = 0) ∧
+      LinearIndependent ℂ (fun p : Σ i, Fin (Mμ i) => (N μ ^ (p.2 : ℕ)) (vμ p.1)) ∧
+      Submodule.span ℂ (Set.range
+        (fun p : Σ i, Fin (Mμ i) => (N μ ^ (p.2 : ℕ)) (vμ p.1))) = ⊤ :=
+    fun μ => hasNilpotentJordanBasis (N μ) (hNnil μ)
+  choose ιμ instμ Mμ vμ hposμ hkillμ hLIμ hspanμ using hJB
+  haveI : ∀ μ, Fintype (ιμ μ) := instμ
+  set bμ : ∀ μ, Module.Basis (Σ i : ιμ μ, Fin (Mμ μ i)) ℂ ↥(A μ) :=
+    fun μ => Module.Basis.mk (hLIμ μ) (hspanμ μ).ge with hbμ
+  set B := hInt.collectedBasis bμ with hB
+  set e := Equiv.sigmaAssoc (fun (μ : ℂ) (i : ιμ μ) => Fin (Mμ μ i)) with he
+  haveI hFin : Fintype ((μ : ℂ) × (i : ιμ μ) × Fin (Mμ μ i)) :=
+    FiniteDimensional.fintypeBasisIndex B
+  haveI : Fintype (Σ μ : ℂ, ιμ μ) :=
+    Fintype.ofSurjective (fun p : (μ : ℂ) × (i : ιμ μ) × Fin (Mμ μ i) => (⟨p.1, p.2.1⟩ : Σ μ, ιμ μ))
+      (by rintro ⟨μ, i⟩; exact ⟨⟨μ, i, ⟨0, hposμ μ i⟩⟩, rfl⟩)
+  have hbridge : ∀ (μ : ℂ) (i : ιμ μ) (j : ℕ),
+      ((T - μ • 1) ^ j) (↑(vμ μ i) : V) = ↑((N μ ^ j) (vμ μ i)) := by
+    intro μ i j
+    rw [hNdef, coe_restrict_pow, Algebra.algebraMap_eq_smul_one]
+  have hFeq : (fun p : Σ a : Σ μ : ℂ, ιμ μ, Fin (Mμ a.1 a.2) =>
+      ((T - p.1.1 • 1) ^ (p.2 : ℕ)) (↑(vμ p.1.1 p.1.2) : V))
+      = ⇑B ∘ e := by
+    funext p; obtain ⟨⟨μ, i⟩, j⟩ := p
+    rw [hB, DirectSum.IsInternal.collectedBasis_coe]
+    show ((T - μ • 1) ^ (j : ℕ)) (↑(vμ μ i) : V) = ↑(bμ μ ⟨i, j⟩)
+    rw [hbμ, Module.Basis.mk_apply, hbridge]
+  refine ⟨Σ μ : ℂ, ιμ μ, inferInstance, fun a => Mμ a.1 a.2, fun a => a.1,
+    fun a => (↑(vμ a.1 a.2) : V), ?_, ?_, ?_, ?_⟩
+  · rintro ⟨μ, i⟩; exact hposμ μ i
+  · rintro ⟨μ, i⟩
+    show ((T - μ • 1) ^ (Mμ μ i)) (↑(vμ μ i) : V) = 0
+    rw [hbridge, hkillμ μ i, Submodule.coe_zero]
+  · rw [hFeq]; exact B.linearIndependent.comp e e.injective
+  · have hre : Set.range (⇑B ∘ ⇑e) = Set.range ⇑B := by
+      ext y; simp only [Set.mem_range, Function.comp_apply]
+      constructor
+      · rintro ⟨x, rfl⟩; exact ⟨e x, rfl⟩
+      · rintro ⟨z, rfl⟩; obtain ⟨x, rfl⟩ := e.surjective z; exact ⟨x, rfl⟩
+    rw [hFeq, hre, Module.Basis.span_eq]
+
 end JordanBasis
 
 /-! For every {lit}`T ∈ ℒ(V)` over {lit}`ℂ` there is a basis giving a "nice"
@@ -568,9 +644,10 @@ with respect to it is block diagonal with each block {lit}`Aₖ` upper triangula
 having a single eigenvalue {lit}`λₖ` on its diagonal, {lit}`1`'s on the line
 directly above the diagonal, and {lit}`0`'s elsewhere. As with the block-diagonal
 definition 8.35, this is a statement about {lit}`ℳ(T, basis)`, which is not
-developed here; for a *nilpotent* {lit}`T` (all {lit}`λₖ = 0`) the condition is
-captured matrix-free by {name}`LADR.Section_8C.HasNilpotentJordanBasis` above,
-whose cyclic chains are exactly the Jordan blocks. -/
+developed here; the condition is instead captured matrix-free by
+{name}`LADR.Section_8C.HasJordanBasis` (and, in the nilpotent all-{lit}`λₖ = 0`
+case, {name}`LADR.Section_8C.HasNilpotentJordanBasis`), whose eigenvalue chains
+are exactly the Jordan blocks. -/
 
 /-! 8.45 Every nilpotent operator has a Jordan basis.
 
@@ -583,15 +660,13 @@ The conclusion is stated matrix-free via
 
 /-! 8.46 Jordan form.
 
-**Deferred.** If {lit}`F = ℂ` and {lit}`T ∈ ℒ(V)`, then {lit}`V` has a Jordan
-basis for {lit}`T`. Axler's proof applies the now-proved nilpotent case 8.45 to
-each nilpotent {lit}`(T − λₖI)|_{G(λₖ,T)}` and assembles the per-eigenspace bases
-along the generalized eigenspace decomposition
-({name}`LADR.Section_8B.isInternal_maxGenEigenspace`). The remaining step — gluing
-the {lit}`HasNilpotentJordanBasis` data across that internal direct sum, with the
-eigenvalue shift turning each nilpotent chain into a genuine Jordan block — is not
-yet formalized here, so the full 8.46 (which is intrinsically about
-{lit}`ℳ(T, basis)`) remains deferred. -/
+**Proved** above as {name}`LADR.Section_8C.hasJordanBasis`, following Axler:
+apply the nilpotent case 8.45 to each nilpotent {lit}`(T − λₖI)|_{G(λₖ,T)}` and
+glue the per-eigenspace bases across the generalized eigenspace decomposition
+({name}`LADR.Section_8B.isInternal_maxGenEigenspace`) with
+{name}`DirectSum.IsInternal.collectedBasis`. The conclusion is stated matrix-free
+via {name}`LADR.Section_8C.HasJordanBasis` (8.44): a family of eigenvalue chains
+{lit}`(v i, (T − λᵢ)(v i), …)` that together form a basis. -/
 
 /-! The closest formally available analogue is the **Jordan–Chevalley–Dunford
 decomposition**: over {lit}`ℂ` (indeed any perfect field) every operator on a
