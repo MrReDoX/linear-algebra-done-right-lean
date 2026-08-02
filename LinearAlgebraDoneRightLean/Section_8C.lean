@@ -247,6 +247,269 @@ theorem cyclic_list_linearIndependent {W : Type*} [AddCommGroup W] [Module ℂ W
     · rw [map_smul, ← Module.End.mul_apply, ← pow_add, hvanish _ (by omega), smul_zero]
   · intro h; exact absurd (Finset.mem_univ i) h
 
+section JordanBasis
+
+universe u
+
+variable {V : Type u} [AddCommGroup V] [Module ℂ V] [FiniteDimensional ℂ V]
+
+/-- Axler's decomposition step for a nilpotent operator. If {lit}`T ^ m = 0` and
+{lit}`T ^ (m-1) u ≠ 0`, then the cyclic subspace {lit}`U = span {u, Tu, …, Tᵐ⁻¹u}`
+has a {lit}`T`-invariant complement {lit}`W`, with {lit}`dim W + m = dim V`. This is
+the heart of the induction proving 8.45: `U` is a single Jordan block and `W` is
+handled by the inductive hypothesis. -/
+theorem nilpotent_cyclic_hasCompl (T : V →ₗ[ℂ] V) (m : ℕ) (hm0 : 0 < m) (u : V)
+    (hmop : (T ^ m : V →ₗ[ℂ] V) = 0) (hu : (T ^ (m - 1)) u ≠ 0) :
+    ∃ W : Submodule ℂ V, (∀ x ∈ W, T x ∈ W) ∧
+      IsCompl (Submodule.span ℂ (Set.range (fun j : Fin m => (T ^ (j : ℕ)) u))) W ∧
+      finrank ℂ W + m = finrank ℂ V := by
+  classical
+  set g : Fin m → V := fun j => (T ^ (j : ℕ)) u with hg
+  set U := Submodule.span ℂ (Set.range g) with hU
+  have hvanish : ∀ l, m ≤ l → (T ^ l : V →ₗ[ℂ] V) = 0 := fun l hl => by
+    obtain ⟨t, rfl⟩ := Nat.exists_eq_add_of_le hl
+    rw [add_comm, pow_add, hmop, mul_zero]
+  have hUinv : ∀ x ∈ U, T x ∈ U := by
+    intro x hx
+    refine Submodule.span_induction ?_ ?_ ?_ ?_ hx
+    · rintro y ⟨j, rfl⟩
+      by_cases hj : (j : ℕ) + 1 < m
+      · refine Submodule.subset_span ⟨⟨(j : ℕ) + 1, hj⟩, ?_⟩
+        simp only [hg]
+        rw [← Module.End.mul_apply, ← pow_succ']
+      · have : (j : ℕ) + 1 = m := by omega
+        have : T (g j) = 0 := by
+          simp only [hg]
+          rw [← Module.End.mul_apply, ← pow_succ', this, hmop, LinearMap.zero_apply]
+        rw [this]; exact Submodule.zero_mem _
+    · simp
+    · intro y z _ _ hy hz; rw [map_add]; exact Submodule.add_mem _ hy hz
+    · intro a y _ hy; rw [map_smul]; exact Submodule.smul_mem _ _ hy
+  obtain ⟨φ, hφ⟩ : ∃ φ : Module.Dual ℂ V, φ ((T ^ (m - 1)) u) ≠ 0 := by
+    by_contra h; push_neg at h
+    exact hu ((Module.forall_dual_apply_eq_zero_iff ℂ _).mp h)
+  set S : V →ₗ[ℂ] (Fin m → ℂ) := LinearMap.pi (fun k : Fin m => φ ∘ₗ (T ^ (k : ℕ))) with hS
+  have hSapp : ∀ (x : V) (k : Fin m), S x k = φ ((T ^ (k : ℕ)) x) := by
+    intro x k; simp [hS, LinearMap.pi_apply]
+  set W := ker S with hW
+  have hWinv : ∀ x ∈ W, T x ∈ W := by
+    intro x hx
+    rw [hW, LinearMap.mem_ker] at hx ⊢
+    funext k
+    rw [Pi.zero_apply, hSapp]
+    have hxk : ∀ j : Fin m, φ ((T ^ (j : ℕ)) x) = 0 := fun j => by
+      simpa [hSapp] using congrFun hx j
+    have hTk : (T ^ (k : ℕ)) (T x) = (T ^ ((k : ℕ) + 1)) x := by
+      rw [← Module.End.mul_apply, ← pow_succ]
+    rw [hTk]
+    by_cases hk : (k : ℕ) + 1 < m
+    · exact hxk ⟨(k : ℕ) + 1, hk⟩
+    · have hkm : (k : ℕ) + 1 = m := by omega
+      rw [hkm, hvanish m le_rfl, LinearMap.zero_apply, map_zero]
+  have hmu : (T ^ m) u = 0 := by rw [hmop, LinearMap.zero_apply]
+  have hgLI : LinearIndependent ℂ g := cyclic_list_linearIndependent T m u hmu hu
+  have hfU : finrank ℂ U = m := by rw [hU, finrank_span_eq_card hgLI]; simp
+  have hdisj : Disjoint U W := by
+    rw [Submodule.disjoint_def]
+    intro x hxU hxW
+    rw [hW, LinearMap.mem_ker] at hxW
+    have hSx : ∀ k : Fin m, φ ((T ^ (k : ℕ)) x) = 0 := fun k => by
+      simpa [hSapp] using congrFun hxW k
+    obtain ⟨c, hc⟩ := (Submodule.mem_span_range_iff_exists_fun ℂ).mp hxU
+    by_contra hx0
+    have hne : ∃ j : Fin m, c j ≠ 0 := by
+      by_contra h; push_neg at h
+      exact hx0 (by rw [← hc]; simp [h])
+    set sset := Finset.univ.filter (fun j : Fin m => c j ≠ 0) with hsset
+    have hsne : sset.Nonempty := by
+      obtain ⟨j, hj⟩ := hne; exact ⟨j, by simp [hsset, hj]⟩
+    set i := sset.min' hsne with hidef
+    have hilt : (i : ℕ) < m := i.isLt
+    have hci : c i ≠ 0 := by have := sset.min'_mem hsne; simp [hsset] at this; exact this
+    have hmin' : ∀ j : Fin m, j < i → c j = 0 := fun j hji => by
+      by_contra hcj
+      exact absurd (sset.min'_le j (by simp [hsset, hcj])) (not_le.mpr hji)
+    have key : φ ((T ^ (m - 1 - (i : ℕ))) x) = c i * φ ((T ^ (m - 1)) u) := by
+      rw [← hc, map_sum, map_sum, Finset.sum_eq_single i]
+      · simp only [hg]
+        rw [map_smul, map_smul, smul_eq_mul]
+        congr 1
+        rw [← Module.End.mul_apply, ← pow_add]
+        have : m - 1 - (i : ℕ) + (i : ℕ) = m - 1 := by omega
+        rw [this]
+      · intro j _ hj
+        rcases lt_or_gt_of_ne hj with hlt | hgt
+        · rw [hmin' j hlt]; simp
+        · simp only [hg]
+          rw [map_smul, map_smul, smul_eq_mul, ← Module.End.mul_apply, ← pow_add,
+            hvanish _ (by omega : m ≤ m - 1 - (i : ℕ) + (j : ℕ))]
+          simp
+      · intro h; exact absurd (Finset.mem_univ i) h
+    have hzero : φ ((T ^ (m - 1 - (i : ℕ))) x) = 0 := hSx ⟨m - 1 - (i : ℕ), by omega⟩
+    rw [key] at hzero
+    rcases mul_eq_zero.mp hzero with h | h
+    · exact hci h
+    · exact hφ h
+  have hrn : finrank ℂ (range S) + finrank ℂ W = finrank ℂ V := by
+    rw [hW]; exact LinearMap.finrank_range_add_finrank_ker S
+  have hrangele : finrank ℂ (range S) ≤ m := by
+    calc finrank ℂ (range S) ≤ finrank ℂ (Fin m → ℂ) := Submodule.finrank_le _
+      _ = m := by rw [Module.finrank_pi]; simp
+  have hinf0 : finrank ℂ ↥(U ⊓ W) = 0 := by rw [disjoint_iff.mp hdisj]; simp
+  have hsup : finrank ℂ ↥(U ⊔ W) = m + finrank ℂ W := by
+    have := Submodule.finrank_sup_add_finrank_inf_eq U W
+    rw [hinf0, hfU] at this; omega
+  have hsuple : finrank ℂ ↥(U ⊔ W) ≤ finrank ℂ V := Submodule.finrank_le _
+  have hsupeq : finrank ℂ ↥(U ⊔ W) = finrank ℂ V := by omega
+  have hcodisj : Codisjoint U W := by
+    rw [codisjoint_iff]; exact Submodule.eq_top_of_finrank_eq hsupeq
+  exact ⟨W, hWinv, ⟨hdisj, hcodisj⟩, by omega⟩
+
+omit [FiniteDimensional ℂ V] in
+/-- Coercion commutes with powers of a restricted operator:
+{lit}`↑((T.restrict h) ^ k x) = (T ^ k) ↑x`. -/
+theorem coe_restrict_pow {W : Submodule ℂ V} (T : V →ₗ[ℂ] V) (h : ∀ x ∈ W, T x ∈ W) :
+    ∀ (k : ℕ) (x : ↥W), (((T.restrict h) ^ k) x : V) = (T ^ k) (x : V) := by
+  intro k
+  induction k with
+  | zero => intro x; simp
+  | succ k ih =>
+    intro x
+    rw [pow_succ, Module.End.mul_apply, ih, pow_succ, Module.End.mul_apply,
+      LinearMap.restrict_coe_apply]
+
+/-- A *Jordan basis* for a nilpotent {lit}`T`, stated matrix-free: a finite family
+of cyclic chains {lit}`(v i, T (v i), …, Tᴹ⁻¹ (v i))` that together form a basis of
+{lit}`V`, with {lit}`Tᴹ (v i) = 0` ending each chain. In the matrix of {lit}`T` with
+respect to the concatenated basis this is exactly the block-diagonal nilpotent
+Jordan form (8.44): each chain contributes one block with {lit}`1`'s on the
+superdiagonal and {lit}`0`'s elsewhere. -/
+def HasNilpotentJordanBasis (T : V →ₗ[ℂ] V) : Prop :=
+  ∃ (ι : Type) (_ : Fintype ι) (M : ι → ℕ) (v : ι → V),
+    (∀ i, 0 < M i) ∧ (∀ i, (T ^ (M i)) (v i) = 0) ∧
+    LinearIndependent ℂ (fun p : Σ i, Fin (M i) => (T ^ (p.2 : ℕ)) (v p.1)) ∧
+    Submodule.span ℂ (Set.range (fun p : Σ i, Fin (M i) => (T ^ (p.2 : ℕ)) (v p.1))) = ⊤
+
+set_option maxHeartbeats 800000 in
+/-- The gluing step of Axler's Jordan induction: a cyclic block for {lit}`u`
+together with a Jordan basis of a {lit}`T`-invariant complement {lit}`W` assemble
+into a Jordan basis of the whole space. -/
+theorem jordan_glue (T : V →ₗ[ℂ] V) (m : ℕ) (hm0 : 0 < m) (u : V)
+    (hmop : (T ^ m : V →ₗ[ℂ] V) = 0) (hu : (T ^ (m - 1)) u ≠ 0)
+    {W : Submodule ℂ V} (hWinv : ∀ x ∈ W, T x ∈ W)
+    (hcompl : IsCompl (Submodule.span ℂ (Set.range (fun j : Fin m => (T ^ (j : ℕ)) u))) W)
+    {ιW : Type} [Fintype ιW] (MW : ιW → ℕ) (vW : ιW → ↥W)
+    (hMWpos : ∀ i, 0 < MW i)
+    (hMWkill : ∀ i, ((T.restrict hWinv) ^ (MW i)) (vW i) = 0)
+    (hLIW : LinearIndependent ℂ
+      (fun p : Σ i, Fin (MW i) => ((T.restrict hWinv) ^ (p.2 : ℕ)) (vW p.1)))
+    (hspanW : Submodule.span ℂ (Set.range
+      (fun p : Σ i, Fin (MW i) => ((T.restrict hWinv) ^ (p.2 : ℕ)) (vW p.1))) = ⊤) :
+    HasNilpotentJordanBasis T := by
+  set g : Fin m → V := fun j => (T ^ (j : ℕ)) u with hg
+  have hgLI : LinearIndependent ℂ g :=
+    cyclic_list_linearIndependent T m u (by rw [hmop, LinearMap.zero_apply]) hu
+  set gU : (Σ _ : Unit, Fin m) → V := fun p => (T ^ (p.2 : ℕ)) u with hgU
+  set hWfam : (Σ i : ιW, Fin (MW i)) → V := fun p => (T ^ (p.2 : ℕ)) ↑(vW p.1) with hWf
+  set wfam : (Σ i : ιW, Fin (MW i)) → ↥W :=
+    fun p => ((T.restrict hWinv) ^ (p.2 : ℕ)) (vW p.1) with hwfam
+  have hWfam_eq : hWfam = (W.subtype : ↥W →ₗ[ℂ] V) ∘ wfam := by
+    funext p; show (T ^ (p.2 : ℕ)) ↑(vW p.1) = ↑(wfam p)
+    rw [hwfam, coe_restrict_pow T hWinv]
+  have hspanhW : Submodule.span ℂ (Set.range hWfam) = W := by
+    rw [hWfam_eq, Set.range_comp, Submodule.span_image, hspanW, Submodule.map_top,
+      Submodule.range_subtype]
+  have hrangeU : Set.range gU = Set.range g := by
+    ext x; constructor
+    · rintro ⟨p, rfl⟩; exact ⟨p.2, rfl⟩
+    · rintro ⟨j, rfl⟩; exact ⟨⟨(), j⟩, rfl⟩
+  have hLIgU : LinearIndependent ℂ gU := by
+    show LinearIndependent ℂ (g ∘ (fun p : Σ _ : Unit, Fin m => p.2))
+    exact hgLI.comp _ (by rintro ⟨⟨⟩, j⟩ ⟨⟨⟩, k⟩ h; simpa using h)
+  have hLIhW : LinearIndependent ℂ hWfam := by
+    rw [hWfam_eq]; exact hLIW.map' W.subtype (Submodule.ker_subtype W)
+  have hdisjspan : Disjoint (Submodule.span ℂ (Set.range gU))
+      (Submodule.span ℂ (Set.range hWfam)) := by
+    rw [hrangeU, hspanhW]; exact hcompl.disjoint
+  set e := Equiv.sumSigmaDistrib
+    (fun o : Unit ⊕ ιW => Fin (Sum.elim (fun _ => m) MW o)) with he
+  have hFeq : (fun p : Σ o : Unit ⊕ ιW, Fin (Sum.elim (fun _ => m) MW o) =>
+      (T ^ (p.2 : ℕ)) (Sum.elim (fun _ => u) (fun i => (vW i : V)) p.1))
+      = Sum.elim gU hWfam ∘ e := by
+    funext p; obtain ⟨o, j⟩ := p; cases o with
+    | inl a => cases a; rfl
+    | inr i => rfl
+  refine ⟨Unit ⊕ ιW, inferInstance, Sum.elim (fun _ => m) MW,
+    Sum.elim (fun _ => u) (fun i => (vW i : V)), ?_, ?_, ?_, ?_⟩
+  · rintro (_ | i)
+    · exact hm0
+    · exact hMWpos i
+  · rintro (⟨⟩ | i)
+    · show (T ^ m) u = 0; rw [hmop, LinearMap.zero_apply]
+    · show (T ^ (MW i)) ↑(vW i) = 0
+      rw [← coe_restrict_pow T hWinv (MW i) (vW i), hMWkill i, Submodule.coe_zero]
+  · rw [hFeq]
+    exact (LinearIndependent.sum_type hLIgU hLIhW hdisjspan).comp e e.injective
+  · have hre : Set.range (Sum.elim gU hWfam ∘ ⇑e) = Set.range (Sum.elim gU hWfam) := by
+      ext y; simp only [Set.mem_range, Function.comp_apply]
+      constructor
+      · rintro ⟨x, rfl⟩; exact ⟨e x, rfl⟩
+      · rintro ⟨z, rfl⟩; obtain ⟨x, rfl⟩ := e.surjective z; exact ⟨x, rfl⟩
+    rw [hFeq, hre, Set.Sum.elim_range, Submodule.span_union, hrangeU, hspanhW]
+    exact hcompl.sup_eq_top
+
+set_option maxHeartbeats 800000 in
+/-! **8.45** Every nilpotent operator on a finite-dimensional complex vector space
+has a Jordan basis. Axler's proof is by induction on {lit}`dim V`: choosing {lit}`m`
+minimal with {lit}`Tᵐ = 0` and {lit}`u` with {lit}`Tᵐ⁻¹u ≠ 0`, the cyclic subspace
+{lit}`U = span{u, …, Tᵐ⁻¹u}` is a single Jordan block with a {lit}`T`-invariant
+complement {lit}`W` ({name}`LADR.Section_8C.nilpotent_cyclic_hasCompl`); applying the
+inductive hypothesis to {lit}`W` and concatenating the chains
+({name}`LADR.Section_8C.jordan_glue`) gives a Jordan basis of {lit}`V`. We state the
+conclusion matrix-free as {name}`LADR.Section_8C.HasNilpotentJordanBasis` (8.44). -/
+theorem hasNilpotentJordanBasis (T : V →ₗ[ℂ] V) (hT : IsNilpotent T) :
+    HasNilpotentJordanBasis T := by
+  suffices H : ∀ (n : ℕ), ∀ {V : Type u} [AddCommGroup V] [Module ℂ V] [FiniteDimensional ℂ V]
+      (T : V →ₗ[ℂ] V), finrank ℂ V = n → IsNilpotent T → HasNilpotentJordanBasis T by
+    exact H (finrank ℂ V) T rfl hT
+  intro n
+  induction n using Nat.strong_induction_on with
+  | _ n IH =>
+    intro V _ _ _ T hdim hnil
+    rcases Nat.eq_zero_or_pos n with hn0 | hnpos
+    · subst hn0
+      haveI : Subsingleton V := Module.finrank_zero_iff.mp hdim
+      refine ⟨Empty, inferInstance, Empty.elim, Empty.elim, fun i => i.elim, fun i => i.elim,
+        ?_, ?_⟩
+      · haveI : IsEmpty (Σ i : Empty, Fin ((Empty.elim : Empty → ℕ) i)) := ⟨fun p => p.1.elim⟩
+        exact linearIndependent_empty_type
+      · rw [eq_top_iff]; intro x _; rw [Subsingleton.elim x 0]; exact Submodule.zero_mem _
+    · classical
+      have hex : ∃ k, (T ^ k : V →ₗ[ℂ] V) = 0 := hnil
+      set m := Nat.find hex with hm
+      have hmop : (T ^ m : V →ₗ[ℂ] V) = 0 := Nat.find_spec hex
+      have hm0 : 0 < m := by
+        rcases Nat.eq_zero_or_pos m with h | h
+        · exfalso
+          rw [h, pow_zero] at hmop
+          have hall : ∀ x : V, x = 0 := fun x => by
+            have := LinearMap.congr_fun hmop x; simpa using this
+          haveI : Subsingleton V := ⟨fun a b => by rw [hall a, hall b]⟩
+          rw [show finrank ℂ V = 0 from Module.finrank_zero_iff.mpr this] at hdim; omega
+        · exact h
+      have hm1 : (T ^ (m - 1) : V →ₗ[ℂ] V) ≠ 0 :=
+        Nat.find_min hex (by rw [← hm]; omega)
+      obtain ⟨u, hu⟩ : ∃ u, (T ^ (m - 1)) u ≠ 0 := by
+        by_contra h; push_neg at h; exact hm1 (LinearMap.ext h)
+      obtain ⟨W, hWinv, hcompl, hdimW⟩ := nilpotent_cyclic_hasCompl T m hm0 u hmop hu
+      have hWlt : finrank ℂ ↥W < n := by rw [← hdim]; omega
+      have hTW : IsNilpotent (T.restrict hWinv) := Module.End.isNilpotent.restrict hWinv hnil
+      obtain ⟨ιW, instW, MW, vW, hMWpos, hMWkill, hLIW, hspanW⟩ :=
+        IH (finrank ℂ ↥W) hWlt (T.restrict hWinv) rfl hTW
+      exact jordan_glue T m hm0 u hmop hu hWinv hcompl MW vW hMWpos hMWkill hLIW hspanW
+
+end JordanBasis
+
 /-! For every {lit}`T ∈ ℒ(V)` over {lit}`ℂ` there is a basis giving a "nice"
 upper-triangular matrix (8.37); the Jordan form does better, producing a matrix
 that is {lit}`0` except on the diagonal and the line directly above it. The
@@ -304,28 +567,31 @@ A basis of {lit}`V` is a *Jordan basis* for {lit}`T` if the matrix of {lit}`T`
 with respect to it is block diagonal with each block {lit}`Aₖ` upper triangular,
 having a single eigenvalue {lit}`λₖ` on its diagonal, {lit}`1`'s on the line
 directly above the diagonal, and {lit}`0`'s elsewhere. As with the block-diagonal
-definition 8.35, this is a statement about {lit}`ℳ(T, basis)`; the
-matrix-of-a-basis correspondence is not developed here, so we describe it only in
-prose. -/
+definition 8.35, this is a statement about {lit}`ℳ(T, basis)`, which is not
+developed here; for a *nilpotent* {lit}`T` (all {lit}`λₖ = 0`) the condition is
+captured matrix-free by {name}`LADR.Section_8C.HasNilpotentJordanBasis` above,
+whose cyclic chains are exactly the Jordan blocks. -/
 
 /-! 8.45 Every nilpotent operator has a Jordan basis.
 
-**Deferred.** If {lit}`T ∈ ℒ(V)` is nilpotent then {lit}`V` has a Jordan basis
-for {lit}`T`. Axler's inductive proof constructs vectors {lit}`v₁, …, vₙ` with
-{lit}`{Tʲvₖ}` a basis of {lit}`V`. The statement is intrinsically about the
-matrix of {lit}`T` in the resulting basis (8.44), which is not formalized in this
-companion; moreover mathlib does not provide a Jordan-normal-form theorem. So we
-state 8.45 in prose rather than as an unproved numbered claim. The combinatorial
-content is captured by Exercises 9 and 13 (stated below). -/
+**Proved** above as {name}`LADR.Section_8C.hasNilpotentJordanBasis`, following
+Axler's induction on {lit}`dim V` (see
+{name}`LADR.Section_8C.nilpotent_cyclic_hasCompl` for the cyclic-block/complement
+splitting and {name}`LADR.Section_8C.jordan_glue` for the assembly of the chains).
+The conclusion is stated matrix-free via
+{name}`LADR.Section_8C.HasNilpotentJordanBasis` (8.44). -/
 
 /-! 8.46 Jordan form.
 
 **Deferred.** If {lit}`F = ℂ` and {lit}`T ∈ ℒ(V)`, then {lit}`V` has a Jordan
-basis for {lit}`T`. Axler's proof applies 8.45 to each nilpotent
-{lit}`(T − λₖI)|_{G(λₖ,T)}` and assembles the bases via the generalized
-eigenspace decomposition. Both the base case 8.45 and the Jordan-basis notion
-8.44 rest on the matrix-of-a-basis formalism absent here (and mathlib has no
-Jordan-normal-form theorem), so 8.46 is deferred. -/
+basis for {lit}`T`. Axler's proof applies the now-proved nilpotent case 8.45 to
+each nilpotent {lit}`(T − λₖI)|_{G(λₖ,T)}` and assembles the per-eigenspace bases
+along the generalized eigenspace decomposition
+({name}`LADR.Section_8B.isInternal_maxGenEigenspace`). The remaining step — gluing
+the {lit}`HasNilpotentJordanBasis` data across that internal direct sum, with the
+eigenvalue shift turning each nilpotent chain into a genuine Jordan block — is not
+yet formalized here, so the full 8.46 (which is intrinsically about
+{lit}`ℳ(T, basis)`) remains deferred. -/
 
 /-! The closest formally available analogue is the **Jordan–Chevalley–Dunford
 decomposition**: over {lit}`ℂ` (indeed any perfect field) every operator on a
