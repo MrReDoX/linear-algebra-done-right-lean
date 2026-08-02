@@ -417,20 +417,87 @@ theorem pinv_svd_apply (T : V →ₗ[𝕜] W) (w : W) :
   rw [← sub_eq_zero]
   exact inner_self_eq_zero.mp hzero
 
-/-! 7.80 Matrix version of the SVD
+/-- The `(k,l)` entry of `A` read off the SVD of `Matrix.toEuclideanLin A`:
+`A k l = ∑ᵢ sᵢ conj(eᵢ l) fᵢ k` (the `sᵢ = 0` terms vanish). -/
+theorem toEuclideanLin_entry_eq_svd {N : ℕ} (A : Matrix (Fin N) (Fin N) 𝕜) (k l : Fin N) :
+    A k l = ∑ i : Fin (finrank 𝕜 (EuclideanSpace 𝕜 (Fin N))),
+      (singularValues (Matrix.toEuclideanLin A) i : 𝕜)
+      * (starRingEnd 𝕜) (svdBasis (Matrix.toEuclideanLin A) i l)
+      * svdImage (Matrix.toEuclideanLin A) i k := by
+  set T := Matrix.toEuclideanLin A with hTdef
+  have hL := congrArg (⇑(EuclideanSpace.equiv (Fin N) 𝕜))
+    (svd_apply T (EuclideanSpace.single l (1 : 𝕜)))
+  rw [map_sum] at hL
+  simp only [map_smul] at hL
+  have hLk := congrFun hL k
+  simp only [Finset.sum_apply, Pi.smul_apply, smul_eq_mul] at hLk
+  have hAkl : A k l = (⇑(EuclideanSpace.equiv (Fin N) 𝕜)
+      (T (EuclideanSpace.single l (1:𝕜)))) k := by
+    rw [hTdef, Matrix.toEuclideanLin_apply]
+    simp [EuclideanSpace.single, Matrix.mulVec_single]
+  rw [hAkl, hLk]
+  refine Finset.sum_congr rfl fun i _ => ?_
+  rw [EuclideanSpace.inner_single_right]
+  simp only [show ∀ (w : EuclideanSpace 𝕜 (Fin N)) (m : Fin N), w.ofLp m = w m from fun _ _ => rfl,
+    show ∀ (w : EuclideanSpace 𝕜 (Fin N)) (m : Fin N),
+      ⇑(EuclideanSpace.equiv (Fin N) 𝕜) w m = w m from fun _ _ => rfl, one_mul]
+  ring
 
-Every {lit}`p`-by-{lit}`n` matrix {lit}`A` of rank {lit}`m ≥ 1` factors as
-{lit}`A = B D C*` with {lit}`B` ({lit}`p`-by-{lit}`m`) and {lit}`C`
-({lit}`n`-by-{lit}`m`) having orthonormal columns and {lit}`D` an {lit}`m`-by-
-{lit}`m` diagonal matrix with positive diagonal.
-
-**Deferred**: this is the matrix restatement of 7.70, obtained by reading the
-{lit}`fₖ` and {lit}`eₖ` off as the columns of {lit}`B` and {lit}`C` and the
-positive singular values as the diagonal of {lit}`D`. Assembling the three
-matrices with orthonormal columns and verifying {lit}`A = B D C*` is a sizeable
-matrix-bookkeeping development beyond the scope of this section (compare the
-deferred QR factorization 7.58); it is stated here in prose to avoid a `sorry` on
-a numbered theorem. -/
+/-- 7.80 Matrix version of the SVD. A square matrix `A` factors as `A = B D Cᴴ`
+with `B`, `C` having orthonormal columns (`Bᴴ B = Cᴴ C = 1`) and `D` a diagonal
+matrix carrying the positive singular values. Following Axler, the columns of `B`
+are the image vectors `fₖ`, the columns of `C` are the eigenbasis vectors `eₖ`
+(both indexed by the positive singular values), and `D` holds the `sₖ`. -/
+theorem matrix_svd {N : ℕ} (A : Matrix (Fin N) (Fin N) 𝕜) :
+    ∃ (B C : Matrix (Fin N)
+        {i : Fin (finrank 𝕜 (EuclideanSpace 𝕜 (Fin N)))
+          // singularValues (Matrix.toEuclideanLin A) i ≠ 0} 𝕜)
+      (D : Matrix {i : Fin (finrank 𝕜 (EuclideanSpace 𝕜 (Fin N)))
+          // singularValues (Matrix.toEuclideanLin A) i ≠ 0}
+        {i : Fin (finrank 𝕜 (EuclideanSpace 𝕜 (Fin N)))
+          // singularValues (Matrix.toEuclideanLin A) i ≠ 0} 𝕜),
+      Bᴴ * B = 1 ∧ Cᴴ * C = 1
+        ∧ (∀ i, D i i = (singularValues (Matrix.toEuclideanLin A) i.1 : 𝕜))
+        ∧ (∀ i j, i ≠ j → D i j = 0) ∧ A = B * D * Cᴴ := by
+  classical
+  set T := Matrix.toEuclideanLin A with hTdef
+  refine ⟨Matrix.of fun k i => svdImage T i.1 k, Matrix.of fun k i => svdBasis T i.1 k,
+    Matrix.diagonal fun i => (singularValues T i.1 : 𝕜), ?_, ?_,
+    fun i => Matrix.diagonal_apply_eq _ _, fun i j hij => Matrix.diagonal_apply_ne _ hij, ?_⟩
+  · ext i j
+    rw [Matrix.mul_apply, Matrix.one_apply,
+      ← orthonormal_iff_ite.mp (svdImage_orthonormal T) i j, PiLp.inner_apply]
+    refine Finset.sum_congr rfl fun x _ => ?_
+    simp only [Matrix.conjTranspose_apply, Matrix.of_apply, RCLike.inner_apply, RCLike.star_def,
+      Function.comp_apply]
+    ring
+  · ext i j
+    rw [Matrix.mul_apply, Matrix.one_apply,
+      ← orthonormal_iff_ite.mp
+        ((svdBasis T).orthonormal.comp Subtype.val Subtype.val_injective) i j, PiLp.inner_apply]
+    refine Finset.sum_congr rfl fun x _ => ?_
+    simp only [Matrix.conjTranspose_apply, Matrix.of_apply, RCLike.inner_apply, RCLike.star_def,
+      Function.comp_apply]
+    ring
+  · ext k l
+    rw [Matrix.mul_assoc, Matrix.mul_apply, toEuclideanLin_entry_eq_svd A k l]
+    rw [show (∑ i : Fin (finrank 𝕜 (EuclideanSpace 𝕜 (Fin N))),
+        (singularValues T i : 𝕜) * (starRingEnd 𝕜) (svdBasis T i l) * svdImage T i k)
+        = ∑ i : {x : Fin (finrank 𝕜 (EuclideanSpace 𝕜 (Fin N))) // singularValues T x ≠ 0},
+          (singularValues T i.1 : 𝕜) * (starRingEnd 𝕜) (svdBasis T i.1 l) * svdImage T i.1 k
+      from ?_]
+    · refine Finset.sum_congr rfl fun i _ => ?_
+      rw [Matrix.mul_apply, Finset.sum_eq_single i]
+      · rw [Matrix.diagonal_apply_eq, Matrix.of_apply, Matrix.conjTranspose_apply,
+          Matrix.of_apply, RCLike.star_def]; ring
+      · intro b _ hb; rw [Matrix.diagonal_apply_ne _ (Ne.symm hb), zero_mul]
+      · intro h; exact absurd (Finset.mem_univ i) h
+    · rw [← Finset.sum_subtype (Finset.univ.filter fun i => singularValues T i ≠ 0)
+        (fun x => by simp) fun i => (singularValues T i : 𝕜)
+          * (starRingEnd 𝕜) (svdBasis T i l) * svdImage T i k]
+      exact (Finset.sum_filter_of_ne fun i _ hne => by
+        intro hz
+        exact hne (by rw [hz, RCLike.ofReal_zero, zero_mul, zero_mul])).symm
 
 /-! # Examples
 
