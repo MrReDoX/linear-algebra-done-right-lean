@@ -107,11 +107,11 @@ numbered results.
 deferrals cluster around a few missing pieces: the *matrix-of-a-basis normal-form
 theory* — the strictly-upper-triangular normal form of a nilpotent operator
 8.18(c) is now proved (8A) and, with it, the per-block content of the
-block-diagonal form 8.37 (8B); the diagonal-multiplicity count 8.31 and the
-Jordan forms (8C 8.44–8.46) remain; *matrix factorizations* (the
+block-diagonal form 8.37 and the diagonal-multiplicity count 8.31 are now
+proved (8B); the Jordan forms (8C 8.44–8.46) remain; *matrix factorizations* (the
 QR factorization 7.58 is now fully proved via Gram–Schmidt, existence and
-uniqueness; Cholesky 7.63 remains in 7D; the matrix SVD `A = B D C*` remains in
-7E, and best rank-`k` approximation in 7F — the operator-norm ↔
+uniqueness; Cholesky 7.63 remains in 7D; best rank-`k` approximation remains in
+7F — the matrix SVD `A = B D C*` 7.80, the operator-norm ↔
 largest-singular-value bridge 7.88(a)/7.85, the positive-singular-value count
 7.68(b)(c), and the pseudoinverse SVD 7.75 are now proved); the dimension theory of `PiTensorProduct` (9D 9.87/9.89/9.90 — the
 inner product on a binary tensor product, 9.80–9.83, is now proved); *measure-theoretic volume*
