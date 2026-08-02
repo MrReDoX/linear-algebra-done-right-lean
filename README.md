@@ -105,12 +105,14 @@ numbered results.
 
 \* A `✓*` marks a section that prose-defers one or more numbered results. These
 deferrals cluster around a few missing pieces: the *matrix-of-a-basis normal-form
-theory* (strictly-upper-triangular nilpotents, block-diagonal and Jordan forms —
-8A 8.18(c), 8B 8.31/8.35–8.38, 8C 8.41/8.44–8.46); *matrix factorizations* (the
+theory* — the strictly-upper-triangular normal form of a nilpotent operator
+8.18(c) is now proved (8A), leaving the block-diagonal and Jordan forms (8B
+8.31/8.35–8.38, 8C 8.41/8.44–8.46); *matrix factorizations* (the
 QR factorization 7.58 is now fully proved via Gram–Schmidt, existence and
-uniqueness; Cholesky 7.63 remains in 7D; the matrix SVD `A = B D C*` and
-pseudoinverse SVD in 7E, and best rank-`k` approximation in 7F — the
-operator-norm ↔ largest-singular-value bridge 7.88(a)/7.85 is now proved); the dimension theory of `PiTensorProduct` (9D 9.87/9.89/9.90 — the
+uniqueness; Cholesky 7.63 remains in 7D; the matrix SVD `A = B D C*` remains in
+7E, and best rank-`k` approximation in 7F — the operator-norm ↔
+largest-singular-value bridge 7.88(a)/7.85, the positive-singular-value count
+7.68(b)(c), and the pseudoinverse SVD 7.75 are now proved); the dimension theory of `PiTensorProduct` (9D 9.87/9.89/9.90 — the
 inner product on a binary tensor product, 9.80–9.83, is now proved); *measure-theoretic volume*
 (7F 7.108–7.111); and a handful of purely numeric worked examples. In 9C the
 determinant/adjoint results 9.56(c), 9.58, 9.59, 9.60 and Hadamard's inequality
