@@ -95,7 +95,7 @@ the section's exercises.
 | 9A. Bilinear Forms and Quadratic Forms | ✓ | — | — |
 | 9B. Alternating Multilinear Forms | ✓ | — | — |
 | 9C. Determinants | ✓ | — | — |
-| 9D. Tensor Products | ✓* | — | — |
+| 9D. Tensor Products | ✓ | — | — |
 
 The whole book (Chapters 1–9) is now drafted. In every section, exercises
 remain as `sorry` and each numbered Axler result is either stated and proved or,
@@ -123,9 +123,12 @@ operator-norm ↔ largest-singular-value bridge 7.88(a)/7.85, the
 positive-singular-value count 7.68(b)(c), the pseudoinverse SVD 7.75, the
 ellipsoid-image results 7.99/7.101, and the best rank-`k` approximation 7.92 are
 now proved — Chapter 7 defers only the measure-theoretic volume results below);
-the dimension theory of `PiTensorProduct` (9D 9.87/9.89/9.90 — the
-inner product on a binary tensor product, 9.80–9.83, is now proved); *measure-theoretic volume*
-(7F 7.108–7.111); and a handful of purely numeric worked examples. In 9C the
+*measure-theoretic volume* (7F 7.108–7.111); and a handful of purely numeric
+worked examples. Section 9D now carries no numbered-result deferral: the
+`PiTensorProduct` dimension theory 9.87/9.89/9.90 is proved via
+`Basis.piTensorProduct` (with 9.87 dual to 9.89 through `PiTensorProduct.lift`),
+alongside the previously proved inner product on a binary tensor product
+9.80–9.83. In 9C the
 determinant/adjoint results 9.56(c), 9.58, 9.59, 9.60 and Hadamard's inequality
 9.66 are now proved (9.60 in both its `‖det T‖ = √det(T*T)` and
 product-of-singular-values `|det T| = s₁ ⋯ sₙ` forms) — 9C carries no remaining
