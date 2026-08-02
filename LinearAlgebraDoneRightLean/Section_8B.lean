@@ -38,6 +38,10 @@ open Module.End (HasEigenvalue HasEigenvector maxGenEigenspace genEigenspace
 open LinearMap (ker range)
 open Module (Finite finrank)
 open Polynomial (aeval X C)
+open LADR.Section_2B (IsBasis)
+open LADR.Section_3C (matrixOf matrixOf_apply)
+open LADR.Section_5C (IsUpperTriangular)
+open LADR.Section_8A (exists_strictUpperTriangular_of_nilpotent)
 
 variable {F : Type*} [Field F]
   {V : Type*} [AddCommGroup V] [Module F V]
@@ -284,17 +288,59 @@ another {lit}`2`-by-{lit}`2` block. Omitted (see 8.35). -/
 
 /-! 8.37 Block diagonal matrix with upper-triangular blocks.
 
-**Deferred.** For {lit}`F = ℂ`, there is a basis with respect to which {lit}`T`
-has a block diagonal matrix whose {lit}`k`-th block is a {lit}`dₖ`-by-{lit}`dₖ`
-upper-triangular matrix with {lit}`λₖ` on the diagonal. The proof chooses, on
-each {lit}`G(λₖ, T)`, a basis making {lit}`(T − λₖI)|_{G(λₖ,T)}` strictly upper
-triangular (8.18(c)) and assembles them via 8.22(c). Both the strictly-upper-
-triangular normal form of a nilpotent operator (8.18(c), deferred in Section 8A)
-and the block-diagonal matrix-of-a-basis formalism (8.35) are outside the scope
-of these companion sections, so we defer 8.37 rather than state an unproved
-numbered claim. The mathematical core — {lit}`V = ⊕ G(λₖ, T)` with
-{lit}`(T − λₖI)|_{G(λₖ,T)}` nilpotent — is fully proved above in
-{name}`isInternal_maxGenEigenspace` and {name}`isNilpotent_restrict_sub_algebraMap`. -/
+For {lit}`F = ℂ`, there is a basis with respect to which {lit}`T` has a block
+diagonal matrix whose {lit}`k`-th block is upper triangular with {lit}`λₖ` on the
+diagonal. The block-diagonal structure is the generalized eigenspace decomposition
+{lit}`V = ⊕ G(λₖ, T)` ({name}`isInternal_maxGenEigenspace`); the content of each
+block is the theorem below — {lit}`T` restricted to {lit}`G(μ, T)` has an
+upper-triangular matrix with {lit}`μ` on the diagonal, since
+{lit}`(T − μI)|_{G(μ,T)}` is nilpotent (8.18(c)). -/
+
+/-- 8.37 (per generalized eigenspace). `T` restricted to `G(μ, T)` has, with
+respect to a basis making `(T − μI)|_{G(μ,T)}` strictly upper triangular (8.18(c)),
+an upper-triangular matrix with `μ` on the diagonal. -/
+theorem exists_upperTriangular_restrict_maxGenEigenspace [Finite F V] (T : V →ₗ[F] V)
+    (μ : F) (hT : Set.MapsTo T (maxGenEigenspace T μ) (maxGenEigenspace T μ)) :
+    ∃ (n : ℕ) (e : Fin n → maxGenEigenspace T μ) (he : IsBasis F e),
+      IsUpperTriangular (matrixOf he he (T.restrict hT)) ∧
+      ∀ k, matrixOf he he (T.restrict hT) k k = μ := by
+  classical
+  set N := ((T : Module.End F V) - algebraMap F (Module.End F V) μ).restrict
+    (mapsTo_maxGenEigenspace_of_comm (Algebra.mul_sub_algebraMap_commutes T μ) μ) with hNdef
+  have hNnil : IsNilpotent N := isNilpotent_restrict_sub_algebraMap T μ
+  have hvec : ∀ x : maxGenEigenspace T μ, (T.restrict hT) x = N x + μ • x := by
+    intro x
+    apply Subtype.ext
+    simp only [LinearMap.restrict_coe_apply, hNdef, Submodule.coe_add, Submodule.coe_smul,
+      LinearMap.sub_apply, Module.algebraMap_end_apply]
+    abel
+  by_cases hnt : Nontrivial (maxGenEigenspace T μ)
+  · obtain ⟨n, e, he, hUT, hdiag⟩ := exists_strictUpperTriangular_of_nilpotent N hNnil
+    refine ⟨n, e, he, ?_, fun k => ?_⟩
+    · intro i j hji
+      rw [matrixOf_apply, hvec (e j)]
+      simp only [map_add, map_smul, Finsupp.add_apply, Finsupp.smul_apply]
+      have hN0 : he.toModuleBasis.repr (N (e j)) i = 0 := by
+        rw [← matrixOf_apply]; exact hUT i j hji
+      have he0 : he.toModuleBasis.repr (e j) i = 0 := by
+        rw [← IsBasis.toModuleBasis_apply he j, he.toModuleBasis.repr_self_apply,
+          if_neg (ne_of_lt hji)]
+      rw [hN0, he0, smul_zero, add_zero]
+    · rw [matrixOf_apply, hvec (e k)]
+      simp only [map_add, map_smul, Finsupp.add_apply, Finsupp.smul_apply]
+      have hN0 : he.toModuleBasis.repr (N (e k)) k = 0 := by
+        rw [← matrixOf_apply]; exact hdiag k
+      have he1 : he.toModuleBasis.repr (e k) k = 1 := by
+        rw [← IsBasis.toModuleBasis_apply he k, he.toModuleBasis.repr_self_apply, if_pos rfl]
+      rw [hN0, he1, smul_eq_mul, mul_one, zero_add]
+  · haveI : Subsingleton (maxGenEigenspace T μ) := not_nontrivial_iff_subsingleton.mp hnt
+    refine ⟨0, Fin.elim0, ⟨linearIndependent_empty_type, ?_⟩, fun i j _ => i.elim0,
+      fun k => k.elim0⟩
+    show Submodule.span F (Set.range (Fin.elim0 : Fin 0 → maxGenEigenspace T μ)) = ⊤
+    rw [Set.range_eq_empty, Submodule.span_empty, eq_top_iff]
+    intro x _
+    rw [Subsingleton.elim x 0]
+    exact Submodule.zero_mem _
 
 /-! 8.38 Example: block diagonal matrix via generalized eigenvectors — for the
 operator of 8.24, with respect to the basis {lit}`(1,0,0), (0,1,0), (10,2,1)` of
