@@ -625,9 +625,11 @@ theorem cholesky_factorization {N : ℕ} (B : Matrix (Fin N) (Fin N) 𝕜)
     have hbasis : LinearIndependent 𝕜
         (fun i : Fin N => (EuclideanSpace.single i 1 : EuclideanSpace 𝕜 (Fin N))) := by
       have h := (EuclideanSpace.basisFun (Fin N) 𝕜).orthonormal.linearIndependent
-      rwa [show (fun i : Fin N => (EuclideanSpace.single i 1 : EuclideanSpace 𝕜 (Fin N)))
-        = ⇑(EuclideanSpace.basisFun (Fin N) 𝕜) from
-          funext fun i => (EuclideanSpace.basisFun_apply i).symm]
+      have he : (fun i : Fin N => (EuclideanSpace.single i 1 : EuclideanSpace 𝕜 (Fin N)))
+          = ⇑(EuclideanSpace.basisFun (Fin N) 𝕜) := by
+        ext i : 1
+        simp [EuclideanSpace.basisFun_apply]
+      rw [he]; exact h
     have hmap := hbasis.map' (Rop : EuclideanSpace 𝕜 (Fin N) →ₗ[𝕜] EuclideanSpace 𝕜 (Fin N))
       (LinearMap.ker_eq_bot.mpr hRopinj)
     have heq : (fun i => (EuclideanSpace.equiv (Fin N) 𝕜).symm (Aᵀ i))
@@ -644,6 +646,67 @@ theorem cholesky_factorization {N : ℕ} (B : Matrix (Fin N) (Fin N) 𝕜)
     rw [← Matrix.star_eq_conjTranspose]; exact (Matrix.mem_unitaryGroup_iff').mp hQ
   rw [← hAA, hAQR, Matrix.conjTranspose_mul, Matrix.mul_assoc, ← Matrix.mul_assoc Qᴴ Q R,
     hQuni, Matrix.one_mul]
+
+/-- 7.63 Cholesky factorization (uniqueness). The upper-triangular positive-diagonal
+factor is unique: if `B = R₁ᴴ * R₁ = R₂ᴴ * R₂` with both `Rₖ` upper triangular with
+positive diagonal, then `R₁ = R₂`. Following Axler's QR uniqueness argument,
+`U = R₂ * R₁⁻¹` is unitary (from `R₁ᴴ R₁ = R₂ᴴ R₂`), upper triangular, and has
+positive diagonal, so `U = I` by `unitary_upperTri_eq_one`. -/
+theorem cholesky_unique {N : ℕ} (B R₁ R₂ : Matrix (Fin N) (Fin N) 𝕜)
+    (hR₁t : ∀ i j, j < i → R₁ i j = 0)
+    (hR₁d : ∀ i, 0 < RCLike.re (R₁ i i) ∧ RCLike.im (R₁ i i) = 0) (hB₁ : B = R₁ᴴ * R₁)
+    (hR₂t : ∀ i j, j < i → R₂ i j = 0)
+    (hR₂d : ∀ i, 0 < RCLike.re (R₂ i i) ∧ RCLike.im (R₂ i i) = 0) (hB₂ : B = R₂ᴴ * R₂) :
+    R₁ = R₂ := by
+  have diagval : ∀ z : 𝕜, RCLike.im z = 0 → z = ((RCLike.re z : ℝ) : 𝕜) := by
+    intro z hz
+    conv_lhs => rw [← RCLike.re_add_im z]
+    rw [hz, RCLike.ofReal_zero, zero_mul, add_zero]
+  have hR₁bt : R₁.BlockTriangular id := fun i j h => hR₁t i j h
+  have hR₁ne : ∀ i, R₁ i i ≠ 0 := fun i h => by have := (hR₁d i).1; rw [h] at this; simp at this
+  have hdet1 : R₁.det ≠ 0 := by
+    rw [Matrix.det_of_upperTriangular hR₁bt]
+    exact Finset.prod_ne_zero_iff.mpr (fun i _ => hR₁ne i)
+  letI : Invertible R₁ := Matrix.invertibleOfIsUnitDet R₁ (isUnit_iff_ne_zero.mpr hdet1)
+  set U := R₂ * R₁⁻¹ with hUdef
+  have hUR : U * R₁ = R₂ := by
+    rw [hUdef, Matrix.mul_assoc, Matrix.inv_mul_of_invertible, Matrix.mul_one]
+  have hUunit : U ∈ Matrix.unitaryGroup (Fin N) 𝕜 := by
+    rw [Matrix.mem_unitaryGroup_iff', Matrix.star_eq_conjTranspose]
+    have hBeq : R₂ᴴ * R₂ = R₁ᴴ * R₁ := by rw [← hB₂, ← hB₁]
+    rw [hUdef, Matrix.conjTranspose_mul]
+    rw [show (R₁⁻¹)ᴴ * R₂ᴴ * (R₂ * R₁⁻¹) = (R₁⁻¹)ᴴ * (R₂ᴴ * R₂) * R₁⁻¹ by
+      simp only [Matrix.mul_assoc], hBeq]
+    rw [show (R₁⁻¹)ᴴ * (R₁ᴴ * R₁) * R₁⁻¹ = (R₁⁻¹)ᴴ * R₁ᴴ * (R₁ * R₁⁻¹) by
+      simp only [Matrix.mul_assoc]]
+    rw [Matrix.mul_inv_of_invertible, Matrix.mul_one, ← Matrix.conjTranspose_mul,
+      Matrix.mul_inv_of_invertible, Matrix.conjTranspose_one]
+  have hR₁invt : R₁⁻¹.BlockTriangular id := Matrix.blockTriangular_inv_of_blockTriangular hR₁bt
+  have hUt : U.BlockTriangular id := by
+    have hR₂bt : R₂.BlockTriangular id := fun i j h => hR₂t i j h
+    exact hUdef ▸ hR₂bt.mul hR₁invt
+  have hUd : ∀ i, 0 < RCLike.re (U i i) ∧ RCLike.im (U i i) = 0 := by
+    intro i
+    have hprod : (U * R₁) i i = U i i * R₁ i i := by
+      rw [Matrix.mul_apply]
+      refine Finset.sum_eq_single i (fun k _ hk => ?_) (fun h => absurd (Finset.mem_univ i) h)
+      rcases lt_or_gt_of_ne hk with hlt | hgt
+      · rw [hUt hlt, zero_mul]
+      · rw [hR₁t _ _ hgt, mul_zero]
+    rw [hUR] at hprod
+    obtain ⟨hr1, hi1⟩ := hR₁d i
+    obtain ⟨hr2, hi2⟩ := hR₂d i
+    have hR1v := diagval _ hi1
+    have hR2v := diagval _ hi2
+    have ha : ((RCLike.re (R₁ i i) : ℝ) : 𝕜) ≠ 0 := by rw [← hR1v]; exact hR₁ne i
+    have hUii : U i i = ((RCLike.re (R₂ i i) / RCLike.re (R₁ i i) : ℝ) : 𝕜) := by
+      rw [RCLike.ofReal_div, eq_div_iff ha, ← hR1v, ← hR2v]
+      exact hprod.symm
+    refine ⟨?_, ?_⟩
+    · rw [hUii, RCLike.ofReal_re]; positivity
+    · rw [hUii, RCLike.ofReal_im]
+  have hU1 : U = 1 := unitary_upperTri_eq_one U hUunit hUt hUd
+  rw [← hUR, hU1, Matrix.one_mul]
 
 /-! # Exercises 7D -/
 
