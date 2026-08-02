@@ -109,24 +109,98 @@ convergence and uses it only heuristically. It is not a theorem to formalize; ou
 proof of 8.39 above replaces it with Newton's method, which supplies the same
 truncated-polynomial square root without reference to the series. -/
 
-/-! 8.41 Over {lit}`ℂ`, invertible operators have square roots.
+open DirectSum in
+/-- Build an operator on `M` from operators on the summands of an internal direct
+sum: the glued `g` acts as `f i` on each summand `A i`. -/
+theorem glue_endo {R M : Type*} [CommRing R] [AddCommGroup M] [Module R M] {ι : Type*}
+    [DecidableEq ι] (A : ι → Submodule R M) (hA : DirectSum.IsInternal A)
+    (f : ∀ i, A i →ₗ[R] A i) :
+    ∃ g : M →ₗ[R] M, ∀ i (x : A i), g (x : M) = (f i x : M) := by
+  set e : (⨁ i, A i) ≃ₗ[R] M := LinearEquiv.ofBijective (DirectSum.coeLinearMap A) hA with he
+  set D : (⨁ i, A i) →ₗ[R] (⨁ i, A i) :=
+    DirectSum.toModule R ι _ (fun i => (DirectSum.lof R ι (fun i => A i) i) ∘ₗ f i) with hD
+  refine ⟨e.toLinearMap ∘ₗ D ∘ₗ e.symm.toLinearMap, fun i x => ?_⟩
+  have hex : e.symm (x : M) = DirectSum.lof R ι (fun i => A i) i x := by
+    apply e.injective
+    rw [LinearEquiv.apply_symm_apply, he, LinearEquiv.ofBijective_apply,
+      DirectSum.lof_eq_of, DirectSum.coeLinearMap_of]
+  show e (D (e.symm (x : M))) = (f i x : M)
+  rw [hex, hD, DirectSum.toModule_lof, LinearMap.comp_apply, he, LinearEquiv.ofBijective_apply,
+    DirectSum.lof_eq_of, DirectSum.coeLinearMap_of]
 
-Suppose {lit}`V` is a complex vector space and {lit}`T ∈ ℒ(V)` is invertible.
-Then {lit}`T` has a square root.
+open DirectSum in
+/-- If on each summand of an internal direct sum `f i ∘ f i` agrees with `T`, then
+gluing the `f i` produces a square root of `T`. -/
+theorem exists_sqComp_of_forall_restrict {R M : Type*} [CommRing R] [AddCommGroup M]
+    [Module R M] {ι : Type*} [DecidableEq ι] (A : ι → Submodule R M)
+    (hA : DirectSum.IsInternal A) (T : M →ₗ[R] M) (f : ∀ i, A i →ₗ[R] A i)
+    (hf : ∀ i (x : A i), (f i (f i x) : M) = T (x : M)) : ∃ R' : M →ₗ[R] M, R' ∘ₗ R' = T := by
+  obtain ⟨g, hg⟩ := glue_endo A hA f
+  refine ⟨g, ?_⟩
+  set e : (⨁ i, A i) ≃ₗ[R] M := LinearEquiv.ofBijective (DirectSum.coeLinearMap A) hA with he
+  have key : (g ∘ₗ g) ∘ₗ e.toLinearMap = T ∘ₗ e.toLinearMap := by
+    refine DirectSum.linearMap_ext _ fun i => LinearMap.ext fun x => ?_
+    have hei : e (DirectSum.lof R ι (fun i => A i) i x) = (x : M) := by
+      rw [he, LinearEquiv.ofBijective_apply, DirectSum.lof_eq_of, DirectSum.coeLinearMap_of]
+    simp only [LinearMap.comp_apply, LinearEquiv.coe_coe, hei]
+    rw [hg i x, hg i (f i x)]
+    exact hf i x
+  ext v
+  obtain ⟨w, rfl⟩ := e.surjective v
+  exact LinearMap.congr_fun key w
 
-**Deferred.** Axler's proof assembles a square root block by block: by the
-generalized eigenspace decomposition {lit}`V = ⊕ₖ G(λₖ, T)` (8.22, mathlib
-{name}`LADR.Section_8B.isInternal_maxGenEigenspace`), on each {lit}`G(λₖ, T)` one
-has {lit}`T|_{G(λₖ,T)} = λₖ(I + Tₖ/λₖ)` with {lit}`Tₖ` nilpotent (8.22(b),
-{name}`LADR.Section_8B.isNilpotent_restrict_sub_algebraMap`), so a square root
-{lit}`Rₖ` of the restriction is a complex square root of {lit}`λₖ` times a square
-root of {lit}`I + Tₖ/λₖ` (obtained from 8.39, proved above), and the {lit}`Rₖ`
-are then glued along the direct sum. Every ingredient is available, but the final
-assembly — building an operator on {lit}`V` from prescribed operators on the
-summands of an internal direct sum and verifying it squares to {lit}`T` — is a
-lengthy construction that we omit here rather than state as an unproved numbered
-claim. The essential new content, the nilpotent case 8.39, is fully proved above
-in {name}`isSquare_one_add_of_isNilpotent_End`. -/
+/-- 8.41 Over `ℂ`, every invertible operator has a square root. Following Axler:
+by the generalized eigenspace decomposition `V = ⊕ G(λₖ, T)`, on each `G(λₖ, T)`
+one has `T = λₖ(I + Nₖ/λₖ)` with `Nₖ` nilpotent (`λₖ ≠ 0` since `T` is invertible),
+so `√λₖ · √(I + Nₖ/λₖ)` (the scalar root exists over `ℂ`, the operator root by 8.39)
+squares to the restriction; gluing these along the direct sum gives a square root
+of `T`. -/
+theorem exists_sqComp_of_bijective {V : Type*} [AddCommGroup V] [Module ℂ V]
+    [FiniteDimensional ℂ V] (T : V →ₗ[ℂ] V) (hT : Function.Bijective T) :
+    ∃ R : V →ₗ[ℂ] V, R ∘ₗ R = T := by
+  classical
+  have hmaps : ∀ μ : ℂ, Set.MapsTo (T : Module.End ℂ V)
+      (maxGenEigenspace T μ) (maxGenEigenspace T μ) :=
+    fun μ => Module.End.mapsTo_maxGenEigenspace_of_comm (Commute.refl _) μ
+  have hper : ∀ μ : ℂ, ∃ fμ : (maxGenEigenspace T μ) →ₗ[ℂ] (maxGenEigenspace T μ),
+      fμ ∘ₗ fμ = T.restrict (hmaps μ) := by
+    intro μ
+    by_cases hb : maxGenEigenspace T μ = ⊥
+    · haveI : Subsingleton (maxGenEigenspace T μ) := by rw [hb]; infer_instance
+      exact ⟨0, Subsingleton.elim _ _⟩
+    · have hμ : μ ≠ 0 := by
+        rintro rfl
+        apply hb
+        rw [Submodule.eq_bot_iff]
+        intro x hx
+        rw [Module.End.mem_maxGenEigenspace] at hx
+        obtain ⟨k, hk⟩ := hx
+        simp only [zero_smul, sub_zero] at hk
+        have hTk : Function.Injective ⇑((T : Module.End ℂ V) ^ k) := by
+          rw [Module.End.coe_pow]; exact hT.injective.iterate k
+        exact hTk (by rw [hk, map_zero])
+      set hN := Module.End.mapsTo_maxGenEigenspace_of_comm
+        (Algebra.mul_sub_algebraMap_commutes (T : Module.End ℂ V) μ) μ with hNmaps
+      set N : (maxGenEigenspace T μ) →ₗ[ℂ] (maxGenEigenspace T μ) :=
+        ((T : Module.End ℂ V) - algebraMap ℂ (Module.End ℂ V) μ).restrict hN with hNval
+      have hNnil : IsNilpotent N := LADR.Section_8B.isNilpotent_restrict_sub_algebraMap T μ
+      obtain ⟨S, hS⟩ := isSquare_one_add_of_isNilpotent_End (μ⁻¹ • N)
+        (isUnit_iff_ne_zero.mpr two_ne_zero) (hNnil.smul μ⁻¹)
+      obtain ⟨z, hz⟩ := IsAlgClosed.exists_pow_nat_eq μ (n := 2) (by norm_num)
+      have hSc : S ∘ₗ S = 1 + μ⁻¹ • N := by rw [← Module.End.mul_eq_comp, ← pow_two]; exact hS
+      have hTres : T.restrict (hmaps μ) = μ • 1 + N := by
+        ext y
+        simp only [LinearMap.add_apply, LinearMap.smul_apply, Module.End.one_apply,
+          Submodule.coe_add, Submodule.coe_smul, hNval, LinearMap.restrict_coe_apply,
+          LinearMap.sub_apply, Module.algebraMap_end_apply]
+        abel
+      refine ⟨z • S, ?_⟩
+      rw [hTres, LinearMap.smul_comp, LinearMap.comp_smul, smul_smul, ← pow_two, hz, hSc,
+        smul_add, smul_smul, mul_inv_cancel₀ hμ, one_smul]
+  choose f hf using hper
+  refine exists_sqComp_of_forall_restrict (fun μ : ℂ => maxGenEigenspace T μ)
+    (LADR.Section_8B.isInternal_maxGenEigenspace T) T f (fun μ x => ?_)
+  rw [← LinearMap.comp_apply, hf μ, LinearMap.restrict_coe_apply]
 
 /-! Axler's closing remark: by imitating the same technique (using {lit}`k`-th
 roots of {lit}`I + Tₖ/λₖ` and of the scalars {lit}`λₖ`) one shows that over
