@@ -336,7 +336,7 @@ We prove the {lit}`√det(T*T)` characterization directly: {lit}`det(T* T) =
 conj(det T)·det T = ‖det T‖²` by 9.56(c) ({name}`det_adjoint_eq_conj`), so
 {lit}`‖det T‖ = √det(T* T)`. The equivalent *product of singular values* form
 {lit}`|det T| = s₁ ⋯ sₙ` is proved below in
-{name}`norm_det_eq_prod_singularValues`: since {lit}`T* T` acts as {lit}`sₖ²` on
+{lit}`norm_det_eq_prod_singularValues`: since {lit}`T* T` acts as {lit}`sₖ²` on
 the SVD eigenbasis (7.72, Section 7E), {lit}`det(T* T) = ∏ sₖ²`. -/
 
 /-- 9.60 auxiliary: {lit}`det(T* T) = ‖det T‖²` (a nonnegative real). -/
