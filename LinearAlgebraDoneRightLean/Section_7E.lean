@@ -250,13 +250,45 @@ theorem injective_iff_singularValues_ne_zero (T : V →ₗ[𝕜] W) :
 (c) {lit}`T` is surjective {lit}`⟺` the number of positive singular values equals
 {lit}`dim W`.
 
-Part (a) is proved above. Parts (b) and (c) are **deferred**: with singular values
-indexed by the eigenbasis of {lit}`T* T`, counting the positive ones amounts to
-{lit}`Fintype.card {i // singularValues T i ≠ 0} = finrank (range T)`, which
-requires identifying {lit}`dim E(0, T* T)` with {lit}`dim (null T)` and invoking
-rank–nullity. This eigenspace-dimension bookkeeping is a sizeable development
-against the eigenbasis API in this mathlib pin; it is stated here without a Lean
-declaration to avoid a `sorry` on a numbered theorem. -/
+Part (a) is proved above; (b) and (c) follow from the SVD, since the image
+vectors {lit}`fₖ` with {lit}`sₖ ≠ 0` form an orthonormal basis of {lit}`range T`. -/
+
+/-- 7.68(b) The number of positive singular values of {lit}`T` equals
+{lit}`dim range T`: the image vectors {lit}`fₖ` with {lit}`sₖ ≠ 0` are orthonormal
+({name}`svdImage_orthonormal`) and span {lit}`range T` (from the SVD formula), so
+they form an orthonormal basis of {lit}`range T`. -/
+theorem card_pos_singularValues_eq_finrank_range (T : V →ₗ[𝕜] W) :
+    Fintype.card {i : Fin (finrank 𝕜 V) // singularValues T i ≠ 0}
+      = finrank 𝕜 (LinearMap.range T) := by
+  set g : {i : Fin (finrank 𝕜 V) // singularValues T i ≠ 0} → W :=
+    fun i => svdImage T i.1 with hg
+  have hindep : LinearIndependent 𝕜 g := (svdImage_orthonormal T).linearIndependent
+  have hspan : Submodule.span 𝕜 (Set.range g) = LinearMap.range T := by
+    apply le_antisymm
+    · rw [Submodule.span_le]
+      rintro _ ⟨i, rfl⟩
+      simp only [hg, svdImage, if_neg i.2]
+      exact Submodule.smul_mem _ _ ⟨svdBasis T i.1, rfl⟩
+    · rintro _ ⟨v, rfl⟩
+      rw [svd_apply]
+      apply Submodule.sum_mem
+      intro i _
+      by_cases hi : singularValues T i = 0
+      · rw [hi, RCLike.ofReal_zero, zero_smul]; exact Submodule.zero_mem _
+      · exact Submodule.smul_mem _ _ (Submodule.smul_mem _ _
+          (Submodule.subset_span ⟨⟨i, hi⟩, rfl⟩))
+  rw [← hspan]
+  exact (finrank_span_eq_card hindep).symm
+
+/-- 7.68(c) {lit}`T` is surjective iff the number of positive singular values of
+{lit}`T` equals {lit}`dim W`. -/
+theorem surjective_iff_card_pos_singularValues (T : V →ₗ[𝕜] W) :
+    Function.Surjective T ↔
+      Fintype.card {i : Fin (finrank 𝕜 V) // singularValues T i ≠ 0} = finrank 𝕜 W := by
+  rw [card_pos_singularValues_eq_finrank_range, ← LinearMap.range_eq_top]
+  constructor
+  · intro h; rw [h]; exact finrank_top 𝕜 W
+  · intro h; exact Submodule.eq_top_of_finrank_eq h
 
 /-! 7.69 Isometries characterized by having all singular values equal 1
 
