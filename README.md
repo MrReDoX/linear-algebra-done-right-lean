@@ -110,7 +110,8 @@ theory* — the strictly-upper-triangular normal form of a nilpotent operator
 block-diagonal form 8.37 and the diagonal-multiplicity count 8.31 are now
 proved (8B); the Jordan forms (8C 8.44–8.46) remain; *matrix factorizations* (the
 QR factorization 7.58 is now fully proved via Gram–Schmidt, existence and
-uniqueness; Cholesky 7.63 remains in 7D; best rank-`k` approximation remains in
+uniqueness; the Cholesky factorization 7.63 is now proved in 7D, existence and
+uniqueness, built on QR; best rank-`k` approximation remains in
 7F — the matrix SVD `A = B D C*` 7.80, the operator-norm ↔
 largest-singular-value bridge 7.88(a)/7.85, the positive-singular-value count
 7.68(b)(c), and the pseudoinverse SVD 7.75 are now proved); the dimension theory of `PiTensorProduct` (9D 9.87/9.89/9.90 — the
