@@ -265,15 +265,34 @@ theorem minpoly_dvd_charpoly {V : Type*} [AddCommGroup V] [Module ℂ V] [Finite
   rw [charpoly_eq_charpoly]
   exact LinearMap.minpoly_dvd_charpoly T
 
-/-! 8.31 Multiplicity of an eigenvalue equals the number of times it appears on
-the diagonal of an upper-triangular matrix representing {lit}`T`.
-
-**Deferred.** This result is stated in terms of the matrix
-{lit}`ℳ(T, (v₁, …, vₙ))` of {lit}`T` with respect to a basis making it upper
-triangular. The matrix-of-a-basis machinery (Axler 3.32) and the existence of an
-upper-triangular basis (Axler 5.44) are not developed in these companion
-sections — as with the analogous deferral of 8.18(c) in Section 8A — so we do not
-state 8.31 here in order to avoid an unproved numbered claim. -/
+/-- 8.31 Multiplicity of an eigenvalue equals the number of times it appears on
+the diagonal of an upper-triangular matrix representing {lit}`T`. Following Axler:
+the characteristic polynomial is basis-independent ({name}`LinearMap.charpoly_toMatrix`)
+and, for an upper-triangular matrix, factors as {lit}`∏ₖ (z − Aₖₖ)`
+({name}`Matrix.charpoly_of_upperTriangular`); so the multiplicity of {lit}`μ` (the
+root multiplicity of the characteristic polynomial, 8.23) is the number of
+diagonal entries equal to {lit}`μ`. -/
+theorem multiplicity_eq_diagonal_count {V : Type*} [AddCommGroup V] [Module ℂ V]
+    [Finite ℂ V] (T : V →ₗ[ℂ] V) (μ : ℂ) {n : ℕ} {v : Fin n → V} (hv : IsBasis ℂ v)
+    (hUT : (matrixOf hv hv T).BlockTriangular id) :
+    multiplicity T μ = (Finset.univ.filter fun k => matrixOf hv hv T k k = μ).card := by
+  classical
+  rw [multiplicity_eq_rootMultiplicity,
+    show LinearMap.charpoly T = (matrixOf hv hv T).charpoly from
+      (LinearMap.charpoly_toMatrix T hv.toModuleBasis).symm,
+    Matrix.charpoly_of_upperTriangular _ hUT, ← Polynomial.count_roots]
+  have hroots : (∏ i : Fin n, (X - C (matrixOf hv hv T i i))).roots
+      = Finset.univ.val.map fun i => matrixOf hv hv T i i := by
+    rw [show (∏ i : Fin n, (X - C (matrixOf hv hv T i i)))
+        = ((Finset.univ.val.map fun i => matrixOf hv hv T i i).map fun a => X - C a).prod from by
+      rw [Multiset.map_map]; rfl]
+    exact Polynomial.roots_multiset_prod_X_sub_C _
+  rw [hroots, Multiset.count_map]
+  congr 1
+  rw [Finset.filter_val]
+  congr 1
+  ext k
+  simp [eq_comm]
 
 /-! # Block Diagonal Matrices -/
 
