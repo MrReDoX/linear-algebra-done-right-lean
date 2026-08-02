@@ -638,17 +638,6 @@ theorem pinv_comp_T (T : V →ₗ[𝕜] W) :
   rw [hproj, ← restrEquiv_coe, LinearEquiv.symm_apply_apply, Submodule.starProjection_apply]
 
 
-/-- 6.70 (a) {lit}`T† b` is a *best approximate solution* of {lit}`T x = b`:
-{lit}`‖T (T† b) − b‖ ≤ ‖T x − b‖` for every {lit}`x`. -/
-theorem pinv_best_approx (T : V →ₗ[𝕜] W) (b : W) (x : V) :
-    ‖T (T† b) - b‖ ≤ ‖T x - b‖ := by
-  have h1 : T (T† b) = (LinearMap.range T).starProjection b := by
-    have := LinearMap.congr_fun (T_comp_pinv T) b; simpa using this
-  rw [h1, show ‖(LinearMap.range T).starProjection b - b‖
-        = ‖b - (LinearMap.range T).starProjection b‖ from norm_sub_rev _ _,
-    show ‖T x - b‖ = ‖b - T x‖ from norm_sub_rev _ _]
-  exact minimizing_distance (U := LinearMap.range T) b (T x) ⟨x, rfl⟩
-
 omit [FiniteDimensional 𝕜 V] in
 /-- Membership in the coset {lit}`a + p` of a subspace {lit}`p`, written with
 mathlib's pointwise {lit}`+ᵥ`. -/
@@ -659,6 +648,47 @@ theorem mem_vadd_coe_iff {p : Submodule 𝕜 V} {a v : V} :
     simpa using hy
   · intro h
     exact ⟨v - a, h, by simp⟩
+
+/-- 6.70 (a) {lit}`T† w` is a *best approximate solution* of {lit}`T v = w`:
+{lit}`‖T (T† w) − w‖ ≤ ‖T v − w‖` for every {lit}`v`, with equality exactly when
+{lit}`v ∈ T†w + null T`. Axler's proof: split
+{lit}`T v − w = (T v − T T†w) + (T T†w − w)`, whose first term lies in
+{lit}`range T` and whose second lies in {lit}`(range T)⟂` because
+{lit}`T T† = P_(range T)` (6.69(b)); the Pythagorean theorem then gives the
+inequality, with equality iff the first term vanishes. -/
+theorem pinv_best_approx (T : V →ₗ[𝕜] W) (w : W) (v : V) :
+    ‖T (T† w) - w‖ ≤ ‖T v - w‖ ∧
+      (‖T (T† w) - w‖ = ‖T v - w‖ ↔ v ∈ T† w +ᵥ (LinearMap.ker T : Set V)) := by
+  have hproj : T (T† w) = (LinearMap.range T).starProjection w := by
+    have := LinearMap.congr_fun (T_comp_pinv T) w; simpa using this
+  -- `T v − T T†w ∈ range T` and `T T†w − w ∈ (range T)⟂`
+  have hmem : T v - T (T† w) ∈ LinearMap.range T := by
+    refine Submodule.sub_mem _ ⟨v, rfl⟩ ?_
+    rw [hproj]
+    exact (LinearMap.range T).starProjection_apply_mem w
+  have hperp : T (T† w) - w ∈ (LinearMap.range T)ᗮ := by
+    rw [hproj, ← neg_sub w]
+    exact Submodule.neg_mem _ ((LinearMap.range T).sub_starProjection_mem_orthogonal w)
+  have horth : ⟪T v - T (T† w), T (T† w) - w⟫_𝕜 = 0 :=
+    (Submodule.mem_orthogonal _ _).mp hperp _ hmem
+  have hpyth : ‖T v - w‖ ^ 2 = ‖T v - T (T† w)‖ ^ 2 + ‖T (T† w) - w‖ ^ 2 := by
+    have hsum : T v - w = (T v - T (T† w)) + (T (T† w) - w) := by abel
+    rw [hsum]; simp only [pow_two]
+    exact norm_add_sq_eq_norm_sq_add_norm_sq_of_inner_eq_zero _ _ horth
+  refine ⟨?_, ?_, ?_⟩
+  · nlinarith [norm_nonneg (T (T† w) - w), norm_nonneg (T v - w),
+      sq_nonneg ‖T v - T (T† w)‖, hpyth]
+  · -- equality forces `T v = T T†w`, i.e. `v − T†w ∈ null T`
+    intro heq
+    have h0 : ‖T v - T (T† w)‖ ^ 2 = 0 := by rw [← heq] at hpyth; linarith
+    have hz : T v - T (T† w) = 0 :=
+      norm_eq_zero.mp ((pow_eq_zero_iff two_ne_zero).mp h0)
+    rw [mem_vadd_coe_iff, LinearMap.mem_ker, map_sub, sub_eq_zero]
+    exact sub_eq_zero.mp hz
+  · intro hv
+    have hker : v - T† w ∈ LinearMap.ker T := mem_vadd_coe_iff.mp hv
+    rw [LinearMap.mem_ker, map_sub, sub_eq_zero] at hker
+    rw [hker]
 
 /-- 6.70 (b) Among the vectors {lit}`v ∈ T†w + null T` — exactly those making
 {lit}`‖T v − w‖` as small as possible, by (a) — the solution {lit}`T†w` has the
@@ -900,8 +930,8 @@ it would only be conjugate-linear, as the caution accompanying 6.58 notes. -/
 noncomputable def phi6C13 {V : Type*} [NormedAddCommGroup V] [InnerProductSpace ℝ V] :
     V →ₗ[ℝ] Module.Dual ℝ V where
   toFun v := innerₛₗ ℝ v
-  map_add' u v := by ext w; simp [inner_add_left]
-  map_smul' c v := by ext w; simp [real_inner_smul_left]
+  map_add' u v := by ext w; simp
+  map_smul' c v := by ext w; simp
 
 /-- 6C.13 (a) {lit}`v ↦ φ_v` is an injective linear map from {lit}`V` to
 {lit}`V′`. -/
