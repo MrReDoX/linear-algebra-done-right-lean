@@ -108,7 +108,9 @@ deferrals cluster around a few missing pieces: the *matrix-of-a-basis normal-for
 theory* — the strictly-upper-triangular normal form of a nilpotent operator
 8.18(c) is now proved (8A) and, with it, the per-block content of the
 block-diagonal form 8.37 and the diagonal-multiplicity count 8.31 are now
-proved (8B); the Jordan forms (8C 8.44–8.46) remain; *matrix factorizations* (the
+proved (8B); the existence of square roots of invertible complex operators 8.41
+is now proved (8C, by gluing per-eigenspace roots along the generalized
+eigenspace decomposition), while the Jordan forms (8C 8.44–8.46) remain; *matrix factorizations* (the
 QR factorization 7.58 is now fully proved via Gram–Schmidt, existence and
 uniqueness; the Cholesky factorization 7.63 is now proved in 7D, existence and
 uniqueness, built on QR; best rank-`k` approximation remains in
