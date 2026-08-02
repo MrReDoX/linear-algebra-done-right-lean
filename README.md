@@ -121,8 +121,8 @@ are now proved); the dimension theory of `PiTensorProduct` (9D 9.87/9.89/9.90 �
 inner product on a binary tensor product, 9.80–9.83, is now proved); *measure-theoretic volume*
 (7F 7.108–7.111); and a handful of purely numeric worked examples. In 9C the
 determinant/adjoint results 9.56(c), 9.58, 9.59, 9.60 and Hadamard's inequality
-9.66 are now proved (9.60 in its `‖det T‖ = √det(T*T)` form; the
-product-of-singular-values form follows from the SVD) — 9C carries no remaining
+9.66 are now proved (9.60 in both its `‖det T‖ = √det(T*T)` and
+product-of-singular-values `|det T| = s₁ ⋯ sₙ` forms) — 9C carries no remaining
 numbered-result deferral. The Chapters 1–7C sections carry no `✓*` — every
 numbered result there is fully proved.
 
