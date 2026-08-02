@@ -4,6 +4,8 @@ import Mathlib.Analysis.InnerProductSpace.PiL2
 import Mathlib.Analysis.Normed.Operator.NNNorm
 import Mathlib.Analysis.InnerProductSpace.Dual
 import Mathlib.Topology.Algebra.Module.FiniteDimension
+import Mathlib.Data.Fin.Tuple.Sort
+import Mathlib.LinearAlgebra.FiniteDimensional.Lemmas
 import LinearAlgebraDoneRightLean.Section_7C
 import LinearAlgebraDoneRightLean.Section_7D
 import LinearAlgebraDoneRightLean.Section_7E
@@ -179,18 +181,262 @@ theorem opNorm_adjoint (T : V →ₗ[𝕜] W) : opNorm (LinearMap.adjoint T) = o
   rw [opNorm, opNorm, LinearMap.adjoint_toContinuousLinearMap]
   exact ContinuousLinearMap.adjoint.norm_map _
 
-/-! 7.92 Best approximation by a linear map whose range has dimension {lit}`≤ k`.
+/-! # 7.92 Best approximation by a linear map whose range has dimension `≤ k` -/
 
-For positive singular values {lit}`s₁ ≥ ⋯ ≥ sₘ` and {lit}`1 ≤ k < m`,
-{lit}`min{‖T − S‖ : dim range S ≤ k} = s_{k+1}`, attained by the truncated SVD
-{lit}`Tₖ v = s₁⟨v,e₁⟩f₁ + ⋯ + sₖ⟨v,eₖ⟩fₖ`.
+/-- Pythagoras for an orthonormal family: {lit}`‖∑ aᵢ gᵢ‖² = ∑ ‖aᵢ‖²`. -/
+theorem norm_sum_smul_sq {ι : Type*} [Fintype ι] {g : ι → V} (hg : Orthonormal 𝕜 g)
+    (a : ι → 𝕜) : ‖∑ i, a i • g i‖ ^ 2 = ∑ i, ‖a i‖ ^ 2 := by
+  rw [← @inner_self_eq_norm_sq 𝕜, hg.inner_sum a a, map_sum]
+  exact Finset.sum_congr rfl fun i _ => by
+    rw [RCLike.conj_mul, ← RCLike.ofReal_pow, RCLike.ofReal_re]
 
-**Deferred.** The proof combines the deferred norm ↔ largest-singular-value bridge
-7.88(a) (to compute {lit}`‖T − Tₖ‖ = s_{k+1}`) with a linear-dependence argument
-on {lit}`S e₁, …, S e_{k+1}` for the lower bound, together with the decreasing
-ordering of the singular values (not tracked in this companion's index-by-eigenbasis
-convention, see Section 7E 7.65). Assembling these is beyond the scope of this
-section; stated here in prose to avoid a `sorry` on a numbered theorem. -/
+/-- Pythagoras when the family is orthonormal on {lit}`{i // p i}` and the coefficients
+vanish off it. -/
+theorem norm_sum_smul_sq_subtype {ι : Type*} [Fintype ι] {g : ι → V} {p : ι → Prop}
+    [DecidablePred p] (hg : Orthonormal 𝕜 (fun i : {i // p i} => g i.1)) {a : ι → 𝕜}
+    (ha : ∀ i, ¬ p i → a i = 0) : ‖∑ i, a i • g i‖ ^ 2 = ∑ i, ‖a i‖ ^ 2 := by
+  have e1 : (∑ i, a i • g i) = ∑ i : {i // p i}, a i.1 • g i.1 := by
+    rw [← Finset.sum_subtype (Finset.univ.filter p) (fun x => by simp) (fun i => a i • g i)]
+    exact (Finset.sum_filter_of_ne fun i _ h => by
+      by_contra hp; exact h (by rw [ha i hp, zero_smul])).symm
+  have e2 : (∑ i, ‖a i‖ ^ 2) = ∑ i : {i // p i}, ‖a i.1‖ ^ 2 := by
+    rw [← Finset.sum_subtype (Finset.univ.filter p) (fun x => by simp) (fun i => ‖a i‖ ^ 2)]
+    exact (Finset.sum_filter_of_ne fun i _ h => by
+      by_contra hp; exact h (by simp [ha i hp])).symm
+  rw [e1, e2]; exact norm_sum_smul_sq hg _
+
+/-- The permutation sorting the singular values of {lit}`T` into decreasing order. -/
+noncomputable def svSortPerm (T : V →ₗ[𝕜] V) : Equiv.Perm (Fin (finrank 𝕜 V)) :=
+  Tuple.sort (fun i => -(singularValues T i))
+
+theorem singularValues_svSortPerm_antitone (T : V →ₗ[𝕜] V) {j k : Fin (finrank 𝕜 V)}
+    (hjk : j ≤ k) : singularValues T (svSortPerm T k) ≤ singularValues T (svSortPerm T j) := by
+  have h := Tuple.monotone_sort (fun i => -(singularValues T i)) hjk
+  simpa only [Function.comp_apply, neg_le_neg_iff] using h
+
+theorem svd_apply_sorted (T : V →ₗ[𝕜] V) (v : V) :
+    T v = ∑ j, ((singularValues T (svSortPerm T j) : 𝕜) * ⟪svdBasis T (svSortPerm T j), v⟫_𝕜) •
+      svdImage T (svSortPerm T j) := by
+  rw [svd_apply T v]
+  refine Fintype.sum_equiv (svSortPerm T).symm _ _ (fun i => ?_)
+  simp only [Equiv.apply_symm_apply]
+  rw [smul_smul]
+
+/-- The truncated SVD keeping the top {lit}`k` singular directions. -/
+noncomputable def truncSVD (T : V →ₗ[𝕜] V) (k : ℕ) : V →ₗ[𝕜] V :=
+  ∑ j ∈ Finset.univ.filter (fun j : Fin (finrank 𝕜 V) => (j : ℕ) < k),
+    (singularValues T (svSortPerm T j) : 𝕜) •
+      LinearMap.smulRight (innerₛₗ 𝕜 (svdBasis T (svSortPerm T j)))
+        (svdImage T (svSortPerm T j))
+
+theorem truncSVD_apply (T : V →ₗ[𝕜] V) (k : ℕ) (v : V) :
+    truncSVD T k v = ∑ j ∈ Finset.univ.filter (fun j : Fin (finrank 𝕜 V) => (j : ℕ) < k),
+      ((singularValues T (svSortPerm T j) : 𝕜) * ⟪svdBasis T (svSortPerm T j), v⟫_𝕜) •
+        svdImage T (svSortPerm T j) := by
+  rw [truncSVD, LinearMap.sum_apply]
+  refine Finset.sum_congr rfl fun j _ => ?_
+  rw [LinearMap.smul_apply, LinearMap.smulRight_apply, innerₛₗ_apply_apply, smul_smul]
+
+theorem finrank_range_truncSVD_le (T : V →ₗ[𝕜] V) (k : ℕ) :
+    finrank 𝕜 (LinearMap.range (truncSVD T k)) ≤ k := by
+  classical
+  have hsub : LinearMap.range (truncSVD T k) ≤
+      Submodule.span 𝕜 ↑((Finset.univ.filter (fun j : Fin (finrank 𝕜 V) => (j : ℕ) < k)).image
+        (fun j => svdImage T (svSortPerm T j))) := by
+    rintro _ ⟨v, rfl⟩
+    rw [truncSVD, LinearMap.sum_apply]
+    refine Submodule.sum_mem _ fun j hj => ?_
+    rw [LinearMap.smul_apply, LinearMap.smulRight_apply]
+    refine Submodule.smul_mem _ _ (Submodule.smul_mem _ _ ?_)
+    exact Submodule.subset_span (Finset.mem_coe.mpr
+      (Finset.mem_image_of_mem (fun j => svdImage T (svSortPerm T j)) hj))
+  refine le_trans (le_trans (Submodule.finrank_mono hsub) (finrank_span_finset_le_card _))
+    (le_trans Finset.card_image_le ?_)
+  have h := Finset.card_le_card_of_injOn
+    (s := Finset.univ.filter (fun j : Fin (finrank 𝕜 V) => (j : ℕ) < k))
+    (t := Finset.range k) Fin.val
+    (fun j hj => by
+      simp only [Finset.mem_coe, Finset.mem_filter] at hj
+      exact Finset.mem_range.mpr hj.2)
+    Fin.val_injective.injOn
+  rwa [Finset.card_range] at h
+
+/-- The image vectors reindexed by the sort, orthonormal on positive singular values. -/
+theorem svdImage_sorted_orthonormal (T : V →ₗ[𝕜] V) :
+    Orthonormal 𝕜 (fun j : {j : Fin (finrank 𝕜 V) // singularValues T (svSortPerm T j) ≠ 0} =>
+      svdImage T (svSortPerm T j.1)) :=
+  (svdImage_orthonormal T).comp (fun j => ⟨svSortPerm T j.1, j.2⟩)
+    (fun a b h => Subtype.ext ((svSortPerm T).injective (congrArg Subtype.val h)))
+
+/-- Parseval in the sorted eigenbasis: {lit}`∑ⱼ ‖⟨eⱼ,v⟩‖² = ‖v‖²`. -/
+theorem sum_sq_norm_inner_sorted (T : V →ₗ[𝕜] V) (v : V) :
+    ∑ j, ‖⟪svdBasis T (svSortPerm T j), v⟫_𝕜‖ ^ 2 = ‖v‖ ^ 2 := by
+  rw [Equiv.sum_comp (svSortPerm T) (fun i => ‖⟪svdBasis T i, v⟫_𝕜‖ ^ 2)]
+  exact (svdBasis T).sum_sq_norm_inner_right v
+
+/-- The squared norm of a partial SVD sum: {lit}`‖∑ⱼ [P j] sⱼ⟨eⱼ,v⟩ fⱼ‖² = ∑ⱼ [P j] sⱼ²‖⟨eⱼ,v⟩‖²`. -/
+theorem partialSVD_normSq (T : V →ₗ[𝕜] V) (v : V) (P : Fin (finrank 𝕜 V) → Prop)
+    [DecidablePred P] :
+    ‖∑ j, (if P j then (singularValues T (svSortPerm T j) : 𝕜) *
+        ⟪svdBasis T (svSortPerm T j), v⟫_𝕜 else 0) • svdImage T (svSortPerm T j)‖ ^ 2
+      = ∑ j, if P j then (singularValues T (svSortPerm T j)) ^ 2 *
+          ‖⟪svdBasis T (svSortPerm T j), v⟫_𝕜‖ ^ 2 else 0 := by
+  rw [norm_sum_smul_sq_subtype (svdImage_sorted_orthonormal T)
+    (a := fun j => if P j then (singularValues T (svSortPerm T j) : 𝕜) *
+      ⟪svdBasis T (svSortPerm T j), v⟫_𝕜 else 0)
+    (fun j hj => by simp only [ne_eq, not_not] at hj; simp [hj])]
+  refine Finset.sum_congr rfl fun j _ => ?_
+  split_ifs with hP
+  · rw [norm_mul, mul_pow, RCLike.norm_ofReal, sq_abs]
+  · simp
+
+/-- The operator-norm upper bound from a pointwise bound. -/
+theorem opNorm_le_of_forall {T : V →ₗ[𝕜] V} {c : ℝ} (hc : 0 ≤ c)
+    (h : ∀ v, ‖T v‖ ≤ c * ‖v‖) : opNorm T ≤ c := by
+  rw [opNorm]; exact ContinuousLinearMap.opNorm_le_bound _ hc h
+
+/-- `(T − Tₖ) v = ∑ⱼ [k ≤ j] sⱼ ⟨eⱼ,v⟩ fⱼ` (the tail of the SVD). -/
+theorem sub_truncSVD_apply (T : V →ₗ[𝕜] V) (k : ℕ) (v : V) :
+    (T - truncSVD T k) v = ∑ j : Fin (finrank 𝕜 V),
+      (if k ≤ (j : ℕ) then (singularValues T (svSortPerm T j) : 𝕜) *
+        ⟪svdBasis T (svSortPerm T j), v⟫_𝕜 else 0) • svdImage T (svSortPerm T j) := by
+  rw [LinearMap.sub_apply, svd_apply_sorted, truncSVD_apply, Finset.sum_filter,
+    ← Finset.sum_sub_distrib]
+  refine Finset.sum_congr rfl fun j _ => ?_
+  by_cases h : (j : ℕ) < k
+  · rw [if_pos h, if_neg (not_le.mpr h), sub_self, zero_smul]
+  · rw [if_neg h, if_pos (not_lt.mp h), sub_zero]
+
+/-- `‖T v‖² = ∑ⱼ sⱼ² ‖⟨eⱼ,v⟩‖²`. -/
+theorem normSq_apply (T : V →ₗ[𝕜] V) (v : V) :
+    ‖T v‖ ^ 2 = ∑ j, (singularValues T (svSortPerm T j)) ^ 2 *
+      ‖⟪svdBasis T (svSortPerm T j), v⟫_𝕜‖ ^ 2 := by
+  rw [svd_apply_sorted, norm_sum_smul_sq_subtype (svdImage_sorted_orthonormal T)
+    (a := fun j => (singularValues T (svSortPerm T j) : 𝕜) * ⟪svdBasis T (svSortPerm T j), v⟫_𝕜)
+    (fun j hj => by simp only [ne_eq, not_not] at hj; simp [hj])]
+  refine Finset.sum_congr rfl fun j _ => ?_
+  rw [norm_mul, mul_pow, RCLike.norm_ofReal, sq_abs]
+
+/-- Upper bound: `opNorm (T − truncSVD T k) ≤ s'_k`. -/
+theorem opNorm_sub_truncSVD_le (T : V →ₗ[𝕜] V) {k : ℕ} (hk : k < finrank 𝕜 V) :
+    opNorm (T - truncSVD T k) ≤ singularValues T (svSortPerm T ⟨k, hk⟩) := by
+  classical
+  refine opNorm_le_of_forall (singularValues_nonneg T _) fun v => ?_
+  have key : ‖(T - truncSVD T k) v‖ ^ 2
+      ≤ (singularValues T (svSortPerm T ⟨k, hk⟩)) ^ 2 * ‖v‖ ^ 2 := by
+    rw [sub_truncSVD_apply, partialSVD_normSq]
+    calc ∑ j : Fin (finrank 𝕜 V), (if k ≤ (j : ℕ) then (singularValues T (svSortPerm T j)) ^ 2 *
+            ‖⟪svdBasis T (svSortPerm T j), v⟫_𝕜‖ ^ 2 else 0)
+        ≤ ∑ j, (singularValues T (svSortPerm T ⟨k, hk⟩)) ^ 2 *
+            ‖⟪svdBasis T (svSortPerm T j), v⟫_𝕜‖ ^ 2 := by
+          refine Finset.sum_le_sum fun j _ => ?_
+          split_ifs with h
+          · refine mul_le_mul_of_nonneg_right ?_ (sq_nonneg _)
+            nlinarith [singularValues_nonneg T (svSortPerm T j),
+              singularValues_nonneg T (svSortPerm T ⟨k, hk⟩),
+              singularValues_svSortPerm_antitone T
+                (show (⟨k, hk⟩ : Fin (finrank 𝕜 V)) ≤ j from h)]
+          · positivity
+      _ = (singularValues T (svSortPerm T ⟨k, hk⟩)) ^ 2 *
+            ∑ j, ‖⟪svdBasis T (svSortPerm T j), v⟫_𝕜‖ ^ 2 := (Finset.mul_sum _ _ _).symm
+      _ = (singularValues T (svSortPerm T ⟨k, hk⟩)) ^ 2 * ‖v‖ ^ 2 := by
+          rw [sum_sq_norm_inner_sorted]
+  have hb := Real.sqrt_le_sqrt key
+  rwa [Real.sqrt_sq (norm_nonneg _), Real.sqrt_mul (sq_nonneg _),
+    Real.sqrt_sq (singularValues_nonneg T _), Real.sqrt_sq (norm_nonneg _)] at hb
+
+/-- Lower bound (achieved): `s'_k ≤ opNorm (T − truncSVD T k)`, witnessed by `eₖ`. -/
+theorem le_opNorm_sub_truncSVD (T : V →ₗ[𝕜] V) {k : ℕ} (hk : k < finrank 𝕜 V) :
+    singularValues T (svSortPerm T ⟨k, hk⟩) ≤ opNorm (T - truncSVD T k) := by
+  classical
+  have hnorm : ‖(T - truncSVD T k) (svdBasis T (svSortPerm T ⟨k, hk⟩))‖
+      = singularValues T (svSortPerm T ⟨k, hk⟩) := by
+    rw [sub_truncSVD_apply, Finset.sum_eq_single (⟨k, hk⟩ : Fin (finrank 𝕜 V))]
+    · rw [if_pos (le_refl k), orthonormal_iff_ite.mp (svdBasis T).orthonormal, if_pos rfl,
+        mul_one, ← svdBasis_image_eq, norm_image_svdBasis]
+    · intro j _ hj
+      rw [orthonormal_iff_ite.mp (svdBasis T).orthonormal,
+        if_neg (fun hh => hj ((svSortPerm T).injective hh)), mul_zero, ite_self, zero_smul]
+    · intro h; exact absurd (Finset.mem_univ _) h
+  have happ := opNorm_apply_le (T - truncSVD T k) (svdBasis T (svSortPerm T ⟨k, hk⟩))
+  rw [hnorm, (svdBasis T).orthonormal.1 (svSortPerm T ⟨k, hk⟩), mul_one] at happ
+  exact happ
+
+/-- Lower bound: any `S` with `dim range S ≤ k` has `opNorm (T − S) ≥ s'_k`. On the
+`(k+1)`-dimensional span `W` of the top eigen-directions, `ker S ⊓ W ≠ ⊥` (dimensions),
+so a nonzero `v` there has `(T − S) v = T v` with `‖T v‖ ≥ s'_k ‖v‖`. -/
+theorem le_opNorm_sub_of_rank_le (T : V →ₗ[𝕜] V) {k : ℕ} (hk : k < finrank 𝕜 V)
+    (S : V →ₗ[𝕜] V) (hrank : finrank 𝕜 (LinearMap.range S) ≤ k) :
+    singularValues T (svSortPerm T ⟨k, hk⟩) ≤ opNorm (T - S) := by
+  classical
+  have hle : k + 1 ≤ finrank 𝕜 V := hk
+  set family := fun i : Fin (k + 1) => svdBasis T (svSortPerm T (Fin.castLE hle i)) with hfam
+  set W := Submodule.span 𝕜 (Set.range family) with hWdef
+  have hWdim : finrank 𝕜 W = k + 1 := by
+    have hli : LinearIndependent 𝕜 family :=
+      (svdBasis T).orthonormal.linearIndependent.comp _
+        ((svSortPerm T).injective.comp (Fin.castLE_injective hle))
+    rw [hWdef, finrank_span_eq_card hli, Fintype.card_fin]
+  have hkerdim : finrank 𝕜 V - k ≤ finrank 𝕜 (LinearMap.ker S) := by
+    have h := LinearMap.finrank_range_add_finrank_ker S
+    omega
+  have hinter : LinearMap.ker S ⊓ W ≠ ⊥ := by
+    intro hbot
+    have hsup := Submodule.finrank_sup_add_finrank_inf_eq (LinearMap.ker S) W
+    rw [hbot, finrank_bot, add_zero, hWdim] at hsup
+    have hle2 : finrank 𝕜 ((LinearMap.ker S ⊔ W : Submodule 𝕜 V)) ≤ finrank 𝕜 V :=
+      Submodule.finrank_le _
+    omega
+  obtain ⟨v, hvmem, hvne⟩ := Submodule.exists_mem_ne_zero_of_ne_bot hinter
+  have hSv : S v = 0 := LinearMap.mem_ker.mp hvmem.1
+  have hvW : v ∈ W := hvmem.2
+  have hperp : ∀ j : Fin (finrank 𝕜 V), k + 1 ≤ (j : ℕ) →
+      ⟪svdBasis T (svSortPerm T j), v⟫_𝕜 = 0 := by
+    intro j hj
+    refine Submodule.span_induction (p := fun w _ => ⟪svdBasis T (svSortPerm T j), w⟫_𝕜 = 0)
+      ?_ ?_ ?_ ?_ hvW
+    · rintro _ ⟨i, rfl⟩
+      rw [hfam, orthonormal_iff_ite.mp (svdBasis T).orthonormal]
+      refine if_neg (fun h => ?_)
+      have hji := (svSortPerm T).injective h
+      have hi := i.isLt
+      rw [hji] at hj
+      simp only [Fin.coe_castLE] at hj
+      omega
+    · exact inner_zero_right _
+    · intro x y _ _ hx hy; rw [inner_add_right, hx, hy, add_zero]
+    · intro c x _ hx; rw [inner_smul_right, hx, mul_zero]
+  have hTvSq : (singularValues T (svSortPerm T ⟨k, hk⟩)) ^ 2 * ‖v‖ ^ 2 ≤ ‖T v‖ ^ 2 := by
+    rw [normSq_apply, ← sum_sq_norm_inner_sorted T v, Finset.mul_sum]
+    refine Finset.sum_le_sum fun j _ => ?_
+    by_cases hjk : (j : ℕ) < k + 1
+    · refine mul_le_mul_of_nonneg_right ?_ (sq_nonneg _)
+      nlinarith [singularValues_nonneg T (svSortPerm T ⟨k, hk⟩),
+        singularValues_nonneg T (svSortPerm T j),
+        singularValues_svSortPerm_antitone T
+          (show (j : Fin (finrank 𝕜 V)) ≤ ⟨k, hk⟩ from Nat.lt_succ_iff.mp hjk)]
+    · rw [hperp j (not_lt.mp hjk), norm_zero]; simp
+  have hTSv : ‖(T - S) v‖ = ‖T v‖ := by rw [LinearMap.sub_apply, hSv, sub_zero]
+  have hvpos : 0 < ‖v‖ := norm_pos_iff.mpr hvne
+  have h1 : singularValues T (svSortPerm T ⟨k, hk⟩) * ‖v‖ ≤ ‖T v‖ := by
+    rw [← Real.sqrt_sq (mul_nonneg (singularValues_nonneg T _) (norm_nonneg v)),
+      ← Real.sqrt_sq (norm_nonneg (T v))]
+    apply Real.sqrt_le_sqrt
+    rw [mul_pow]; exact hTvSq
+  have h2 := opNorm_apply_le (T - S) v
+  rw [hTSv] at h2
+  exact le_of_mul_le_mul_right (le_trans h1 h2) hvpos
+
+/-- 7.92 The best rank-`≤ k` approximation of `T` is the truncated SVD: the minimum
+of `‖T − S‖` over operators with `dim range S ≤ k` is the `(k+1)`-th largest
+singular value. -/
+theorem isLeast_opNorm_sub (T : V →ₗ[𝕜] V) {k : ℕ} (hk : k < finrank 𝕜 V) :
+    IsLeast {r : ℝ | ∃ S : V →ₗ[𝕜] V, finrank 𝕜 (LinearMap.range S) ≤ k ∧ opNorm (T - S) = r}
+      (singularValues T (svSortPerm T ⟨k, hk⟩)) := by
+  refine ⟨⟨truncSVD T k, finrank_range_truncSVD_le T k,
+    le_antisymm (opNorm_sub_truncSVD_le T hk) (le_opNorm_sub_truncSVD T hk)⟩, ?_⟩
+  rintro r ⟨S, hrank, rfl⟩
+  exact le_opNorm_sub_of_rank_le T hk S hrank
 
 /-! # Polar Decomposition -/
 
