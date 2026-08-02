@@ -212,6 +212,41 @@ field with {lit}`k` invertible, {lit}`I + T` has a {lit}`k`-th root — this is 
 
 /-! # Jordan Form -/
 
+/-- Axler's Exercise 8A.2, the foundation of the Jordan-basis construction: if
+{lit}`Tᵐ u = 0` but {lit}`Tᵐ⁻¹ u ≠ 0`, then the cyclic list {lit}`u, T u, …, Tᵐ⁻¹ u`
+is linearly independent. -/
+theorem cyclic_list_linearIndependent {W : Type*} [AddCommGroup W] [Module ℂ W]
+    (T : W →ₗ[ℂ] W) (m : ℕ) (u : W) (hm : (T ^ m) u = 0) (hu : (T ^ (m - 1)) u ≠ 0) :
+    LinearIndependent ℂ (fun j : Fin m => (T ^ (j : ℕ)) u) := by
+  classical
+  rw [Fintype.linearIndependent_iff]
+  intro c hc
+  have hvanish : ∀ l, m ≤ l → (T ^ l) u = 0 := fun l hl => by
+    obtain ⟨t, rfl⟩ := Nat.exists_eq_add_of_le hl
+    rw [add_comm, pow_add, Module.End.mul_apply, hm, map_zero]
+  by_contra hne
+  push_neg at hne
+  obtain ⟨j0, hj0⟩ := hne
+  set s := Finset.univ.filter (fun j => c j ≠ 0) with hs
+  have hsne : s.Nonempty := ⟨j0, by simp [hs, hj0]⟩
+  set i := s.min' hsne with hidef
+  have hci : c i ≠ 0 := by have := s.min'_mem hsne; simp [hs] at this; exact this
+  have hmin' : ∀ j : Fin m, j < i → c j = 0 := fun j hji => by
+    by_contra hcj
+    exact absurd (s.min'_le j (by simp [hs, hcj])) (not_le.mpr hji)
+  have key := congrArg (T ^ (m - 1 - (i : ℕ))) hc
+  rw [map_sum, map_zero, Finset.sum_eq_single i] at key
+  · rw [map_smul, ← Module.End.mul_apply, ← pow_add,
+      Nat.sub_add_cancel (by omega : (i : ℕ) ≤ m - 1)] at key
+    rcases smul_eq_zero.mp key with h | h
+    · exact hci h
+    · exact hu h
+  · intro j _ hj
+    rcases lt_or_gt_of_ne hj with hlt | hgt
+    · rw [hmin' j hlt, zero_smul, map_zero]
+    · rw [map_smul, ← Module.End.mul_apply, ← pow_add, hvanish _ (by omega), smul_zero]
+  · intro h; exact absurd (Finset.mem_univ i) h
+
 /-! For every {lit}`T ∈ ℒ(V)` over {lit}`ℂ` there is a basis giving a "nice"
 upper-triangular matrix (8.37); the Jordan form does better, producing a matrix
 that is {lit}`0` except on the diagonal and the line directly above it. The
