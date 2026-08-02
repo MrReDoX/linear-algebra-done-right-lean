@@ -278,21 +278,62 @@ The examples 7.97 ({lit}`E(2f₁, f₂)` in {lit}`ℝ²`, {lit}`E(4f₁, 3f₂, 
 image of {lit}`Ω ⊆ V` under {lit}`T` is mathlib's set image {lit}`T '' Ω`; in
 particular {lit}`T(V) = range T`. We use {lit}`T '' Ω` directly below. -/
 
-/-! 7.99 Invertible operator takes the ball to an ellipsoid, and 7.101 invertible
-operator takes ellipsoids to ellipsoids.
+/-! 7.99 Invertible operator takes the ball to an ellipsoid.
 
 For invertible {lit}`T` with SVD {lit}`T v = ∑ sₖ ⟨v, eₖ⟩ fₖ`,
-{lit}`T(B) = E(s₁ f₁, …, sₙ fₙ)` (7.99), and consequently {lit}`T` maps every
-ellipsoid to an ellipsoid (7.101, by composing with the diagonal stretch carrying
-{lit}`B` onto the given ellipsoid).
+{lit}`T(B) = E(s₁ f₁, …, sₙ fₙ)`. The proof rests on the coordinate identity
+{lit}`∑ ‖⟨T v, fₖ⟩‖² / sₖ² = ∑ ‖⟨v, eₖ⟩‖² = ‖v‖²` (from {name}`LADR.Section_7E.svd_apply`,
+{lit}`⟪fₖ, T v⟫ = sₖ ⟪eₖ, v⟫`, and Parseval), so {lit}`T v` lies in the ellipsoid
+exactly when {lit}`‖v‖ < 1`. -/
+theorem image_ball_eq_ellipsoid (T : V →ₗ[𝕜] V) (hT : Function.Bijective T) :
+    T '' ball = ellipsoid (𝕜 := 𝕜) (LADR.Section_7E.svdImage T) (LADR.Section_7E.singularValues T) := by
+  set e := LADR.Section_7E.svdBasis T
+  set s := LADR.Section_7E.singularValues T with hs
+  set f := LADR.Section_7E.svdImage T with hf
+  -- every singular value is nonzero (`T` injective)
+  have hspos : ∀ k, s k ≠ 0 := by
+    intro k
+    rw [hs, ← LADR.Section_7E.norm_image_svdBasis T k, ne_eq, norm_eq_zero]
+    intro h
+    exact LADR.Section_7E.svdBasis_ne_zero T k (hT.injective (by rw [h, map_zero]))
+  -- the `fₖ` are orthonormal (all indices are positive-singular-value indices)
+  have hON : ∀ j k, ⟪f j, f k⟫_𝕜 = if j = k then 1 else 0 := by
+    intro j k
+    have h := orthonormal_iff_ite.mp (LADR.Section_7E.svdImage_orthonormal T)
+      ⟨j, hspos j⟩ ⟨k, hspos k⟩
+    simpa using h
+  -- `⟪fₖ, T v⟫ = sₖ ⟪eₖ, v⟫`
+  have hinner : ∀ (v : V) (k), ⟪f k, T v⟫_𝕜 = (s k : 𝕜) * ⟪e k, v⟫_𝕜 := by
+    intro v k
+    rw [LADR.Section_7E.svd_apply T v, inner_sum, Finset.sum_eq_single k]
+    · rw [inner_smul_right, inner_smul_right, hON k k, if_pos rfl, mul_one]
+    · intro j _ hjk
+      rw [inner_smul_right, inner_smul_right, hON k j, if_neg (Ne.symm hjk), mul_zero, mul_zero]
+    · intro h; exact absurd (Finset.mem_univ k) h
+  -- the coordinate identity `∑ ‖⟪fₖ, T v⟫‖²/sₖ² = ‖v‖²`
+  have hkey : ∀ v : V, ∑ k, ‖⟪f k, T v⟫_𝕜‖ ^ 2 / (s k) ^ 2 = ‖v‖ ^ 2 := by
+    intro v
+    rw [← (e).sum_sq_norm_inner_right v]
+    refine Finset.sum_congr rfl fun k _ => ?_
+    rw [hinner v k, div_eq_iff (pow_ne_zero 2 (hspos k)), norm_mul, mul_pow,
+      RCLike.norm_ofReal, sq_abs, mul_comm]
+  ext w
+  simp only [ball, ellipsoid, Set.mem_image, Set.mem_setOf_eq]
+  constructor
+  · rintro ⟨v, hv, rfl⟩
+    rw [hkey v]
+    exact pow_lt_one₀ (norm_nonneg v) hv two_ne_zero
+  · intro hw
+    obtain ⟨v, rfl⟩ := hT.surjective w
+    rw [hkey v] at hw
+    exact ⟨v, by nlinarith [norm_nonneg v], rfl⟩
 
-**Deferred.** Both are set equalities proved by the coordinate computation
-{lit}`∑ |⟨T v, fₖ⟩|² / sₖ² = ∑ |⟨v, eₖ⟩|² = ‖v‖²` (using
-{name}`LADR.Section_7E.svd_apply`, {lit}`⟪fₖ, T v⟫ = sₖ ⟪eₖ, v⟫`, and Parseval),
-together with an explicit construction of the preimage for the reverse inclusion.
-This is a lengthy two-sided set-membership argument; it is stated in prose to keep
-the file focused on the algebraic core (norms and polar decomposition) and to avoid
-a `sorry` on a numbered theorem. -/
+/-! 7.101 Invertible operator takes ellipsoids to ellipsoids. Axler obtains this
+from 7.99 by composing with the diagonal stretch carrying the ball onto a given
+ellipsoid. A faithful Lean statement needs the SVD of the composite operator (the
+axes of the image ellipsoid are those of `T ∘ (stretch)`), which is a further
+change-of-basis development; it is left in prose here, with 7.99 — the case
+`E = T(B)` — formalized above. -/
 
 /-! 7.102 Definition: {lit}`P(v₁, …, vₙ)`, parallelepiped
 
