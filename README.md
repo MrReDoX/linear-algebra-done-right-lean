@@ -113,11 +113,12 @@ is now proved (8C, by gluing per-eigenspace roots along the generalized
 eigenspace decomposition), while the Jordan forms (8C 8.44–8.46) remain; *matrix factorizations* (the
 QR factorization 7.58 is now fully proved via Gram–Schmidt, existence and
 uniqueness; the Cholesky factorization 7.63 is now proved in 7D, existence and
-uniqueness, built on QR; best rank-`k` approximation remains in
-7F — the matrix SVD `A = B D C*` 7.80, the operator-norm ↔
-largest-singular-value bridge 7.88(a)/7.85, the positive-singular-value count
-7.68(b)(c), the pseudoinverse SVD 7.75, and the ellipsoid-image results 7.99/7.101
-are now proved); the dimension theory of `PiTensorProduct` (9D 9.87/9.89/9.90 — the
+uniqueness, built on QR; and in 7F the matrix SVD `A = B D C*` 7.80, the
+operator-norm ↔ largest-singular-value bridge 7.88(a)/7.85, the
+positive-singular-value count 7.68(b)(c), the pseudoinverse SVD 7.75, the
+ellipsoid-image results 7.99/7.101, and the best rank-`k` approximation 7.92 are
+now proved — Chapter 7 defers only the measure-theoretic volume results below);
+the dimension theory of `PiTensorProduct` (9D 9.87/9.89/9.90 — the
 inner product on a binary tensor product, 9.80–9.83, is now proved); *measure-theoretic volume*
 (7F 7.108–7.111); and a handful of purely numeric worked examples. In 9C the
 determinant/adjoint results 9.56(c), 9.58, 9.59, 9.60 and Hadamard's inequality
