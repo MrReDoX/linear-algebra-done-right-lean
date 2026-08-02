@@ -28,6 +28,7 @@ import Mathlib.Tactic.Linter.Style
 import LinearAlgebraDoneRightLean.Section_3D
 import LinearAlgebraDoneRightLean.Section_7C
 import LinearAlgebraDoneRightLean.Section_7D
+import LinearAlgebraDoneRightLean.Section_7E
 import CompanionHelper
 
 /-!
@@ -333,9 +334,10 @@ equivalently {lit}`√det(T*T)`.
 
 We prove the {lit}`√det(T*T)` characterization directly: {lit}`det(T* T) =
 conj(det T)·det T = ‖det T‖²` by 9.56(c) ({name}`det_adjoint_eq_conj`), so
-{lit}`‖det T‖ = √det(T* T)`. The equivalent *product of singular values* form is
-the determinant of the SVD factorization (7.70, Section 7E); with the singular
-values {lit}`s₁, …, sₙ` on the diagonal it reads {lit}`|det T| = s₁ ⋯ sₙ`. -/
+{lit}`‖det T‖ = √det(T* T)`. The equivalent *product of singular values* form
+{lit}`|det T| = s₁ ⋯ sₙ` is proved below in
+{name}`norm_det_eq_prod_singularValues`: since {lit}`T* T` acts as {lit}`sₖ²` on
+the SVD eigenbasis (7.72, Section 7E), {lit}`det(T* T) = ∏ sₖ²`. -/
 
 /-- 9.60 auxiliary: {lit}`det(T* T) = ‖det T‖²` (a nonnegative real). -/
 theorem det_adjoint_comp_self (T : E →ₗ[𝕜] E) :
@@ -347,6 +349,36 @@ theorem norm_det_eq_sqrt_det_adjoint_comp_self (T : E →ₗ[𝕜] E) :
     ‖LinearMap.det T‖ =
       Real.sqrt (RCLike.re (LinearMap.det (LinearMap.adjoint T ∘ₗ T))) := by
   rw [det_adjoint_comp_self, RCLike.ofReal_re, Real.sqrt_sq (norm_nonneg _)]
+
+/-- The determinant of an operator diagonal on a basis is the product of its
+diagonal scalars. -/
+theorem det_eq_prod_of_apply_eq_smul {K W : Type*} [Field K] [AddCommGroup W] [Module K W]
+    {n : ℕ} (b : Module.Basis (Fin n) K W) (f : W →ₗ[K] W) (d : Fin n → K)
+    (hf : ∀ i, f (b i) = d i • b i) : LinearMap.det f = ∏ i, d i := by
+  rw [← LinearMap.det_toMatrix b, show LinearMap.toMatrix b b f = Matrix.diagonal d from ?_,
+    Matrix.det_diagonal]
+  ext i j
+  rw [LinearMap.toMatrix_apply, hf, map_smul, Module.Basis.repr_self, Finsupp.smul_single,
+    smul_eq_mul, mul_one, Finsupp.single_apply, Matrix.diagonal_apply]
+  rcases eq_or_ne i j with h | h
+  · subst h; simp
+  · rw [if_neg (Ne.symm h), if_neg h]
+
+/-- 9.60 (product-of-singular-values form): {lit}`‖det T‖ = s₁ ⋯ sₙ`, the product
+of the singular values. Since {lit}`T* T` acts as {lit}`sₖ²` on the SVD eigenbasis
+(7.72), {lit}`det(T* T) = ∏ sₖ²`, so {lit}`‖det T‖ = √det(T* T) = ∏ sₖ`. -/
+theorem norm_det_eq_prod_singularValues (T : E →ₗ[𝕜] E) :
+    ‖LinearMap.det T‖ = ∏ i, LADR.Section_7E.singularValues T i := by
+  set b := (LADR.Section_7E.svdBasis T).toBasis with hb
+  have hf : ∀ i, (LinearMap.adjoint T ∘ₗ T) (b i)
+      = (((LADR.Section_7E.singularValues T i) ^ 2 : ℝ) : 𝕜) • b i := by
+    intro i
+    rw [hb, OrthonormalBasis.coe_toBasis]
+    exact LADR.Section_7E.adjComp_apply_svdBasis T i
+  rw [norm_det_eq_sqrt_det_adjoint_comp_self,
+    det_eq_prod_of_apply_eq_smul b (LinearMap.adjoint T ∘ₗ T) _ hf,
+    ← RCLike.ofReal_prod, RCLike.ofReal_re, Finset.prod_pow,
+    Real.sqrt_sq (Finset.prod_nonneg fun i _ => LADR.Section_7E.singularValues_nonneg T i)]
 
 end InnerProductDetOps
 
