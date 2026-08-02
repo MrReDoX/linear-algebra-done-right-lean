@@ -345,15 +345,77 @@ theorem adjoint_svd_apply (T : V →ₗ[𝕜] W) (w : W) :
     RCLike.conj_ofReal, inner_conj_symm]
   ring
 
-/-! 7.75 Singular value decomposition of the pseudoinverse (7.78)
-
-{lit}`T† w = ∑ (⟨w, fₖ⟩ / sₖ) eₖ`. **Deferred**: the pseudoinverse {lit}`T†`
-({lit}`LADR.Section_6C.pinv`) is available in this companion, and the identity can
-in principle be derived from {lit}`T T† = P_(range T)` (6.69(b)) together with the
-fact that {lit}`f₁, …, fₘ` is an orthonormal basis of {lit}`range T` (Exercise 8a);
-but assembling that projection argument against the pseudoinverse API is a
-substantial addition. It is stated here in prose to avoid a `sorry` on a numbered
-theorem. -/
+/-- 7.75 Singular value decomposition of the pseudoinverse (7.78):
+{lit}`T† w = ∑ (⟨fₖ, w⟩ / sₖ) eₖ` (summed over all {lit}`k`; the {lit}`sₖ = 0`
+terms vanish). Following Axler, write {lit}`S w` for the right-hand side. The key
+identity {lit}`T* w = (T* T)(S w)` (both equal {lit}`∑ sₖ ⟨fₖ, w⟩ eₖ` by the SVD
+of the adjoint and {lit}`T* T eₖ = sₖ² eₖ`) shows {lit}`w − T(S w) ∈ ker T* =
+(range T)ᗮ`, so {lit}`T(S w) = P_(range T) w = T(T† w)` (6.69(b)); since both
+{lit}`S w` and {lit}`T† w` lie in {lit}`(ker T)ᗮ`, they are equal. -/
+theorem pinv_svd_apply (T : V →ₗ[𝕜] W) (w : W) :
+    LADR.Section_6C.pinv T w
+      = ∑ i, (singularValues T i : 𝕜)⁻¹ • ⟪svdImage T i, w⟫_𝕜 • svdBasis T i := by
+  set S := ∑ i, (singularValues T i : 𝕜)⁻¹ • ⟪svdImage T i, w⟫_𝕜 • svdBasis T i with hSdef
+  -- svdBasis T i ∈ (ker T)ᗮ when sᵢ ≠ 0, since eᵢ = sᵢ⁻¹ • T*(fᵢ) ∈ range T*.
+  have hTf : ∀ i, singularValues T i ≠ 0 →
+      LinearMap.adjoint T (svdImage T i) = (singularValues T i : 𝕜) • svdBasis T i := by
+    intro i hi
+    rw [svdImage, if_neg hi, map_smul, ← LinearMap.comp_apply, adjComp_apply_svdBasis, smul_smul]
+    congr 1
+    have hne : (singularValues T i : 𝕜) ≠ 0 := by exact_mod_cast hi
+    rw [RCLike.ofReal_pow]; field_simp
+  have hei_perp : ∀ i, singularValues T i ≠ 0 → svdBasis T i ∈ (LinearMap.ker T)ᗮ := by
+    intro i hi
+    have hei : svdBasis T i = (singularValues T i : 𝕜)⁻¹ • LinearMap.adjoint T (svdImage T i) := by
+      rw [hTf i hi, smul_smul, inv_mul_cancel₀ (by exact_mod_cast hi), one_smul]
+    rw [hei]
+    apply Submodule.smul_mem
+    rw [Submodule.mem_orthogonal]
+    intro x hx
+    rw [LinearMap.adjoint_inner_right, LinearMap.mem_ker.mp hx, inner_zero_left]
+  have hS_mem : S ∈ (LinearMap.ker T)ᗮ := by
+    rw [hSdef]
+    apply Submodule.sum_mem
+    intro i _
+    by_cases hi : singularValues T i = 0
+    · rw [hi, RCLike.ofReal_zero, inv_zero, zero_smul]; exact Submodule.zero_mem _
+    · exact Submodule.smul_mem _ _ (Submodule.smul_mem _ _ (hei_perp i hi))
+  -- Key identity: T* w = (T* T)(S).
+  have hkey : LinearMap.adjoint T w = (LinearMap.adjoint T ∘ₗ T) S := by
+    rw [adjoint_svd_apply, hSdef, map_sum]
+    refine Finset.sum_congr rfl fun i _ => ?_
+    rw [map_smul, map_smul, adjComp_apply_svdBasis]
+    by_cases hi : singularValues T i = 0
+    · simp [hi]
+    · simp only [smul_smul]
+      congr 1
+      have hne : (singularValues T i : 𝕜) ≠ 0 := by exact_mod_cast hi
+      rw [RCLike.ofReal_pow]; field_simp
+  -- Hence T(S) = P_(range T) w.
+  have hTS : T S = (LinearMap.range T).starProjection w := by
+    symm
+    apply Submodule.eq_starProjection_of_mem_of_inner_eq_zero (LinearMap.mem_range_self T S)
+    intro y hy
+    obtain ⟨x, rfl⟩ := hy
+    have hadj0 : LinearMap.adjoint T (w - T S) = 0 := by
+      rw [map_sub, hkey, LinearMap.comp_apply, sub_self]
+    rw [← LinearMap.adjoint_inner_left, hadj0, inner_zero_left]
+  -- pinv w and S both lie in (ker T)ᗮ and T maps both to P_(range T) w.
+  have hpinv_mem : LADR.Section_6C.pinv T w ∈ (LinearMap.ker T)ᗮ := by
+    show ((LADR.Section_6C.restrEquiv T).symm
+      ((LinearMap.range T).orthogonalProjection w) : V) ∈ _
+    exact SetLike.coe_mem _
+  have hTeq : T (LADR.Section_6C.pinv T w) = T S := by
+    rw [hTS, ← LinearMap.comp_apply]
+    exact LinearMap.congr_fun (LADR.Section_6C.T_comp_pinv T) w
+  have hdiff_ker : LADR.Section_6C.pinv T w - S ∈ LinearMap.ker T := by
+    rw [LinearMap.mem_ker, map_sub, hTeq, sub_self]
+  have hdiff_perp : LADR.Section_6C.pinv T w - S ∈ (LinearMap.ker T)ᗮ :=
+    Submodule.sub_mem _ hpinv_mem hS_mem
+  have hzero : ⟪LADR.Section_6C.pinv T w - S, LADR.Section_6C.pinv T w - S⟫_𝕜 = 0 :=
+    (Submodule.mem_orthogonal' _ _).mp hdiff_perp _ hdiff_ker
+  rw [← sub_eq_zero]
+  exact inner_self_eq_zero.mp hzero
 
 /-! 7.80 Matrix version of the SVD
 
