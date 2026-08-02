@@ -328,12 +328,80 @@ theorem image_ball_eq_ellipsoid (T : V →ₗ[𝕜] V) (hT : Function.Bijective 
     rw [hkey v] at hw
     exact ⟨v, by nlinarith [norm_nonneg v], rfl⟩
 
-/-! 7.101 Invertible operator takes ellipsoids to ellipsoids. Axler obtains this
-from 7.99 by composing with the diagonal stretch carrying the ball onto a given
-ellipsoid. A faithful Lean statement needs the SVD of the composite operator (the
-axes of the image ellipsoid are those of `T ∘ (stretch)`), which is a further
-change-of-basis development; it is left in prose here, with 7.99 — the case
-`E = T(B)` — formalized above. -/
+/-- General principle behind 7.99/7.101: an invertible `S` acting diagonally on an
+orthonormal basis (`⟨g k, S v⟩ = r k ⟨g k, v⟩`, all `r k ≠ 0`) carries the ball
+onto the ellipsoid `E(r₁ g₁, …, rₙ gₙ)`. -/
+theorem image_ball_eq_ellipsoid_of_diag {n : ℕ} (S : V →ₗ[𝕜] V) (hS : Function.Bijective S)
+    (g : OrthonormalBasis (Fin n) 𝕜 V) (r : Fin n → ℝ) (hr : ∀ k, r k ≠ 0)
+    (hSg : ∀ (v : V) (k), ⟪g k, S v⟫_𝕜 = (r k : 𝕜) * ⟪g k, v⟫_𝕜) :
+    S '' ball = ellipsoid (𝕜 := 𝕜) (g ·) r := by
+  have hkey : ∀ v : V, ∑ k, ‖⟪g k, S v⟫_𝕜‖ ^ 2 / (r k) ^ 2 = ‖v‖ ^ 2 := by
+    intro v
+    rw [← g.sum_sq_norm_inner_right v]
+    refine Finset.sum_congr rfl fun k _ => ?_
+    rw [hSg v k, div_eq_iff (pow_ne_zero 2 (hr k)), norm_mul, mul_pow,
+      RCLike.norm_ofReal, sq_abs, mul_comm]
+  ext w
+  simp only [ball, ellipsoid, Set.mem_image, Set.mem_setOf_eq]
+  constructor
+  · rintro ⟨v, hv, rfl⟩
+    rw [hkey v]; exact pow_lt_one₀ (norm_nonneg v) hv two_ne_zero
+  · intro hw
+    obtain ⟨v, rfl⟩ := hS.surjective w
+    rw [hkey v] at hw
+    exact ⟨v, by nlinarith [norm_nonneg v], rfl⟩
+
+/-- The diagonal stretch with `S gₖ = rₖ gₖ`, i.e. `S v = ∑ₖ rₖ ⟨v, gₖ⟩ gₖ`. -/
+noncomputable def stretchOp {n : ℕ} (g : OrthonormalBasis (Fin n) 𝕜 V) (r : Fin n → ℝ) :
+    V →ₗ[𝕜] V :=
+  ∑ k, (r k : 𝕜) • LinearMap.smulRight (innerₛₗ 𝕜 (g k)) (g k)
+
+theorem stretchOp_inner {n : ℕ} (g : OrthonormalBasis (Fin n) 𝕜 V) (r : Fin n → ℝ)
+    (v : V) (j : Fin n) : ⟪g j, stretchOp g r v⟫_𝕜 = (r j : 𝕜) * ⟪g j, v⟫_𝕜 := by
+  rw [stretchOp]
+  simp only [LinearMap.sum_apply, LinearMap.smul_apply, LinearMap.smulRight_apply,
+    innerₛₗ_apply_apply, smul_smul]
+  rw [inner_sum, Finset.sum_eq_single j]
+  · rw [inner_smul_right, orthonormal_iff_ite.mp g.orthonormal j j, if_pos rfl, mul_one]
+  · intro k _ hkj
+    rw [inner_smul_right, orthonormal_iff_ite.mp g.orthonormal j k, if_neg (Ne.symm hkj), mul_zero]
+  · intro h; exact absurd (Finset.mem_univ j) h
+
+theorem stretchOp_bijective {n : ℕ} (g : OrthonormalBasis (Fin n) 𝕜 V) (r : Fin n → ℝ)
+    (hr : ∀ k, r k ≠ 0) : Function.Bijective (stretchOp g r) := by
+  have hinj : Function.Injective (stretchOp g r) := by
+    rw [← LinearMap.ker_eq_bot, LinearMap.ker_eq_bot']
+    intro v hv
+    have hall : ∀ j, ⟪g j, v⟫_𝕜 = 0 := by
+      intro j
+      have h := stretchOp_inner g r v j
+      rw [hv, inner_zero_right] at h
+      rcases mul_eq_zero.mp h.symm with h1 | h1
+      · exact absurd (RCLike.ofReal_eq_zero.mp h1) (hr j)
+      · exact h1
+    conv_lhs => rw [← g.sum_repr' v]
+    exact Finset.sum_eq_zero fun j _ => by rw [hall j, zero_smul]
+  exact ⟨hinj, LinearMap.injective_iff_surjective.mp hinj⟩
+
+theorem stretchOp_image_ball {n : ℕ} (g : OrthonormalBasis (Fin n) 𝕜 V) (r : Fin n → ℝ)
+    (hr : ∀ k, r k ≠ 0) : stretchOp g r '' ball = ellipsoid (𝕜 := 𝕜) (g ·) r :=
+  image_ball_eq_ellipsoid_of_diag (stretchOp g r) (stretchOp_bijective g r hr) g r hr
+    (fun v k => stretchOp_inner g r v k)
+
+/-- 7.101 An invertible operator maps every ellipsoid to an ellipsoid. Axler's
+argument: the ellipsoid `E(r₁ g₁, …, rₙ gₙ)` is `stretchOp '' ball`, so its image
+under `T` is `(T ∘ stretchOp) '' ball`, which 7.99 identifies as an ellipsoid
+(with axes the singular values / image vectors of `T ∘ stretchOp`). -/
+theorem image_ellipsoid_is_ellipsoid {n : ℕ} (T : V →ₗ[𝕜] V) (hT : Function.Bijective T)
+    (g : OrthonormalBasis (Fin n) 𝕜 V) (r : Fin n → ℝ) (hr : ∀ k, r k ≠ 0) :
+    ∃ (h : Fin (Module.finrank 𝕜 V) → V) (t : Fin (Module.finrank 𝕜 V) → ℝ),
+      T '' ellipsoid (𝕜 := 𝕜) (g ·) r = ellipsoid (𝕜 := 𝕜) h t := by
+  have hbij : Function.Bijective (T ∘ₗ stretchOp g r) := by
+    rw [LinearMap.coe_comp]; exact hT.comp (stretchOp_bijective g r hr)
+  refine ⟨LADR.Section_7E.svdImage (T ∘ₗ stretchOp g r),
+    LADR.Section_7E.singularValues (T ∘ₗ stretchOp g r), ?_⟩
+  rw [← stretchOp_image_ball g r hr, ← Set.image_comp, ← LinearMap.coe_comp]
+  exact image_ball_eq_ellipsoid (T ∘ₗ stretchOp g r) hbij
 
 /-! 7.102 Definition: {lit}`P(v₁, …, vₙ)`, parallelepiped
 
