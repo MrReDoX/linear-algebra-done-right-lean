@@ -709,15 +709,16 @@ subsets by approximation with disjoint boxes (7.109). The headline result 7.111
 states that for invertible {lit}`T ∈ ℒ(V)` and {lit}`Ω ⊆ V`,
 {lit}`volume T(Ω) = (s₁ ⋯ sₙ)(volume Ω)`, where {lit}`s₁ ⋯ sₙ = |det T|` (9.60/9.61).
 
-**Deferred.** Axler himself notes these belong to analysis rather than linear
-algebra and works only with an intuitive notion of volume. A faithful Lean
-treatment requires measure theory: {lit}`volume` is the additive Haar measure
-{lit}`MeasureTheory.Measure.addHaar` on the finite-dimensional real space, and 7.111
-is {name}`MeasureTheory.Measure.addHaar_image_linearMap` / the change-of-variables
-formula with the Jacobian factor {lit}`|det T| = ∏ sᵢ`. This measure-theoretic
-development is out of scope for this section; stated in prose to avoid a `sorry` on
-a numbered theorem. The geometric input 7.107 (boxes to boxes) — the linear-algebra
-heart of 7.111 — is proved above as {lit}`image_box`. -/
+The definitions 7.108/7.109 (volume of a box, and volume of a general set by box
+approximation) and the example 7.110 stay in prose: Axler himself notes these
+belong to analysis rather than linear algebra and works only with an intuitive
+notion of volume. But the **headline theorem 7.111 is proved**, using measure
+theory for {lit}`volume`: on {lit}`ℝⁿ` the additive Haar measure satisfies
+{lit}`volume T(Ω) = (s₁ ⋯ sₙ) · volume Ω`, formalized as
+{lit}`LADR.Section_9C.volume_image_eq_prod_singularValues` (the Haar
+change-of-variables {name}`MeasureTheory.Measure.addHaar_image_linearMap`, 9.61,
+with Jacobian {lit}`|det T|` rewritten as {lit}`∏ sᵢ` by 9.60). The linear-algebra
+input 7.107 (boxes to boxes) is proved above as {lit}`image_box`. -/
 
 /-! # Properties of an Operator as Determined by Its Eigenvalues
 

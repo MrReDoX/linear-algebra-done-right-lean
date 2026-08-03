@@ -122,9 +122,11 @@ uniqueness, built on QR; and in 7F the matrix SVD `A = B D C*` 7.80, the
 operator-norm ↔ largest-singular-value bridge 7.88(a)/7.85, the
 positive-singular-value count 7.68(b)(c), the pseudoinverse SVD 7.75, the
 ellipsoid-image results 7.99/7.101, and the best rank-`k` approximation 7.92 are
-now proved — Chapter 7 defers only the measure-theoretic volume results below);
-*measure-theoretic volume* (7F 7.108–7.111); and a handful of purely numeric
-worked examples. Section 9D now carries no numbered-result deferral: the
+now proved — in 7F only Axler's informal box/volume *definitions* below remain in
+prose); Axler's informal box/volume *definitions* 7.108–7.110 (the headline
+volume theorem 7.111, `volume T(Ω) = (s₁ ⋯ sₙ)·volume Ω`, is proved
+measure-theoretically in 9C via the Haar change-of-variables and 9.60); and a
+handful of purely numeric worked examples. Section 9D now carries no numbered-result deferral: the
 `PiTensorProduct` dimension theory 9.87/9.89/9.90 is proved via
 `Basis.piTensorProduct` (with 9.87 dual to 9.89 through `PiTensorProduct.lift`),
 alongside the previously proved inner product on a binary tensor product

@@ -392,6 +392,18 @@ theorem volume_image_eq_9_61 {n : ℕ}
       ENNReal.ofReal |LinearMap.det T| * MeasureTheory.volume Ω :=
   MeasureTheory.Measure.addHaar_image_linearMap MeasureTheory.volume T Ω
 
+/-- **7.111** (singular-values form of the volume change) On {lit}`ℝⁿ` an operator
+{lit}`T` scales volume by the product of its singular values:
+{lit}`volume T(Ω) = (s₁ ⋯ sₙ) · volume Ω`. This is 9.61 with the Jacobian
+{lit}`|det T|` rewritten as {lit}`s₁ ⋯ sₙ` by 9.60
+({name}`LADR.Section_9C.norm_det_eq_prod_singularValues`). -/
+theorem volume_image_eq_prod_singularValues {n : ℕ}
+    (T : EuclideanSpace ℝ (Fin n) →ₗ[ℝ] EuclideanSpace ℝ (Fin n))
+    (Ω : Set (EuclideanSpace ℝ (Fin n))) :
+    MeasureTheory.volume (T '' Ω) =
+      ENNReal.ofReal (∏ i, LADR.Section_7E.singularValues T i) * MeasureTheory.volume Ω := by
+  rw [volume_image_eq_9_61, ← Real.norm_eq_abs, norm_det_eq_prod_singularValues]
+
 /-! 9.62 If {lit}`F = ℂ`, the characteristic polynomial of {lit}`T` equals
 {lit}`(z − λ₁)^{d₁} ⋯ (z − λₘ)^{dₘ}`, where {lit}`λ₁, …, λₘ` are the distinct
 eigenvalues with multiplicities {lit}`d₁, …, dₘ`. Equivalently, over {lit}`ℂ`
