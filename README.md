@@ -103,10 +103,12 @@ Example — is accounted for in the corresponding section file: stated and prove
 or, where it needs machinery genuinely absent from the pinned mathlib or relies on
 Axler's own informal/analytic constructions, recorded with an explicit prose note.
 Exercises remain as `sorry`. There are no silent `sorry`s on numbered results, and
-no numbered item is omitted. (Every numbered *theorem or definition* that can be
-faithfully formalized is proved; the prose-only items are Axler's informal
-definitions, a handful of purely computational or integral-inner-product worked
-examples, and results whose content is already covered by a nearby proved lemma.)
+no numbered item is omitted. **Every named Axler result (numbered theorem) is
+proved in Lean** — none is left as a prose deferral. The only prose-only items are
+Axler's own informal *definitions* (e.g. the intuitive box/volume definitions
+7.108–7.110 and the matrix-of-a-basis Jordan-form definition 8.44, both captured
+elsewhere in a formal, matrix-free way) and a handful of purely computational or
+integral-inner-product worked *examples*.
 
 \* A `✓*` marks a section that prose-defers one or more numbered results. These
 deferrals cluster around a few missing pieces: the *matrix-of-a-basis normal-form
