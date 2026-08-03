@@ -678,9 +678,9 @@ theorem exercise_9C_17 (a b c : ℝ) (ha : 0 < a) (hb : 0 < b) (hc : 0 < c)
         MeasureTheory.volume {x : EuclideanSpace ℝ (Fin 3) | ‖x‖ < 1} := by
   sorry
 
-/-! 9C.18–9C.20 (deferred): Hadamard's inequality (9.66) and its equality case /
-matrix-entry bound. Deferred — Hadamard's inequality itself is not developed in
-this project, and 9C.19/20 build directly on it. -/
+/-! 9C.18–9C.20: Hadamard's inequality (9.66) is proved above as
+{lit}`hadamard_inequality`, which is Exercise 9C.18. Its equality case (9C.19) and
+the matrix-entry bound (9C.20) build on it and are left as exercises. -/
 
 /-- 9C.21 The determinant is the unique multiplicative function on complex square
 matrices that agrees with the product of diagonal entries on diagonal matrices. -/

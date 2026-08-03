@@ -616,13 +616,13 @@ theorem exercise_8A_23 :
       (∀ lam : ℝ, HasEigenvalue T lam → lam = 0) ∧ ¬ IsNilpotent T := by
   sorry
 
-/-! 8A.24 (deferred): for each item in Example 8.15, exhibit a basis putting the
-nilpotent operator into the strictly-upper-triangular normal form of 8.18(c). This
-depends on the matrix-of-a-basis normal-form theory (8.18(c)), which is deferred in
-this section. -/
+/-! 8A.24 (exercise): for each item in Example 8.15, exhibit a basis putting the
+nilpotent operator into the strictly-upper-triangular normal form of 8.18(c).
+8.18(c) itself is proved above ({lit}`exists_strictUpperTriangular_of_nilpotent`);
+the per-example exhibition is left as an exercise. -/
 
-/-! 8A.25 (deferred): on an inner product space, a nilpotent operator has an
-orthonormal basis giving the strictly-upper-triangular form of 8.18(c). Same
-dependency on the deferred 8.18(c) normal form. -/
+/-! 8A.25 (exercise): on an inner product space, a nilpotent operator has an
+orthonormal basis giving the strictly-upper-triangular form of 8.18(c). Left as an
+exercise. -/
 
 end LADR.Section_8A

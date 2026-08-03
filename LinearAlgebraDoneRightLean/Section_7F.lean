@@ -23,9 +23,10 @@ decomposition (Section 7E):
   factors as an isometry composed with the positive square root of {lit}`T* T`;
 * the geometry of *ellipsoids*, *parallelepipeds*, *boxes*, and *volume* (7.95–7.111).
 
-The norm and polar-decomposition results are proved in full. The measure-theoretic
-volume results (7.108–7.111) and a few set-geometry image results are deferred in
-prose with reasons, as flagged below.
+The norm and polar-decomposition results are proved in full, as is the headline
+volume theorem 7.111 (proved measure-theoretically in 9C). Only Axler's
+deliberately informal box/volume *definitions* 7.108–7.110 and a few set-geometry
+image results remain in prose with reasons, as flagged below.
 -/
 
 namespace LADR.Section_7F
@@ -63,8 +64,8 @@ theorem opNorm_eq_sSup_closedBall (T : V →ₗ[𝕜] W) :
   simp
 
 /-! 7.85 The maximum in 7.86 equals the largest singular value; the "≥ each singular
-value" half is {lit}`singularValues_le_opNorm` below and the reverse bound is the
-deferred 7.88(a). -/
+value" half is {lit}`singularValues_le_opNorm` below and the reverse bound is
+7.88(a), proved below as {lit}`opNorm_eq_iSup_singularValues`. -/
 
 /-- 7.89 The fundamental inequality {lit}`‖T v‖ ≤ ‖T‖ ‖v‖`. -/
 theorem opNorm_apply_le (T : V →ₗ[𝕜] W) (v : V) : ‖T v‖ ≤ opNorm T * ‖v‖ := by
