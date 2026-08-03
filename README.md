@@ -82,7 +82,7 @@ the section's exercises.
 | 6A. Inner Products and Norms | ✓ | ✓ | — |
 | 6B. Orthonormal Bases | ✓ | ✓ | — |
 | 6C. Orthogonal Complements and Minimization Problems | ✓ | ✓ | — |
-| 7A. Self-Adjoint and Normal Operators | ✓ | — | — |
+| 7A. Self-Adjoint and Normal Operators | ✓ | ✓ | — |
 | 7B. Spectral Theorem | ✓ | — | — |
 | 7C. Positive Operators | ✓ | — | — |
 | 7D. Isometries, Unitary Operators, and Matrix Factorization | ✓* | — | — |
