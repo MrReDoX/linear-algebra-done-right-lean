@@ -202,6 +202,18 @@ theorem positive_sqrt_unique {T R S : V →ₗ[𝕜] V} (hR : R.IsPositive) (hRT
     rw [hST]; exact hTs.apply_eigenvectorBasis (rfl : Module.finrank 𝕜 V = n) i
   rw [sqrt_eigenvector hR (hμnn i) hwR, sqrt_eigenvector hS (hμnn i) hwS]
 
+/-- 7.43 If {lit}`T` is a positive operator and {lit}`⟨Tv, v⟩ = 0`, then {lit}`Tv = 0`.
+Writing {lit}`T = R²` with {lit}`R` a positive (hence self-adjoint) square root
+(7.36), {lit}`0 = ⟨Tv, v⟩ = ⟨R(Rv), v⟩ = ⟨Rv, Rv⟩ = ‖Rv‖²`, so {lit}`Rv = 0` and
+thus {lit}`Tv = R(Rv) = 0`. -/
+theorem apply_eq_zero_of_isPositive_of_inner_eq_zero {T : V →ₗ[𝕜] V} (hT : T.IsPositive)
+    {v : V} (hv : ⟪T v, v⟫_𝕜 = 0) : T v = 0 := by
+  obtain ⟨R, hRpos, hRT⟩ := exists_positive_sqrt hT
+  have hRR : ⟪R v, R v⟫_𝕜 = 0 := by
+    rw [← hv, ← hRT, LinearMap.comp_apply]; exact (hRpos.1 (R v) v).symm
+  have hRv : R v = 0 := inner_self_eq_zero.mp hRR
+  rw [← hRT, LinearMap.comp_apply, hRv, map_zero]
+
 /-! # Exercises 7C -/
 
 /-- 7C.1 If both {lit}`T` and {lit}`−T` are positive, then {lit}`T = 0`. -/

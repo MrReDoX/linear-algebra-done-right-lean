@@ -25,6 +25,22 @@ section Field
 variable {F : Type*} [Field F]
   {V : Type*} [AddCommGroup V] [Module F V] [FiniteDimensional F V]
 
+/-! 8.47 Definition: trace of a matrix.
+
+The *trace* of a square matrix {lit}`A`, denoted {lit}`tr A`, is the sum of its
+diagonal entries — mathlib's {name}`Matrix.trace`. -/
+
+/-! 8.48 Example: the trace of the {lit}`3`-by-{lit}`3` matrix with diagonal
+entries {lit}`3, 2, 0` is {lit}`3 + 2 + 0 = 5` — a direct instance of
+{name}`Matrix.trace_fin_three`. -/
+
+/-- 8.49 The trace of {lit}`AB` equals the trace of {lit}`BA`, for {lit}`A` an
+{lit}`m`-by-{lit}`n` matrix and {lit}`B` an {lit}`n`-by-{lit}`m` matrix — mathlib's
+{name}`Matrix.trace_mul_comm`. -/
+theorem trace_mul_comm {m n : Type*} [Fintype m] [Fintype n] (A : Matrix m n F)
+    (B : Matrix n m F) : (A * B).trace = (B * A).trace :=
+  Matrix.trace_mul_comm A B
+
 /-! 8.50 The trace of the matrix of an operator does not depend on the basis.
 
 For any two bases {lit}`b`, {lit}`c` of {lit}`V`, the matrices {lit}`ℳ(T, b)`

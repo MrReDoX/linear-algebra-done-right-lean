@@ -245,6 +245,24 @@ theorem apply_basis_ne_zero_iff_linearIndependent [Finite F V]
     have := (AlternatingMap.map_basis_ne_zero_iff hb.toModuleBasis α).mpr hα
     rwa [hbe] at this
 
+/-- 9.40 Definition: {lit}`α_T`. For {lit}`α` an alternating {lit}`m`-linear form
+and {lit}`T ∈ ℒ(V)`, Axler defines {lit}`α_T(v₁, …, vₘ) = α(Tv₁, …, Tvₘ)`, the
+precomposition of {lit}`α` with {lit}`T` in every slot — mathlib's
+{name}`AlternatingMap.compLinearMap`. -/
+def altCompOp {m : ℕ} (α : V [⋀^Fin m]→ₗ[F] F) (T : V →ₗ[F] V) : V [⋀^Fin m]→ₗ[F] F :=
+  α.compLinearMap T
+
+theorem altCompOp_apply {m : ℕ} (α : V [⋀^Fin m]→ₗ[F] F) (T : V →ₗ[F] V) (v : Fin m → V) :
+    altCompOp α T v = α (fun i => T (v i)) :=
+  rfl
+
+/-! 9.41 Definition: determinant of an operator, {lit}`det T`. Axler defines
+{lit}`det T` as the unique scalar with {lit}`α_T = (det T) · α` for every alternating
+{lit}`(dim V)`-form {lit}`α` (well-defined because {lit}`dim V⁽ⁿ⁾ₐₗₜ = 1`, 9.37,
+so any two top alternating forms are proportional). This companion uses mathlib's
+{name}`LinearMap.det` throughout Section 9C, where its determinant properties
+(9.42–9.61) are developed. -/
+
 /-! # Exercises 9B -/
 
 /-- 9B.1 {lit}`dim V⁽ᵐ⁾ = (dim V)ᵐ`: the space of `m`-linear forms on an
