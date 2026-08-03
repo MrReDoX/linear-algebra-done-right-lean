@@ -30,9 +30,10 @@ variable {F : Type*} [Field F]
 The *trace* of a square matrix {lit}`A`, denoted {lit}`tr A`, is the sum of its
 diagonal entries — mathlib's {name}`Matrix.trace`. -/
 
-/-! 8.48 Example: the trace of the {lit}`3`-by-{lit}`3` matrix with diagonal
-entries {lit}`3, 2, 0` is {lit}`3 + 2 + 0 = 5` — a direct instance of
-{name}`Matrix.trace_fin_three`. -/
+/-- 8.48 Example: the trace of a {lit}`3`-by-{lit}`3` matrix is the sum of its
+diagonal entries; here {lit}`3 + 2 + 0 = 5`. -/
+example : Matrix.trace !![(3 : ℚ), -1, -2; 5, 2, -3; 1, 6, 0] = 5 := by
+  simp [Matrix.trace_fin_three]; norm_num
 
 /-- 8.49 The trace of {lit}`AB` equals the trace of {lit}`BA`, for {lit}`A` an
 {lit}`m`-by-{lit}`n` matrix and {lit}`B` an {lit}`n`-by-{lit}`m` matrix — mathlib's
@@ -118,6 +119,15 @@ theorem trace_eq_sum_roots_charpoly (T : V →ₗ[ℂ] V) :
   let b := Module.finBasis ℂ V
   rw [trace_eq_toMatrix_trace b, Matrix.trace_eq_sum_roots_charpoly,
     LinearMap.charpoly_toMatrix T b]
+
+/-- 8.53 Example: for {lit}`T(z₁,z₂,z₃) = (3z₁−z₂−2z₃, 3z₁+2z₂−3z₃, z₁+2z₂)` on
+{lit}`ℂ³` — whose standard-basis matrix has diagonal {lit}`3, 2, 0` — the trace is
+{lit}`5` (equivalently the sum {lit}`1 + (2+3i) + (2−3i)` of its eigenvalues, 8.52). -/
+example : LinearMap.trace ℂ (Fin 3 → ℂ)
+    (Matrix.toLin (Pi.basisFun ℂ (Fin 3)) (Pi.basisFun ℂ (Fin 3))
+      !![(3 : ℂ), -1, -2; 3, 2, -3; 1, 2, 0]) = 5 := by
+  rw [LinearMap.trace_eq_matrix_trace ℂ (Pi.basisFun ℂ (Fin 3)), LinearMap.toMatrix_toLin]
+  simp [Matrix.trace_fin_three]; norm_num
 
 end Complex
 
