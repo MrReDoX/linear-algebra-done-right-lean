@@ -117,6 +117,10 @@ theorem spectral_eigenvalues_real (T : V →ₗ[𝕜] V) (hT : LinearMap.IsSymme
 
 /-! # Complex Spectral Theorem -/
 
+/-! 7.30 Example: an orthonormal basis of eigenvectors (real case). A concrete
+self-adjoint operator on {lit}`ℝ²`/{lit}`ℝ³` diagonalized by an orthonormal
+eigenbasis, illustrating the real spectral theorem 7.29. Recorded in prose. -/
+
 /-! 7.31 Complex spectral theorem
 
 For {lit}`𝔽 = ℂ`, an operator {lit}`T` is normal if and only if {lit}`V` has an
@@ -213,6 +217,10 @@ theorem complex_spectral {W : Type*} [NormedAddCommGroup W] [InnerProductSpace �
   have hflag : ∀ k, T (e k) ∈ Submodule.span ℂ (e '' {i | i ≤ k}) :=
     ((LADR.Section_5C.tfae_upperTriangular he T).out 0 2).mp hUT
   exact ⟨n, e, normal_ut_diagonal T hN e hflag⟩
+
+/-! 7.33 Example: an orthonormal basis of eigenvectors (complex case). A concrete
+normal operator on {lit}`ℂ²` diagonalized by an orthonormal eigenbasis,
+illustrating the complex spectral theorem 7.31. Recorded in prose. -/
 
 /-! # Exercises 7B -/
 

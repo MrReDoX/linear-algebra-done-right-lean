@@ -63,6 +63,11 @@ theorem opNorm_eq_sSup_closedBall (T : V →ₗ[𝕜] W) :
   rw [opNorm, ← ContinuousLinearMap.sSup_unitClosedBall_eq_norm (LinearMap.toContinuousLinearMap T)]
   simp
 
+/-! 7.82 For {lit}`T ∈ ℒ(V, W)` and {lit}`v ∈ V`, {lit}`‖Tv‖ ≤ s₁‖v‖` with
+{lit}`s₁` the largest singular value. Proved below as
+{lit}`norm_apply_le_iSup_singularValues`, once the norm and its
+singular-value characterization (7.88(a)/7.89) are available. -/
+
 /-! 7.85 The maximum in 7.86 equals the largest singular value; the "≥ each singular
 value" half is {lit}`singularValues_le_opNorm` below and the reverse bound is
 7.88(a), proved below as {lit}`opNorm_eq_iSup_singularValues`. -/
@@ -155,9 +160,21 @@ theorem opNorm_eq_iSup_singularValues (T : V →ₗ[𝕜] W) :
   rwa [Real.sqrt_sq (norm_nonneg _),
     Real.sqrt_sq (mul_nonneg hsup_nn (norm_nonneg _))] at h1
 
-/-! 7.88(b) {lit}`‖T‖ = max{‖T v‖ : ‖v‖ = 1}` is the restriction of 7.86 from the
-closed unit ball to the unit sphere; combined with 7.88(a) it is the sphere-max
-characterization, deferred here as a routine restatement. -/
+/-- 7.82 For {lit}`T ∈ ℒ(V, W)` and {lit}`v ∈ V`, {lit}`‖T v‖ ≤ s₁ ‖v‖`, where
+{lit}`s₁ = ⨆ᵢ sᵢ` is the largest singular value. Immediate from the fundamental
+inequality 7.89 ({lit}`opNorm_apply_le`) and the identification of the norm with
+the largest singular value 7.88(a) ({lit}`opNorm_eq_iSup_singularValues`). -/
+theorem norm_apply_le_iSup_singularValues (T : V →ₗ[𝕜] W) (v : V) :
+    ‖T v‖ ≤ (⨆ i, singularValues T i) * ‖v‖ := by
+  rw [← opNorm_eq_iSup_singularValues]; exact opNorm_apply_le T v
+
+/-- 7.88(b) {lit}`‖T‖ = max{‖T v‖ : ‖v‖ = 1}`: the norm is the supremum of
+{lit}`‖T v‖` over the *unit sphere*, the restriction of 7.86 from the closed unit
+ball. This is mathlib's {name}`ContinuousLinearMap.sSup_sphere_eq_norm`. -/
+theorem opNorm_eq_sSup_sphere (T : V →ₗ[𝕜] W) :
+    opNorm T = sSup ((fun v => ‖T v‖) '' Metric.sphere (0 : V) 1) := by
+  rw [opNorm, ← ContinuousLinearMap.sSup_sphere_eq_norm (LinearMap.toContinuousLinearMap T)]
+  simp
 
 /-! 7.90 Example: norms
 
