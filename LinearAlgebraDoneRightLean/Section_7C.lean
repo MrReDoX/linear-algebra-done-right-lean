@@ -41,8 +41,24 @@ theorem isPositive_iff_symmetric_nonneg (T : V →ₗ[𝕜] V) :
 
 def IsSquareRoot (R T : V →ₗ[𝕜] V) : Prop := R ∘ₗ R = T
 
-/-! 7.37 Example: a square root of an operator. A concrete operator exhibiting a
-square root in the sense of Definition 7.36. Recorded in prose. -/
+/-- The operator {lit}`T(z₁,z₂,z₃) = (z₃,0,0)` on {lit}`ℂ³` (Example 7.37). -/
+def T_7_37 : (Fin 3 → ℂ) →ₗ[ℂ] (Fin 3 → ℂ) where
+  toFun z := ![z 2, 0, 0]
+  map_add' x y := by funext i; fin_cases i <;> simp
+  map_smul' a x := by funext i; fin_cases i <;> simp
+
+/-- The operator {lit}`R(z₁,z₂,z₃) = (z₂,z₃,0)` on {lit}`ℂ³` (Example 7.37). -/
+def R_7_37 : (Fin 3 → ℂ) →ₗ[ℂ] (Fin 3 → ℂ) where
+  toFun z := ![z 1, z 2, 0]
+  map_add' x y := by funext i; fin_cases i <;> simp
+  map_smul' a x := by funext i; fin_cases i <;> simp
+
+/-- 7.37 Example: {lit}`R` is a square root of {lit}`T` — {lit}`R² = T` (the
+square-root relation of Definition 7.36, here stated directly since it is purely
+algebraic and needs no inner product). -/
+theorem R_7_37_sq : R_7_37 ∘ₗ R_7_37 = T_7_37 := by
+  ext z i
+  fin_cases i <;> simp [R_7_37, T_7_37]
 
 /-! 7.38 Characterizations of positive operators
 
