@@ -486,11 +486,24 @@ theorem minpoly_eq_prod_roots {V : Type*} [AddCommGroup V] [Module ℂ V]
   · intro lam
     rw [Polynomial.mem_roots hmonic.ne_zero, isEigenvalue_iff_isRoot]
 
-/-! 5.28 Example: an operator whose eigenvalues cannot be found exactly. Axler
-exhibits an operator on {lit}`𝐅⁵` (a companion-type matrix) whose minimal
-polynomial is a degree-{lit}`5` polynomial with no closed-form roots, illustrating
-that eigenvalues need not be computable in closed form. An informal illustration,
-recorded here in prose. -/
+/-! 5.28 Example: an operator whose eigenvalues cannot be found exactly. Axler's
+operator {lit}`T(z₁,…,z₅) = (−3z₅, z₁+6z₅, z₂, z₃, z₄)` on {lit}`ℂ⁵` satisfies
+{lit}`T⁵ − 6T + 3 = 0`; the polynomial {lit}`X⁵ − 6X + 3` is its minimal polynomial
+(over {lit}`ℚ` it is Eisenstein-irreducible at {lit}`3`), and Galois theory shows
+its roots — the eigenvalues of {lit}`T` — are not expressible in radicals. We
+formalize the concrete algebraic content: {lit}`T` annihilates {lit}`X⁵ − 6X + 3`. -/
+
+/-- The operator of Example 5.28 on {lit}`ℂ⁵`. -/
+def T_5_28 : (Fin 5 → ℂ) →ₗ[ℂ] (Fin 5 → ℂ) where
+  toFun z := ![-3 * z 4, z 0 + 6 * z 4, z 1, z 2, z 3]
+  map_add' x y := by funext i; fin_cases i <;> simp <;> ring
+  map_smul' a x := by funext i; fin_cases i <;> simp <;> ring
+
+/-- 5.28: {lit}`T` satisfies {lit}`T⁵ − 6T + 3 = 0`. -/
+theorem T_5_28_annihilator :
+    (T_5_28 ^ 5 : Module.End ℂ (Fin 5 → ℂ)) - (6 : ℂ) • T_5_28 + (3 : ℂ) • 1 = 0 := by
+  apply LinearMap.ext; intro z; funext i
+  fin_cases i <;> simp [pow_succ, Module.End.mul_apply, T_5_28] <;> ring
 
 /-! 5.29 {lit}`q(T) = 0` iff {lit}`q` is a polynomial multiple of the minimal
 polynomial. Axler's proof uses the division algorithm (4.9); mathlib's

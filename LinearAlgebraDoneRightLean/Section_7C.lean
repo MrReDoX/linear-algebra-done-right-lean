@@ -225,8 +225,30 @@ theorem positive_sqrt_unique {T R S : V →ₗ[𝕜] V} (hR : R.IsPositive) (hRT
     rw [hST]; exact hTs.apply_eigenvectorBasis (rfl : Module.finrank 𝕜 V = n) i
   rw [sqrt_eigenvector hR (hμnn i) hwR, sqrt_eigenvector hS (hμnn i) hwS]
 
-/-! 7.41 Example: square roots of positive operators. Illustrates 7.39 — the unique
-positive square root of a concrete positive operator. Recorded in prose. -/
+/-- The (positive) operator {lit}`S(x,y) = (x, 2y)` on {lit}`ℝ²` (Example 7.41). -/
+def S_7_41 : (Fin 2 → ℝ) →ₗ[ℝ] (Fin 2 → ℝ) where
+  toFun p := ![p 0, 2 * p 1]
+  map_add' x y := by funext i; fin_cases i <;> simp <;> ring
+  map_smul' a x := by funext i; fin_cases i <;> simp <;> ring
+
+/-- Its positive square root {lit}`√S(x,y) = (x, √2·y)` (Example 7.41). -/
+noncomputable def sqrtS_7_41 : (Fin 2 → ℝ) →ₗ[ℝ] (Fin 2 → ℝ) where
+  toFun p := ![p 0, Real.sqrt 2 * p 1]
+  map_add' x y := by funext i; fin_cases i <;> simp <;> ring
+  map_smul' a x := by funext i; fin_cases i <;> simp <;> ring
+
+/-- 7.41 Example: {lit}`√S` is a square root of {lit}`S`, i.e. {lit}`(√S)² = S`
+(using {lit}`√2 · √2 = 2`). -/
+theorem sqrtS_7_41_sq : sqrtS_7_41 ∘ₗ sqrtS_7_41 = S_7_41 := by
+  have h2 : Real.sqrt 2 * Real.sqrt 2 = 2 := Real.mul_self_sqrt (by norm_num)
+  apply LinearMap.ext; intro p; funext i
+  fin_cases i
+  · show sqrtS_7_41 (sqrtS_7_41 p) 0 = S_7_41 p 0
+    simp [sqrtS_7_41, S_7_41]
+  · show sqrtS_7_41 (sqrtS_7_41 p) 1 = S_7_41 p 1
+    simp only [sqrtS_7_41, S_7_41, LinearMap.coe_mk, AddHom.coe_mk, Matrix.cons_val_one,
+      Matrix.head_cons, Matrix.cons_val_zero]
+    rw [← mul_assoc, h2]
 
 /-- 7.43 If {lit}`T` is a positive operator and {lit}`⟨Tv, v⟩ = 0`, then {lit}`Tv = 0`.
 Writing {lit}`T = R²` with {lit}`R` a positive (hence self-adjoint) square root
