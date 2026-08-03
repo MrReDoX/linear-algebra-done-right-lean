@@ -48,6 +48,12 @@ variable {F : Type*} [Field F]
 
 /-! # The Generalized Eigenspace Decomposition -/
 
+/-! 8.21 Example: generalized eigenspaces of an operator on {lit}`ℂ³`. For
+{lit}`T(z₁, z₂, z₃) = (4z₂, 0, 5z₃)`, one has {lit}`G(0, T) = {(z₁, z₂, 0)}` and
+{lit}`G(5, T) = {(0, 0, z₃)}`, so {lit}`ℂ³ = G(0, T) ⊕ G(5, T)` — a concrete
+instance of the decomposition 8.22 (the generalized eigenvectors of this same
+operator appear in 8A's Example 8.10). Recorded in prose. -/
+
 /-! 8.22 Generalized eigenspace decomposition.
 
 Suppose {lit}`F = ℂ` and {lit}`T ∈ ℒ(V)`, with distinct eigenvalues

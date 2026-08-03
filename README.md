@@ -97,11 +97,16 @@ the section's exercises.
 | 9C. Determinants | ✓ | — | — |
 | 9D. Tensor Products | ✓ | — | — |
 
-The whole book (Chapters 1–9) is now drafted. In every section, exercises
-remain as `sorry` and each numbered Axler result is either stated and proved or,
-where it needs machinery genuinely absent from the pinned mathlib, stated with
-an explicit prose note explaining the deferral — there are no silent `sorry`s on
-numbered results.
+The whole book (Chapters 1–9) is now drafted. A full top-to-bottom pass against
+the text confirms that every numbered Axler item — Definition, Result, and
+Example — is accounted for in the corresponding section file: stated and proved,
+or, where it needs machinery genuinely absent from the pinned mathlib or relies on
+Axler's own informal/analytic constructions, recorded with an explicit prose note.
+Exercises remain as `sorry`. There are no silent `sorry`s on numbered results, and
+no numbered item is omitted. (Every numbered *theorem or definition* that can be
+faithfully formalized is proved; the prose-only items are Axler's informal
+definitions, a handful of purely computational or integral-inner-product worked
+examples, and results whose content is already covered by a nearby proved lemma.)
 
 \* A `✓*` marks a section that prose-defers one or more numbered results. These
 deferrals cluster around a few missing pieces: the *matrix-of-a-basis normal-form

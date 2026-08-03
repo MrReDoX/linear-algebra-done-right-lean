@@ -486,6 +486,12 @@ theorem minpoly_eq_prod_roots {V : Type*} [AddCommGroup V] [Module ℂ V]
   · intro lam
     rw [Polynomial.mem_roots hmonic.ne_zero, isEigenvalue_iff_isRoot]
 
+/-! 5.28 Example: an operator whose eigenvalues cannot be found exactly. Axler
+exhibits an operator on {lit}`𝐅⁵` (a companion-type matrix) whose minimal
+polynomial is a degree-{lit}`5` polynomial with no closed-form roots, illustrating
+that eigenvalues need not be computable in closed form. An informal illustration,
+recorded here in prose. -/
+
 /-! 5.29 {lit}`q(T) = 0` iff {lit}`q` is a polynomial multiple of the minimal
 polynomial. Axler's proof uses the division algorithm (4.9); mathlib's
 version of the forward direction is {name}`minpoly.dvd`. -/

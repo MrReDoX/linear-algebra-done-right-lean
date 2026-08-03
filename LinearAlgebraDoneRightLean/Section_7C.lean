@@ -31,11 +31,18 @@ theorem isPositive_iff_symmetric_nonneg (T : V →ₗ[𝕜] V) :
     T.IsPositive ↔ LinearMap.IsSymmetric T ∧ ∀ v, 0 ≤ RCLike.re ⟪T v, v⟫_𝕜 :=
   ⟨fun h => ⟨h.1, h.2⟩, fun h => ⟨h.1, h.2⟩⟩
 
+/-! 7.35 Example: positive operators. Concrete instances — orthogonal projections,
+{lit}`R*R`, and operators with nonnegative eigenvalues — illustrating Definition
+7.34. Recorded in prose. -/
+
 /-! 7.36 Definition: square root
 
 {lit}`R` is a *square root* of {lit}`T` if {lit}`R² = T`. -/
 
 def IsSquareRoot (R T : V →ₗ[𝕜] V) : Prop := R ∘ₗ R = T
+
+/-! 7.37 Example: a square root of an operator. A concrete operator exhibiting a
+square root in the sense of Definition 7.36. Recorded in prose. -/
 
 /-! 7.38 Characterizations of positive operators
 
@@ -201,6 +208,9 @@ theorem positive_sqrt_unique {T R S : V →ₗ[𝕜] V} (hR : R.IsPositive) (hRT
   have hwS : (S ∘ₗ S) (b i) = ((μ i : ℝ) : 𝕜) • b i := by
     rw [hST]; exact hTs.apply_eigenvectorBasis (rfl : Module.finrank 𝕜 V = n) i
   rw [sqrt_eigenvector hR (hμnn i) hwR, sqrt_eigenvector hS (hμnn i) hwS]
+
+/-! 7.41 Example: square roots of positive operators. Illustrates 7.39 — the unique
+positive square root of a concrete positive operator. Recorded in prose. -/
 
 /-- 7.43 If {lit}`T` is a positive operator and {lit}`⟨Tv, v⟩ = 0`, then {lit}`Tv = 0`.
 Writing {lit}`T = R²` with {lit}`R` a positive (hence self-adjoint) square root

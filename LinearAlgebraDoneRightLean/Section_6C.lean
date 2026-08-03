@@ -530,6 +530,13 @@ open scoped Pointwise
 variable [FiniteDimensional 𝕜 V]
   {W : Type*} [NormedAddCommGroup W] [InnerProductSpace 𝕜 W]
 
+/-! 6.63 Example: approximating the sine function. The degree-{lit}`≤ 5` polynomial
+{lit}`u` minimizing {lit}`∫₋π^π |sin x − u(x)|² dx` — the orthogonal projection of
+{lit}`sin` onto {lit}`𝒫₅` in the {lit}`L²` inner product — approximates {lit}`sin`
+far better than its degree-{lit}`5` Taylor polynomial away from {lit}`0`. This
+integral-inner-product example is recorded in prose; the same minimization is
+Exercise 6C.18. -/
+
 /-! 6.67 The restriction of {lit}`T` to {lit}`(null T)⟂` is an injective map of
 {lit}`(null T)⟂` onto {lit}`range T`. -/
 

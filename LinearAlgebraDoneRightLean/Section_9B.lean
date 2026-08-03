@@ -35,6 +35,12 @@ forms `V⁽ᵐ⁾ₐₗₜ` are mathlib's {name}`AlternatingMap`, written
 `v₁, …, vₘ` becomes application to a function `v : Fin m → V`, and Axler's
 condition "`vⱼ = vₖ` for some `j ≠ k`" is {name}`AlternatingMap.map_eq_zero_of_eq`. -/
 
+/-! 9.26 Example: {lit}`m`-linear forms. Two of Axler's examples: the product
+{lit}`β(v₁, v₂, v₃, v₄) = α(v₁, v₂) ρ(v₃, v₄)` of two bilinear forms is a
+{lit}`4`-linear form; and {lit}`β(T₁, …, Tₘ) = tr(T₁ ⋯ Tₘ)` is an {lit}`m`-linear
+form on {lit}`ℒ(V)`. The type of {lit}`m`-linear forms is {name}`MultilinearMap`
+(9.25); these particular instances are recorded in prose. -/
+
 /-! 9.27 Definition: alternating forms, `V⁽ᵐ⁾ₐₗₜ`
 
 An `m`-linear form is a {name}`MultilinearMap`; it is *alternating* if it
