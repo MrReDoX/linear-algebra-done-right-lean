@@ -9,6 +9,9 @@ import Mathlib.Tactic.Linter.Style
 import Mathlib.Tactic.Recall
 import CompanionHelper
 
+-- Added
+import Mathlib.Tactic.ApplyFun
+
 /-!
 # Axler, *Linear Algebra Done Right* (4e) — Section 1B: Definition of Vector Space
 -/
@@ -179,28 +182,42 @@ theorem neg_one_smul' (v : V) : (-1 : F) • v = -v :=
 
 /-! # Exercises -/
 
+
+-- set_option trace.simp true
+set_option trace.grind true
+
 /-- 1B.1 -/
 @[avoiding neg_neg]
 theorem exercise_1B_1 (v : V) : -(-v) = v := by
-  sorry
+  rw [neg_eq_iff_eq_neg]
 
 /-- 1B.2 -/
 @[avoiding smul_eq_zero, smul_eq_zero_iff_eq, smul_eq_zero_iff_eq']
 theorem exercise_1B_2 (a : F) (v : V) (h : a • v = 0) :
     a = 0 ∨ v = 0 := by
-  sorry
+  by_cases h' : a = 0
+  · left; trivial
+  · right
+    -- apply_fun (fun t ↦ a⁻¹ • t) at h
+    apply_fun a⁻¹ • (·) at h
+    simp_all only [Pi.smul_apply, ne_eq, not_false_eq_true, inv_smul_smul₀, smul_zero]
 
 /-- 1B.3 The unique {lit}`x` is {lit}`(1/3) • (w - v)`, which requires
 {lit}`(3 : F)` to be invertible. We assume {lit}`[CharZero F]`, which forces
 {lit}`(n : F) ≠ 0` for every positive {lit}`n` and is satisfied by {lit}`ℝ` and
 {lit}`ℂ` (Axler's working fields). -/
 theorem exercise_1B_3 [CharZero F] (v w : V) : ∃! x : V, v + (3 : F) • x = w := by
-  sorry
+  use (1/3 : F) • (w - v)
+  simp
+  intro y hy
+  subst hy
+  simp_all only [add_sub_cancel_left, ne_eq, OfNat.ofNat_ne_zero, not_false_eq_true, inv_smul_smul₀]
 
 /-- 1B.4: We show the failure in the {lit}`AddCommGroup` subcomponent —
 the failing axiom lives in the additive structure. -/
-theorem exercise_1B_4 : IsEmpty (AddCommGroup Empty) := by
-  sorry
+theorem exercise_1B_4 : IsEmpty (AddCommGroup Empty) := by exact {
+  false := by intro a; cases a.zero
+}
 
 /-- The textbook's *alternative* module-side axioms (1B.5): the four standard
 smul axioms with {lit}`add_neg_cancel` replaced by {lit}`0 • v = 0`. The
@@ -221,7 +238,12 @@ example (v : V) : (0 : F) • v = 0 := zero_smul' v
 {lit}`AddCommMonoid`, the dropped axiom — additive inverses — must hold. -/
 theorem exercise_1B_5 (V : Type*) [AddCommMonoid V] (m : AxlerAltModule F V) :
     ∀ v : V, ∃ w : V, v + w = 0 := by
-  sorry
+  intro v
+  use m.smul (-1) v
+  nth_rewrite 1 [← m.one_smul v]
+  rw [← m.add_smul 1 (-1) v]
+  simp
+  rw [m.zero_smul]
 
 /-! 1B.6
   For this exercise, instead of a custom extended reals definition we will use
@@ -244,7 +266,15 @@ structure on {lit}`EReal` whose addition is {lit}`addAxler`.
 Note: mathlib cannot not provide an {lit}`AddGroup EReal` instance either —
 {lit}`EReal` even with its addition definition. -/
 theorem exercise_1B_6 : ¬ ∃ g : AddCommGroup EReal, g.add = addAxler := by
-  sorry
+  intro h
+  rcases h with ⟨g, hg⟩
+  -- проверим ассоциативность
+  have h1 : addAxler ⊤ ⊥ = 0 := by simp [addAxler]
+  have h2 : addAxler ⊥ 1 = ⊥ := by sorry
+  have hL : addAxler (addAxler ⊤ ⊥) 1 = 1 := by simp [addAxler]
+  have hR : addAxler ⊤ (addAxler ⊥ 1) = 0 := by sorry
+  have : 1 = 0 := by sorry
+  trivial
 
 /-- 1B.7: {lit}`V^S = (S → V)` is a vector space with pointwise operations. We
 pick the {lit}`Module F` subcomponent — the {lit}`AddCommGroup` part comes for free
@@ -255,13 +285,33 @@ from Pi instances; the reader fills in the scalar-action axioms. -/
     Pi.Function.module, Pi.instZero, Pi.mulAction
 ]
 def exercise_1B_7 (S : Type*) [Nonempty S] : Module F (S → V) where
-  smul a f := fun s => a • f s
-  one_smul := by sorry
-  mul_smul := by sorry
-  smul_zero := by sorry
-  zero_smul := by sorry
-  smul_add := by sorry
-  add_smul := by sorry
+  -- smul a f := fun s => a • f s
+  smul a f := a • (f ·)
+  one_smul := by
+    intro b
+    funext
+    simp_all only [Pi.smul_apply, one_smul]
+  mul_smul := by
+    intro x y f
+    funext z
+    simp_all only [Pi.smul_apply, smul_smul]
+  smul_zero := by
+    intro a
+    funext z
+    simp only [Pi.smul_apply, Pi.zero_apply, smul_zero]
+  zero_smul := by
+    intro f
+    funext z
+    simp only [Pi.smul_apply, zero_smul, Pi.zero_apply]
+  smul_add := by
+    intro a f g
+    funext z
+    simp only [Pi.smul_apply, Pi.add_apply, smul_add]
+  add_smul := by
+    intro r s f
+    funext z
+    simp_all only [Pi.smul_apply, Pi.add_apply]
+    rw [add_smul]
 
 /-- The complexification {lit}`V_C = V × V` of a real vector space {lit}`V`. An
 element {lit}`(u, v)` is written {lit}`u + i·v` in the textbook. The underlying
@@ -269,6 +319,7 @@ additive structure is just the product (mathlib provides it via Pi); the
 content of 1B.8 is the *complex* scalar multiplication. -/
 abbrev Complexification (W : Type*) := W × W
 
+set_option trace.grind true in
 /-- 1B.8: with the textbook's complex scalar multiplication, the complexification
 of a real vector space is a complex vector space. We pick the {lit}`Module ℂ`
 subcomponent — the {lit}`AddCommGroup` part comes for free from the product
@@ -277,11 +328,30 @@ subcomponent — the {lit}`AddCommGroup` part comes for free from the product
 def exercise_1B_8 (W : Type*) [AddCommGroup W] [Module ℝ W] :
     Module ℂ (Complexification W) where
   smul c x := (c.re • x.1 - c.im • x.2, c.re • x.2 + c.im • x.1)
-  one_smul := by sorry
+  one_smul := by
+    intro b
+    rcases b with ⟨u, v⟩
+    show ((1 : ℂ).re • u - (1 : ℂ).im • v, (1 : ℂ).re • v + (1 : ℂ).im • u) = (u, v)
+    simp
   mul_smul := by sorry
-  smul_zero := by sorry
-  zero_smul := by sorry
-  smul_add := by sorry
+  smul_zero := by
+    intro a
+    show (a.re • (0 : W) - a.im • (0 : W), a.re • (0 : W) + a.im • (0 : W)) = 0
+    simp
+  zero_smul := by
+    intro x
+    rcases x with ⟨u, v⟩
+    show ((0 : ℂ).re • u - (0 : ℂ).im • v, (0 : ℂ).re • v + (0 : ℂ).im • u) = 0
+    simp
+  smul_add := by
+    intro a x y
+    rcases x with ⟨u₁, v₁⟩
+    rcases y with ⟨u₂, v₂⟩
+    show (a.re • (u₁ + u₂) - a.im • (v₁ + v₂), a.re • (v₁ + v₂) + a.im • (u₁ + u₂)) =
+      ((a.re • u₁ - a.im • v₁) + (a.re • u₂ - a.im • v₂), (a.re • v₁ + a.im • u₁) + (a.re • v₂ + a.im • u₂))
+    ext <;> simp
+    · sorry
+    · sorry
   add_smul := by sorry
 
 /-! # Appendix: Axler's prescribed operations on {name}`EReal`

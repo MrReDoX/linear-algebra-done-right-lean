@@ -159,8 +159,14 @@ here; both directions are exercise 1C.1 above). -/
 example : Submodule F (Fin 4 → F) where
   carrier := {v | v 2 = 5 * v 3}
   zero_mem' := by simp
-  add_mem' := by sorry
-  smul_mem' := by sorry
+  add_mem' := by
+    intro a b ha hb
+    simp_all only [Fin.isValue, Set.mem_setOf_eq, Pi.add_apply]
+    ring_nf
+  smul_mem' := by
+    intro c x hx
+    simp_all only [Fin.isValue, Set.mem_setOf_eq, Pi.smul_apply, smul_eq_mul]
+    ring_nf
 
 /-! 1.35(b) Continuous real-valued functions on {lit}`[0, 1]` form a subspace
 of {lit}`ℝ^[0,1]`. (Axler uses {lit}`[0, 1]`; we work over all of {lit}`ℝ` —
@@ -169,8 +175,14 @@ the closure proofs are identical.) -/
 example : Submodule ℝ (ℝ → ℝ) where
   carrier := {f | Continuous f}
   zero_mem' := continuous_const
-  add_mem' hf hg := by sorry
-  smul_mem' a _ hf := by sorry
+  add_mem' hf hg := by
+    simp_all only [Set.mem_setOf_eq]
+    exact Continuous.add hf hg
+  smul_mem' a _ hf := by
+    simp_all only [Set.mem_setOf_eq]
+    rw [Pi.smul_def]
+    simp
+    exact Continuous.const_mul hf a
 
 /-! 1.35(c) Differentiable real-valued functions on {lit}`ℝ` form a subspace
 of {lit}`ℝ^ℝ`. -/
@@ -178,8 +190,13 @@ of {lit}`ℝ^ℝ`. -/
 example : Submodule ℝ (ℝ → ℝ) where
   carrier := {f | Differentiable ℝ f}
   zero_mem' := differentiable_const 0
-  add_mem' hf hg := by sorry
-  smul_mem' a _ hf := by sorry
+  add_mem' hf hg := by
+    simp_all only [Set.mem_setOf_eq, Differentiable.add]
+  smul_mem' a _ hf := by
+    simp_all only [Set.mem_setOf_eq]
+    rw [@Pi.smul_def]
+    simp
+    exact Differentiable.const_mul hf a
 
 /-! 1.35(d) Differentiable real-valued functions on {lit}`(0, 3)` such that
 {lit}`f'(2) = 0` form a subspace. We work on all of {lit}`ℝ` and pin the
@@ -189,8 +206,24 @@ derivative being zero at a point. -/
 example : Submodule ℝ (ℝ → ℝ) where
   carrier := {f | Differentiable ℝ f ∧ deriv f 2 = 0}
   zero_mem' := ⟨differentiable_const 0, by simp⟩
-  add_mem' := by sorry
-  smul_mem' := by sorry
+  add_mem' := by
+    intro f g hf hg
+    -- simp_all only [Set.mem_setOf_eq, Differentiable.add, true_and, and_imp]
+    simp_all only [Set.mem_setOf_eq, Differentiable.add, true_and]
+    obtain ⟨left, right⟩ := hf
+    obtain ⟨left_1, right_1⟩ := hg
+    rw [deriv_add (left 2) (left_1 2)]
+    simp_all only [add_zero]
+  smul_mem' := by
+    intro c f hf
+    simp_all only [Set.mem_setOf_eq]
+    obtain ⟨left, right⟩ := hf
+    apply And.intro
+    · rw [Pi.smul_def]
+      simp_all only [smul_eq_mul, differentiable_const, Differentiable.fun_mul]
+    · rw [@Pi.smul_def]
+      simp
+      simp_all only [or_true]
 
 /-! 1.35(e) Sequences of complex numbers with limit {lit}`0` form a subspace
 of {lit}`ℂ^∞`. In Lean, "sequence" is {lit}`ℕ → ℂ` and "has limit {lit}`0`" is
@@ -199,8 +232,17 @@ of {lit}`ℂ^∞`. In Lean, "sequence" is {lit}`ℕ → ℂ` and "has limit {lit
 example : Submodule ℂ (ℕ → ℂ) where
   carrier := {f | Filter.Tendsto f Filter.atTop (nhds 0)}
   zero_mem' := tendsto_const_nhds
-  add_mem' := by sorry
-  smul_mem' := by sorry
+  add_mem' := by
+    intro a b ha hb
+    simp_all only [Set.mem_setOf_eq]
+    rw [@Pi.add_def]
+    sorry
+  smul_mem' := by
+    intro c x hx
+    simp_all only [Set.mem_setOf_eq]
+    rw [@Pi.smul_def]
+    simp
+    sorry
 
 /-! Two distinguished subspaces every space has: the trivial subspace {lit}`{0}`
 ({name}`Bot.bot`) and the whole space {name}`Top.top`. -/
@@ -658,10 +700,23 @@ def exercise_1C_1a :
     Decidable (∃ U : Submodule F (Fin 3 → F),
       (U : Set (Fin 3 → F)) = {v | v 0 + 2 * v 1 + 3 * v 2 = 0}) := by
   -- first line should be `apply isTrue` or `apply isFalse`
-  sorry
+  apply isTrue
+  let f : (Fin 3 → F) →ₗ[F] F := {
+    toFun v := v 0 + 2 * v 1 + 3 * v 2
+    map_add' v w := by simp; ring
+    map_smul' v w := by simp; ring
+  }
+  use LinearMap.ker f
+  simp_all only [Fin.isValue, f]
+  rfl
 
 /-- 1C.1(b) -/
-def exercise_1C_1b :
+-- CharZero F?
+-- IMPORTANT --
+-- CharZero F
+-- IMPORTANT --
+-- Otherwise in case char F = 2 it IS true
+noncomputable def exerci!se_1C_1b [CharZero F] :
     Decidable (∃ U : Submodule F (Fin 3 → F),
       (U : Set (Fin 3 → F)) = {v | v 0 + 2 * v 1 + 3 * v 2 = 4}) := by
   -- first line should be `apply isTrue` or `apply isFalse`
@@ -672,14 +727,51 @@ def exercise_1C_1c :
     Decidable (∃ U : Submodule F (Fin 3 → F),
       (U : Set (Fin 3 → F)) = {v | v 0 * v 1 * v 2 = 0}) := by
   -- first line should be `apply isTrue` or `apply isFalse`
-  sorry
+  apply isFalse
+  intro h
+  choose U hU using h
+  let x : Fin 3 → F := ![1, 1, 0]
+  let y : Fin 3 → F := ![0, 0, 1]
+
+  have hx : x ∈ (U : Set (Fin 3 → F)) := by
+    rw [hU]
+    simp_all only [Fin.isValue, mul_eq_zero, Set.mem_setOf_eq, Matrix.cons_val_zero, one_ne_zero, Matrix.cons_val_one,
+      or_self, Matrix.cons_val, or_true, x]
+  have hy : y ∈ (U : Set (Fin 3 → F)) := by
+    rw [hU]
+    simp_all only [Fin.isValue, mul_eq_zero, Set.mem_setOf_eq, Matrix.cons_val_zero, one_ne_zero, Matrix.cons_val_one,
+      or_self, Matrix.cons_val, or_true, or_false, x, y]
+
+  have hxy : x + y ∈ (U : Set (Fin 3 → F)) := by
+    have := U.add_mem hx hy
+    exact (Submodule.mem_carrier U).mp this
+
+  simp_all only [Fin.isValue, mul_eq_zero, Set.mem_setOf_eq, Matrix.cons_val_zero, one_ne_zero, Matrix.cons_val_one,
+    or_self, Matrix.cons_val, or_true, or_false, Matrix.add_cons, Matrix.head_cons, add_zero, Matrix.tail_cons,
+    zero_add, Matrix.empty_add_empty, x, y]
 
 /-- 1C.1(d) -/
 def exercise_1C_1d :
     Decidable (∃ U : Submodule F (Fin 3 → F),
       (U : Set (Fin 3 → F)) = {v | v 0 = 5 * v 2}) := by
   -- first line should be `apply isTrue` or `apply isFalse`
-  sorry
+  apply isTrue
+  let f : (Fin 3 → F) →ₗ[F] F := {
+    toFun v := v 0 - 5 * v 2
+    map_add' v w := by simp; ring
+    map_smul' v w := by simp; ring
+  }
+  use LinearMap.ker f
+  ext v
+  constructor <;> intro h
+  · have : v 0 - 5 * v 2 = 0 := by
+      change v 0 - 5 * v 2 = 0 at h
+      trivial
+    simp
+    grind
+  · simp_all
+    dsimp [f]
+    linear_combination h
 
 /-- 1C.3 Axler's ambient space is {lit}`ℝ^(-4, 4)`, i.e. the function space
 {lit}`Set.Ioo (-4) 4 → ℝ`. We use the larger {lit}`ℝ → ℝ` instead because
@@ -689,7 +781,37 @@ theorem exercise_1C_3 :
     ∃ U : Submodule ℝ (ℝ → ℝ),
       (U : Set (ℝ → ℝ)) =
         {f | DifferentiableOn ℝ f (Set.Ioo (-4) 4) ∧ deriv f (-1) = 3 * f 2} := by
-  sorry
+  use {
+    carrier := {f | DifferentiableOn ℝ f (Set.Ioo (-4) 4) ∧ deriv f (-1) = 3 * f 2}
+    add_mem' := by
+      intro f g hf hg
+      simp_all
+      obtain ⟨left, right⟩ := hf
+      obtain ⟨left_1, right_1⟩ := hg
+      have h_mem : (-1 : ℝ) ∈ Set.Ioo (-4 : ℝ) 4 := by
+        simp; linarith
+      have hf_at : DifferentiableAt ℝ f (-1) :=
+        left.differentiableAt (IsOpen.mem_nhds isOpen_Ioo h_mem)
+      have hg_at : DifferentiableAt ℝ g (-1) :=
+        left_1.differentiableAt (IsOpen.mem_nhds isOpen_Ioo h_mem)
+      rw [deriv_add hf_at hg_at]
+      rw [right, right_1]
+      ring
+    zero_mem' := by simp
+    smul_mem' := by
+      intro c f hf
+      simp_all
+      obtain ⟨left, right⟩ := hf
+      apply And.intro
+      · exact DifferentiableOn.const_smul left c
+      · have h_mem : (-1 : ℝ) ∈ Set.Ioo (-4 : ℝ) 4 := by simp; linarith
+        have hf_at : DifferentiableAt ℝ f (-1) := by
+          exact left.differentiableAt (IsOpen.mem_nhds isOpen_Ioo h_mem)
+        rw [deriv_const_smul c hf_at, right]
+        dsimp
+        ring_nf
+  }
+  simp
 
 /-- 1C.4 Axler's ambient space is {lit}`ℝ^[0,1]`, i.e. {lit}`Set.Icc 0 1 → ℝ`.
 We use {lit}`ℝ → ℝ` instead so the integral reads as the familiar
@@ -706,7 +828,25 @@ def exercise_1C_5 :
     Decidable (∃ U : Submodule ℂ (Fin 2 → ℂ),
       (U : Set (Fin 2 → ℂ)) = {v | ∀ i, (v i).im = 0}) := by
   -- first line should be `apply isTrue` or `apply isFalse`
-  sorry
+  apply isFalse
+  intro h
+  choose U hU using h
+  let v : Fin 2 → ℂ := fun _ ↦ 1
+  have hv_set : v ∈ {v | ∀ i, (v i).im = 0} := by
+    simp
+    constructor <;> dsimp [v]
+  have hv_U : v ∈ U := by
+    rw [← hU] at hv_set
+    exact (Submodule.mem_toAddSubgroup U).mp hv_set
+  have h_smul_U : Complex.I • v ∈ U := U.smul_mem Complex.I hv_U
+  have h_smul_set : Complex.I • v ∈ {v | ∀ i, (v i).im = 0} := by
+    have := U.smul_mem Complex.I hv_U
+    rw [← hU]
+    exact (Submodule.mem_carrier U).mp h_smul_U
+  have h_zero := h_smul_set 0
+  dsimp [v] at h_zero
+  simp_all only [Fin.forall_fin_two, Fin.isValue, Set.mem_setOf_eq, Pi.smul_apply, smul_eq_mul,
+    Complex.mul_im, Complex.I_re, mul_zero, Complex.I_im, one_mul, zero_add, mul_one, one_ne_zero]
 
 /-- 1C.6(a) -/
 def exercise_1C_6a :
