@@ -31,11 +31,56 @@ theorem isPositive_iff_symmetric_nonneg (T : V →ₗ[𝕜] V) :
     T.IsPositive ↔ LinearMap.IsSymmetric T ∧ ∀ v, 0 ≤ RCLike.re ⟪T v, v⟫_𝕜 :=
   ⟨fun h => ⟨h.1, h.2⟩, fun h => ⟨h.1, h.2⟩⟩
 
+/-! 7.35 Example: positive operators. Axler gives three illustrations of
+Definition 7.34: (a) the operator on {lit}`𝐅²` with matrix {lit}`!![2,-1;-1,1]`;
+(b) an orthogonal projection {lit}`P_U` ("as you should verify"); and (c)
+{lit}`T² + bT + cI` when {lit}`T` is self-adjoint and {lit}`b² < 4c` ("as shown by
+the proof of 7.26"). We formalize the concrete instance (a): its quadratic form is
+{lit}`⟨T(w,z),(w,z)⟩ = 2|w|² - 2 Re(w̄z) + |z|² = |w - z|² + |w|² ≥ 0`. -/
+open scoped Matrix ComplexOrder in
+/-- 7.35(a): the operator on {lit}`ℂ²` whose matrix in the standard basis is
+{lit}`!![2, -1; -1, 1]` is a positive operator, because its quadratic form equals
+{lit}`|w - z|² + |w|² ≥ 0`. -/
+theorem toEuclideanLin_isPositive :
+    (Matrix.toEuclideanLin (!![2, -1; -1, 1] : Matrix (Fin 2) (Fin 2) ℂ)).IsPositive := by
+  rw [Matrix.isPositive_toEuclideanLin_iff, Matrix.posSemidef_iff_dotProduct_mulVec]
+  refine ⟨?_, fun x => ?_⟩
+  · ext i j; fin_cases i <;> fin_cases j <;> simp [Matrix.conjTranspose_apply]
+  · have hval : star x ⬝ᵥ (!![2, -1; -1, 1] : Matrix (Fin 2) (Fin 2) ℂ).mulVec x
+        = ((Complex.normSq (x 0 - x 1) + Complex.normSq (x 0) : ℝ) : ℂ) := by
+      simp only [dotProduct, Fin.sum_univ_two, Matrix.mulVec, Matrix.cons_val_zero,
+        Matrix.cons_val_one, Pi.star_apply, RCLike.star_def, Matrix.of_apply,
+        Matrix.cons_val', Matrix.empty_val', Matrix.cons_val_fin_one]
+      apply Complex.ext <;>
+        simp [Complex.normSq_apply, Complex.mul_re, Complex.mul_im, Complex.sub_re, Complex.sub_im,
+          Complex.conj_re, Complex.conj_im] <;> ring
+    rw [hval]
+    exact_mod_cast add_nonneg (Complex.normSq_nonneg _) (Complex.normSq_nonneg _)
+
 /-! 7.36 Definition: square root
 
 {lit}`R` is a *square root* of {lit}`T` if {lit}`R² = T`. -/
 
 def IsSquareRoot (R T : V →ₗ[𝕜] V) : Prop := R ∘ₗ R = T
+
+/-- The operator {lit}`T(z₁,z₂,z₃) = (z₃,0,0)` on {lit}`ℂ³` (Example 7.37). -/
+def T_7_37 : (Fin 3 → ℂ) →ₗ[ℂ] (Fin 3 → ℂ) where
+  toFun z := ![z 2, 0, 0]
+  map_add' x y := by funext i; fin_cases i <;> simp
+  map_smul' a x := by funext i; fin_cases i <;> simp
+
+/-- The operator {lit}`R(z₁,z₂,z₃) = (z₂,z₃,0)` on {lit}`ℂ³` (Example 7.37). -/
+def R_7_37 : (Fin 3 → ℂ) →ₗ[ℂ] (Fin 3 → ℂ) where
+  toFun z := ![z 1, z 2, 0]
+  map_add' x y := by funext i; fin_cases i <;> simp
+  map_smul' a x := by funext i; fin_cases i <;> simp
+
+/-- 7.37 Example: {lit}`R` is a square root of {lit}`T` — {lit}`R² = T` (the
+square-root relation of Definition 7.36, here stated directly since it is purely
+algebraic and needs no inner product). -/
+theorem R_7_37_sq : R_7_37 ∘ₗ R_7_37 = T_7_37 := by
+  ext z i
+  fin_cases i <;> simp [R_7_37, T_7_37]
 
 /-! 7.38 Characterizations of positive operators
 
@@ -201,6 +246,43 @@ theorem positive_sqrt_unique {T R S : V →ₗ[𝕜] V} (hR : R.IsPositive) (hRT
   have hwS : (S ∘ₗ S) (b i) = ((μ i : ℝ) : 𝕜) • b i := by
     rw [hST]; exact hTs.apply_eigenvectorBasis (rfl : Module.finrank 𝕜 V = n) i
   rw [sqrt_eigenvector hR (hμnn i) hwR, sqrt_eigenvector hS (hμnn i) hwS]
+
+/-- The (positive) operator {lit}`S(x,y) = (x, 2y)` on {lit}`ℝ²` (Example 7.41). -/
+def S_7_41 : (Fin 2 → ℝ) →ₗ[ℝ] (Fin 2 → ℝ) where
+  toFun p := ![p 0, 2 * p 1]
+  map_add' x y := by funext i; fin_cases i <;> simp <;> ring
+  map_smul' a x := by funext i; fin_cases i <;> simp <;> ring
+
+/-- Its positive square root {lit}`√S(x,y) = (x, √2·y)` (Example 7.41). -/
+noncomputable def sqrtS_7_41 : (Fin 2 → ℝ) →ₗ[ℝ] (Fin 2 → ℝ) where
+  toFun p := ![p 0, Real.sqrt 2 * p 1]
+  map_add' x y := by funext i; fin_cases i <;> simp <;> ring
+  map_smul' a x := by funext i; fin_cases i <;> simp <;> ring
+
+/-- 7.41 Example: {lit}`√S` is a square root of {lit}`S`, i.e. {lit}`(√S)² = S`
+(using {lit}`√2 · √2 = 2`). -/
+theorem sqrtS_7_41_sq : sqrtS_7_41 ∘ₗ sqrtS_7_41 = S_7_41 := by
+  have h2 : Real.sqrt 2 * Real.sqrt 2 = 2 := Real.mul_self_sqrt (by norm_num)
+  apply LinearMap.ext; intro p; funext i
+  fin_cases i
+  · show sqrtS_7_41 (sqrtS_7_41 p) 0 = S_7_41 p 0
+    simp [sqrtS_7_41, S_7_41]
+  · show sqrtS_7_41 (sqrtS_7_41 p) 1 = S_7_41 p 1
+    simp only [sqrtS_7_41, S_7_41, LinearMap.coe_mk, AddHom.coe_mk, Matrix.cons_val_one,
+      Matrix.head_cons, Matrix.cons_val_zero]
+    rw [← mul_assoc, h2]
+
+/-- 7.43 If {lit}`T` is a positive operator and {lit}`⟨Tv, v⟩ = 0`, then {lit}`Tv = 0`.
+Writing {lit}`T = R²` with {lit}`R` a positive (hence self-adjoint) square root
+(7.36), {lit}`0 = ⟨Tv, v⟩ = ⟨R(Rv), v⟩ = ⟨Rv, Rv⟩ = ‖Rv‖²`, so {lit}`Rv = 0` and
+thus {lit}`Tv = R(Rv) = 0`. -/
+theorem apply_eq_zero_of_isPositive_of_inner_eq_zero {T : V →ₗ[𝕜] V} (hT : T.IsPositive)
+    {v : V} (hv : ⟪T v, v⟫_𝕜 = 0) : T v = 0 := by
+  obtain ⟨R, hRpos, hRT⟩ := exists_positive_sqrt hT
+  have hRR : ⟪R v, R v⟫_𝕜 = 0 := by
+    rw [← hv, ← hRT, LinearMap.comp_apply]; exact (hRpos.1 (R v) v).symm
+  have hRv : R v = 0 := inner_self_eq_zero.mp hRR
+  rw [← hRT, LinearMap.comp_apply, hRv, map_zero]
 
 /-! # Exercises 7C -/
 

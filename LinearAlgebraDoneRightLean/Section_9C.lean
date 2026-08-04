@@ -26,6 +26,9 @@ import Mathlib.Tactic.Linarith
 import Mathlib.Tactic.Ring
 import Mathlib.Tactic.Linter.Style
 import LinearAlgebraDoneRightLean.Section_3D
+import LinearAlgebraDoneRightLean.Section_7C
+import LinearAlgebraDoneRightLean.Section_7D
+import LinearAlgebraDoneRightLean.Section_7E
 import CompanionHelper
 
 /-!
@@ -217,15 +220,30 @@ theorem det_dualMap_eq [Finite F V] (T : V →ₗ[F] V) :
     LinearMap.det T.dualMap = LinearMap.det T :=
   LinearMap.det_dualMap T
 
-/-! 9.56 (c) {lit}`det(T*) = det T` for an operator on an inner-product space.
+/-! 9.56 (c) {lit}`det(T*) = conj(det T)` for an operator on an inner-product
+space. -/
 
-**Deferred.** Axler proves this by choosing an orthonormal basis, in which the
-matrix of the adjoint {lit}`T*` is the conjugate transpose of the matrix of
-{lit}`T`, and then invoking part (a). Formalizing it requires the inner-product /
-adjoint machinery of Chapter 7 (orthonormal bases, {lit}`ℳ(T*) = ℳ(T)*`), which
-is outside the scope of this section's imports. The real content — that the
-determinant is unchanged under transpose and dual — is captured by
-{lit}`det_transpose_matrix` and {lit}`det_dualMap_eq` above. -/
+section InnerProductDet
+
+open scoped ComplexConjugate
+
+variable {𝕜 : Type*} [RCLike 𝕜]
+  {E : Type*} [NormedAddCommGroup E] [InnerProductSpace 𝕜 E] [FiniteDimensional 𝕜 E]
+
+/-- 9.56 (c) The determinant of the adjoint is the conjugate of the determinant.
+Following Axler: in an orthonormal basis the matrix of {lit}`T*` is the conjugate
+transpose of the matrix of {lit}`T` ({name}`LinearMap.toMatrix_adjoint`), so the
+result follows from part (a) via {name}`Matrix.det_conjTranspose`. -/
+theorem det_adjoint_eq_conj (T : E →ₗ[𝕜] E) :
+    LinearMap.det (LinearMap.adjoint T) = conj (LinearMap.det T) := by
+  classical
+  let b := stdOrthonormalBasis 𝕜 E
+  rw [← LinearMap.det_toMatrix b.toBasis (LinearMap.adjoint T),
+    LinearMap.toMatrix_adjoint b b T, Matrix.det_conjTranspose,
+    ← LinearMap.det_toMatrix b.toBasis T]
+  rfl
+
+end InnerProductDet
 
 /-! 9.57 Helpful results in evaluating determinants. All follow from the fact
 that the determinant is an alternating multilinear form in the columns (9.45)
@@ -268,25 +286,101 @@ theorem det_updateRow_add_smul {n : ℕ} (A : Matrix (Fin n) (Fin n) F)
     (A.updateRow i (A i + c • A j)).det = A.det :=
   Matrix.det_updateRow_add_smul_self A h c
 
-/-! 9.58 Every unitary operator has determinant with absolute value {lit}`1`.
+section InnerProductDetOps
 
-**Deferred.** The proof uses {lit}`I = S*S` for a unitary {lit}`S` (7.53),
-{lit}`det(S*) = conj(det S)` (9.56(c)), and 9.49(a) to get {lit}`|det S|² = 1`.
-This requires inner-product-space structure, the adjoint, and 9.56(c) — all
-Chapter 7 machinery not available in this section's imports. -/
+open scoped ComplexConjugate
 
-/-! 9.59 Every positive operator has nonnegative determinant.
+variable {𝕜 : Type*} [RCLike 𝕜]
+  {E : Type*} [NormedAddCommGroup E] [InnerProductSpace 𝕜 E] [FiniteDimensional 𝕜 E]
 
-**Deferred.** By the spectral theorem there is an orthonormal basis of
-eigenvectors, so {lit}`det T` is a product of the (nonnegative) eigenvalues.
-This needs inner products, positivity, and the spectral theorem (Chapter 7). -/
+/-- 9.58 Every unitary operator has determinant with absolute value {lit}`1`.
+Following Axler: {lit}`S* S = I` (7.53), so {lit}`conj(det S)·det S = det(S*)·det S
+= det(S* S) = 1` using 9.56(c) ({name}`det_adjoint_eq_conj`); taking norms gives
+{lit}`‖det S‖² = 1`. -/
+theorem det_unitary_norm_eq_one {S : E →ₗ[𝕜] E} (h : LADR.Section_7D.IsUnitary S) :
+    ‖LinearMap.det S‖ = 1 := by
+  have hSS : LinearMap.adjoint S ∘ₗ S = 1 :=
+    ((LADR.Section_7D.isUnitary_iff_adjoint S).mp h).1
+  have hdet : conj (LinearMap.det S) * LinearMap.det S = 1 := by
+    rw [← det_adjoint_eq_conj, ← LinearMap.det_comp, hSS, Module.End.one_eq_id,
+      LinearMap.det_id]
+  have hnorm := congrArg norm hdet
+  rw [norm_mul, RCLike.norm_conj, norm_one] at hnorm
+  nlinarith [norm_nonneg (LinearMap.det S)]
+
+/-- 9.59 Every positive operator has nonnegative determinant. Following Axler:
+a positive {lit}`T` has a positive (hence self-adjoint) square root {lit}`R` with
+{lit}`R² = T` (7.39), so {lit}`det T = (det R)²`; and {lit}`det R` is real because
+{lit}`R` self-adjoint gives {lit}`conj(det R) = det(R*) = det R` (9.56(c)). Hence
+{lit}`det T` is the square of a real number, so it is a nonnegative real. -/
+theorem det_positive_nonneg {T : E →ₗ[𝕜] E} (hT : T.IsPositive) :
+    ∃ c : ℝ, 0 ≤ c ∧ LinearMap.det T = (c : 𝕜) := by
+  obtain ⟨R, hR, hRT⟩ := LADR.Section_7C.exists_positive_sqrt hT
+  have hsym : LinearMap.adjoint R = R :=
+    (LinearMap.isSymmetric_iff_isSelfAdjoint R).mp hR.1
+  have hreal : conj (LinearMap.det R) = LinearMap.det R := by
+    rw [← det_adjoint_eq_conj, hsym]
+  have hdreal : ((RCLike.re (LinearMap.det R) : ℝ) : 𝕜) = LinearMap.det R :=
+    RCLike.conj_eq_iff_re.mp hreal
+  refine ⟨(RCLike.re (LinearMap.det R)) ^ 2, sq_nonneg _, ?_⟩
+  have hTd : LinearMap.det T = LinearMap.det R * LinearMap.det R := by
+    rw [← hRT, LinearMap.det_comp]
+  rw [hTd, ← hdreal]
+  push_cast
+  ring
 
 /-! 9.60 {lit}`|det T|` equals the product of the singular values of {lit}`T`,
 equivalently {lit}`√det(T*T)`.
 
-**Deferred.** The statement and proof rest on the adjoint {lit}`T*`, the
-singular-value decomposition, and 9.56(c) — inner-product machinery from
-Chapter 7 (Sections 7E–7F) not developed here. -/
+We prove the {lit}`√det(T*T)` characterization directly: {lit}`det(T* T) =
+conj(det T)·det T = ‖det T‖²` by 9.56(c) ({name}`det_adjoint_eq_conj`), so
+{lit}`‖det T‖ = √det(T* T)`. The equivalent *product of singular values* form
+{lit}`|det T| = s₁ ⋯ sₙ` is proved below in
+{lit}`norm_det_eq_prod_singularValues`: since {lit}`T* T` acts as {lit}`sₖ²` on
+the SVD eigenbasis (7.72, Section 7E), {lit}`det(T* T) = ∏ sₖ²`. -/
+
+/-- 9.60 auxiliary: {lit}`det(T* T) = ‖det T‖²` (a nonnegative real). -/
+theorem det_adjoint_comp_self (T : E →ₗ[𝕜] E) :
+    LinearMap.det (LinearMap.adjoint T ∘ₗ T) = ((‖LinearMap.det T‖ ^ 2 : ℝ) : 𝕜) := by
+  rw [LinearMap.det_comp, det_adjoint_eq_conj, RCLike.conj_mul]; push_cast; ring
+
+/-- 9.60 ({lit}`√det(T*T)` form): {lit}`‖det T‖ = √det(T* T)`. -/
+theorem norm_det_eq_sqrt_det_adjoint_comp_self (T : E →ₗ[𝕜] E) :
+    ‖LinearMap.det T‖ =
+      Real.sqrt (RCLike.re (LinearMap.det (LinearMap.adjoint T ∘ₗ T))) := by
+  rw [det_adjoint_comp_self, RCLike.ofReal_re, Real.sqrt_sq (norm_nonneg _)]
+
+/-- The determinant of an operator diagonal on a basis is the product of its
+diagonal scalars. -/
+theorem det_eq_prod_of_apply_eq_smul {K W : Type*} [Field K] [AddCommGroup W] [Module K W]
+    {n : ℕ} (b : Module.Basis (Fin n) K W) (f : W →ₗ[K] W) (d : Fin n → K)
+    (hf : ∀ i, f (b i) = d i • b i) : LinearMap.det f = ∏ i, d i := by
+  rw [← LinearMap.det_toMatrix b, show LinearMap.toMatrix b b f = Matrix.diagonal d from ?_,
+    Matrix.det_diagonal]
+  ext i j
+  rw [LinearMap.toMatrix_apply, hf, map_smul, Module.Basis.repr_self, Finsupp.smul_single,
+    smul_eq_mul, mul_one, Finsupp.single_apply, Matrix.diagonal_apply]
+  rcases eq_or_ne i j with h | h
+  · subst h; simp
+  · rw [if_neg (Ne.symm h), if_neg h]
+
+/-- 9.60 (product-of-singular-values form): {lit}`‖det T‖ = s₁ ⋯ sₙ`, the product
+of the singular values. Since {lit}`T* T` acts as {lit}`sₖ²` on the SVD eigenbasis
+(7.72), {lit}`det(T* T) = ∏ sₖ²`, so {lit}`‖det T‖ = √det(T* T) = ∏ sₖ`. -/
+theorem norm_det_eq_prod_singularValues (T : E →ₗ[𝕜] E) :
+    ‖LinearMap.det T‖ = ∏ i, LADR.Section_7E.singularValues T i := by
+  set b := (LADR.Section_7E.svdBasis T).toBasis with hb
+  have hf : ∀ i, (LinearMap.adjoint T ∘ₗ T) (b i)
+      = (((LADR.Section_7E.singularValues T i) ^ 2 : ℝ) : 𝕜) • b i := by
+    intro i
+    rw [hb, OrthonormalBasis.coe_toBasis]
+    exact LADR.Section_7E.adjComp_apply_svdBasis T i
+  rw [norm_det_eq_sqrt_det_adjoint_comp_self,
+    det_eq_prod_of_apply_eq_smul b (LinearMap.adjoint T ∘ₗ T) _ hf,
+    ← RCLike.ofReal_prod, RCLike.ofReal_re, Finset.prod_pow,
+    Real.sqrt_sq (Finset.prod_nonneg fun i _ => LADR.Section_7E.singularValues_nonneg T i)]
+
+end InnerProductDetOps
 
 /-- 9.61 An operator {lit}`T ∈ ℒ(ℝⁿ)` changes volume by the factor {lit}`|det T|`:
 {lit}`volume T(Ω) = |det T| · volume Ω`. This is mathlib's Haar change-of-variables
@@ -297,6 +391,18 @@ theorem volume_image_eq_9_61 {n : ℕ}
     MeasureTheory.volume (T '' Ω) =
       ENNReal.ofReal |LinearMap.det T| * MeasureTheory.volume Ω :=
   MeasureTheory.Measure.addHaar_image_linearMap MeasureTheory.volume T Ω
+
+/-- **7.111** (singular-values form of the volume change) On {lit}`ℝⁿ` an operator
+{lit}`T` scales volume by the product of its singular values:
+{lit}`volume T(Ω) = (s₁ ⋯ sₙ) · volume Ω`. This is 9.61 with the Jacobian
+{lit}`|det T|` rewritten as {lit}`s₁ ⋯ sₙ` by 9.60
+({name}`LADR.Section_9C.norm_det_eq_prod_singularValues`). -/
+theorem volume_image_eq_prod_singularValues {n : ℕ}
+    (T : EuclideanSpace ℝ (Fin n) →ₗ[ℝ] EuclideanSpace ℝ (Fin n))
+    (Ω : Set (EuclideanSpace ℝ (Fin n))) :
+    MeasureTheory.volume (T '' Ω) =
+      ENNReal.ofReal (∏ i, LADR.Section_7E.singularValues T i) * MeasureTheory.volume Ω := by
+  rw [volume_image_eq_9_61, ← Real.norm_eq_abs, norm_det_eq_prod_singularValues]
 
 /-! 9.62 If {lit}`F = ℂ`, the characteristic polynomial of {lit}`T` equals
 {lit}`(z − λ₁)^{d₁} ⋯ (z − λₘ)^{dₘ}`, where {lit}`λ₁, …, λₘ` are the distinct
@@ -375,12 +481,63 @@ theorem charpoly_coeff_det {n : ℕ} (A : Matrix (Fin n) (Fin n) F) :
   have h := Matrix.det_eq_sign_charpoly_coeff A
   rwa [Fintype.card_fin] at h
 
-/-! 9.66 Hadamard's inequality: for an {lit}`n×n` matrix {lit}`A` with columns
+open scoped Matrix in
+/-- 9.66 Hadamard's inequality: for an {lit}`n×n` matrix {lit}`A` with columns
 {lit}`v₁, …, vₙ`, {lit}`|det A| ≤ ∏ₖ ‖vₖ‖`.
 
-**Deferred.** Axler's proof uses the QR factorization (7.58), the fact that a
-unitary matrix has {lit}`|det| = 1` (9.58), and the standard inner-product norms
-on {lit}`Fⁿ`. These belong to Chapter 7 and are not available here. -/
+Following Axler: if the columns are dependent then {lit}`det A = 0` and the bound
+is trivial; otherwise take a QR factorization {lit}`A = QR` (7.58). Then
+{lit}`|det A| = |det R| = ∏ₖ |Rₖₖ|` (Q unitary has {lit}`|det| = 1` (9.58), R
+triangular), and {lit}`|Rₖₖ| ≤ ‖vₖ‖` because {lit}`‖vₖ‖² = (A*A)ₖₖ = (R*R)ₖₖ =
+∑ⱼ |Rⱼₖ|² ≥ |Rₖₖ|²` (using {lit}`Q*Q = I`). -/
+theorem hadamard_inequality {𝕜 : Type*} [RCLike 𝕜] {n : ℕ}
+    (A : Matrix (Fin n) (Fin n) 𝕜) :
+    ‖A.det‖ ≤ ∏ i, ‖(EuclideanSpace.equiv (Fin n) 𝕜).symm (Aᵀ i)‖ := by
+  classical
+  set col : Fin n → EuclideanSpace 𝕜 (Fin n) :=
+    fun i => (EuclideanSpace.equiv (Fin n) 𝕜).symm (Aᵀ i) with hcol
+  by_cases hindep : LinearIndependent 𝕜 col
+  · obtain ⟨Q, R, hQ, hRtri, _, hAQR⟩ := LADR.Section_7D.QR_factorization A hindep
+    have hRupper : R.BlockTriangular id := hRtri
+    have hQdet : ‖Q.det‖ = 1 := by
+      have hu := (unitary.mem_iff.mp (Matrix.det_of_mem_unitary hQ)).1
+      rw [RCLike.star_def, RCLike.conj_mul] at hu
+      have h2 : ‖Q.det‖ ^ 2 = 1 := by exact_mod_cast hu
+      rw [← Real.sqrt_sq (norm_nonneg Q.det), h2, Real.sqrt_one]
+    have hnormdet : ‖A.det‖ = ∏ i, ‖R i i‖ := by
+      rw [hAQR, Matrix.det_mul, norm_mul, hQdet, one_mul,
+        Matrix.det_of_upperTriangular hRupper, norm_prod]
+    rw [hnormdet]
+    refine Finset.prod_le_prod (fun i _ => norm_nonneg _) (fun i _ => ?_)
+    -- ‖R i i‖ ≤ ‖col i‖
+    have hARR : Aᴴ * A = Rᴴ * R := by
+      have hQQ : Qᴴ * Q = 1 := (Matrix.mem_unitaryGroup_iff').mp hQ
+      rw [hAQR, Matrix.conjTranspose_mul, Matrix.mul_assoc, ← Matrix.mul_assoc Qᴴ,
+        hQQ, Matrix.one_mul]
+    have hcolsq : ‖col i‖ ^ 2 = ∑ k, ‖A k i‖ ^ 2 := by
+      rw [hcol, EuclideanSpace.norm_eq, Real.sq_sqrt (by positivity)]
+      rfl
+    have hARentry : ∑ k, ‖A k i‖ ^ 2 = ∑ k, ‖R k i‖ ^ 2 := by
+      have hdiag := congrFun (congrFun hARR i) i
+      simp only [Matrix.mul_apply, Matrix.conjTranspose_apply, RCLike.star_def,
+        RCLike.conj_mul] at hdiag
+      have := congrArg RCLike.re hdiag
+      push_cast at this ⊢
+      simpa using this
+    have hge : ‖R i i‖ ^ 2 ≤ ‖col i‖ ^ 2 := by
+      rw [hcolsq, hARentry]
+      refine Finset.single_le_sum (f := fun k => ‖R k i‖ ^ 2) (fun k _ => ?_)
+        (Finset.mem_univ i)
+      positivity
+    have h1 := Real.sqrt_le_sqrt hge
+    rwa [Real.sqrt_sq (norm_nonneg _), Real.sqrt_sq (norm_nonneg _)] at h1
+  · have hdet0 : A.det = 0 := by
+      apply Matrix.det_eq_zero_of_not_linearIndependent_cols
+      intro hdep
+      exact hindep (hdep.map' ((EuclideanSpace.equiv (Fin n) 𝕜).symm.toLinearEquiv.toLinearMap)
+        (LinearMap.ker_eq_bot.mpr (EuclideanSpace.equiv (Fin n) 𝕜).symm.injective))
+    rw [hdet0, norm_zero]
+    exact Finset.prod_nonneg (fun i _ => norm_nonneg _)
 
 /-! 9.67 Determinant of a Vandermonde matrix:
 {lit}`det V(β₁, …, βₙ) = ∏_{1 ≤ j < k ≤ n} (βₖ − βⱼ)`
@@ -521,9 +678,9 @@ theorem exercise_9C_17 (a b c : ℝ) (ha : 0 < a) (hb : 0 < b) (hc : 0 < c)
         MeasureTheory.volume {x : EuclideanSpace ℝ (Fin 3) | ‖x‖ < 1} := by
   sorry
 
-/-! 9C.18–9C.20 (deferred): Hadamard's inequality (9.66) and its equality case /
-matrix-entry bound. Deferred — Hadamard's inequality itself is not developed in
-this project, and 9C.19/20 build directly on it. -/
+/-! 9C.18–9C.20: Hadamard's inequality (9.66) is proved above as
+{lit}`hadamard_inequality`, which is Exercise 9C.18. Its equality case (9C.19) and
+the matrix-entry bound (9C.20) build on it and are left as exercises. -/
 
 /-- 9C.21 The determinant is the unique multiplicative function on complex square
 matrices that agrees with the product of diagonal entries on diagonal matrices. -/

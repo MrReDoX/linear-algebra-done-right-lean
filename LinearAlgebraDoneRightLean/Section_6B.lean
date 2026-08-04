@@ -237,6 +237,13 @@ theorem span_gram_schmidt_initial {ι : Type*} [LinearOrder ι]
       Submodule.span 𝕜 (f '' Set.Iic k) :=
   span_gramSchmidt_Iic 𝕜 f k
 
+/-! 6.34 Example: an orthonormal basis of {lit}`𝒫₂(ℝ)`. Applying Gram–Schmidt
+(6.32) to {lit}`1, x, x²` under {lit}`⟨p, q⟩ = ∫₋₁¹ pq` yields (normalized) Legendre
+polynomials. This uses the {lit}`L²` inner product on polynomials — an analysis
+construction outside mathlib's typeclass inner products (see {lit}`L2Interval.lean`)
+— so it is recorded in prose; the analogous Gram–Schmidt over {lit}`∫₀¹` is
+Exercise 6B.8. -/
+
 /-! 6.35 Existence of an orthonormal basis
 
 Every finite-dimensional inner product space has an orthonormal basis. -/
@@ -385,6 +392,11 @@ example (z : EuclideanSpace 𝕜 (Fin 3)) :
   simp only [PiLp.inner_apply, RCLike.inner_apply, Fin.sum_univ_three, Matrix.cons_val,
     Matrix.cons_val_zero, Matrix.cons_val_one, map_ofNat, map_neg, map_one, Fin.isValue]
   ring
+
+/-! 6.41 Example: a linear functional on {lit}`𝒫₅(ℝ)`. The map
+{lit}`φ(p) = ∫₋₁¹ p(t) cos(πt) dt` is a linear functional on {lit}`𝒫₅(ℝ)`, using the
+{lit}`L²` integral pairing (see 6.34); the closely related Riesz computation on
+{lit}`𝒫₂(ℝ)` is 6.44. Recorded in prose. -/
 
 /-! 6.42 Riesz representation theorem
 

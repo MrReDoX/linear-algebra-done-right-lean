@@ -9,6 +9,9 @@ import Mathlib.LinearAlgebra.Dimension.Constructions
 import Mathlib.LinearAlgebra.Trace
 import Mathlib.Analysis.InnerProductSpace.Basic
 import Mathlib.Analysis.InnerProductSpace.Positive
+import Mathlib.Analysis.InnerProductSpace.Dual
+import Mathlib.Analysis.InnerProductSpace.Spectrum
+import Mathlib.Analysis.InnerProductSpace.PiL2
 import Mathlib.MeasureTheory.Integral.IntervalIntegral.Basic
 import Mathlib.Algebra.Polynomial.Derivative
 import Mathlib.Tactic.Linarith
@@ -277,17 +280,52 @@ theorem isSymm_iff_exists_diag [FiniteDimensional F V] (B : BilinForm F V) :
 
 /-! 9.13 Diagonalization of a symmetric bilinear form by an orthonormal basis
 
-**Deferred (proof requires the real spectral theorem).** Axler's proof bridges a
-symmetric bilinear form {lit}`ρ` on a real inner product space to the self-adjoint
-operator {lit}`T` with {lit}`ℳ(T) = ℳ(ρ)` in an orthonormal basis, invokes the
-real spectral theorem (7.29) to diagonalize {lit}`T` by an orthonormal basis, and
-uses that the change-of-basis matrix is unitary ({lit}`C⁻¹ = Cᵗ`) so that the
-congruence {lit}`CᵗℳC` coincides with the similarity {lit}`C⁻¹ℳC`. Assembling
-this in mathlib requires the Riesz representation bridge between bilinear forms and
-operators together with the finite-dimensional real spectral theorem and the
-unitary change-of-basis bookkeeping; that machinery is substantial and orthogonal
-to the algebraic core of this section, so we state the result but leave it
-unformalized here rather than introduce a silent gap. -/
+Axler's proof: on a real inner product space, represent the symmetric bilinear
+form {lit}`ρ` by the self-adjoint operator {lit}`T` with {lit}`⟨T u, w⟩ = ρ(u, w)`
+(Riesz representation, {name}`InnerProductSpace.toDual`), diagonalize {lit}`T` by an
+orthonormal eigenbasis via the real spectral theorem (7.29,
+{name}`LinearMap.IsSymmetric.eigenvectorBasis`), and read off
+{lit}`ρ(eᵢ, eⱼ) = ⟨T eᵢ, eⱼ⟩ = λᵢ⟨eᵢ, eⱼ⟩ = λᵢ δᵢⱼ`, a diagonal matrix. -/
+
+section SpectralBilinear
+
+open Module (finrank)
+open scoped RealInnerProductSpace
+
+variable {W : Type*} [NormedAddCommGroup W] [InnerProductSpace ℝ W]
+  [FiniteDimensional ℝ W]
+
+/-- The self-adjoint operator representing a bilinear form via the inner product:
+{lit}`⟨bilinOp B u, w⟩ = B u w` (Riesz representation). -/
+noncomputable def bilinOp (B : LinearMap.BilinForm ℝ W) : W →ₗ[ℝ] W :=
+  (InnerProductSpace.toDual ℝ W).symm.toLinearMap ∘ₗ
+    (LinearMap.toContinuousLinearMap : (W →ₗ[ℝ] ℝ) ≃ₗ[ℝ] (W →L[ℝ] ℝ)).toLinearMap ∘ₗ B
+
+theorem bilinOp_inner (B : LinearMap.BilinForm ℝ W) (u w : W) :
+    ⟪bilinOp B u, w⟫ = B u w := by
+  show ⟪(InnerProductSpace.toDual ℝ W).symm ((B u).toContinuousLinearMap), w⟫ = B u w
+  rw [InnerProductSpace.toDual_symm_apply]
+  rfl
+
+theorem bilinOp_isSymmetric {B : LinearMap.BilinForm ℝ W} (hB : B.IsSymm) :
+    LinearMap.IsSymmetric (bilinOp B) := by
+  intro u w
+  rw [bilinOp_inner, real_inner_comm, bilinOp_inner, hB.eq u w]
+
+/-- 9.13 On a real inner product space, every symmetric bilinear form has a
+diagonal matrix with respect to some orthonormal basis. -/
+theorem exists_orthonormal_diag (B : LinearMap.BilinForm ℝ W) (hB : B.IsSymm) :
+    ∃ e : OrthonormalBasis (Fin (finrank ℝ W)) ℝ W,
+      Matrix.IsDiag (LinearMap.BilinForm.toMatrix e.toBasis B) := by
+  have hT : LinearMap.IsSymmetric (bilinOp B) := bilinOp_isSymmetric hB
+  refine ⟨hT.eigenvectorBasis rfl, ?_⟩
+  intro i j hij
+  rw [LinearMap.BilinForm.toMatrix_apply, OrthonormalBasis.coe_toBasis,
+    ← bilinOp_inner, hT.apply_eigenvectorBasis rfl i, inner_smul_left,
+    (hT.eigenvectorBasis rfl).orthonormal.2 hij]
+  simp
+
+end SpectralBilinear
 
 /-! Now we turn to alternating bilinear forms. -/
 
@@ -510,9 +548,29 @@ theorem diagonalize_quadratic [FiniteDimensional F V] (q : QuadraticForm F V) :
   rw [smul_eq_mul, pow_two]
 
 /-! (b) When {lit}`F = ℝ` and {lit}`V` is an inner product space, the diagonalizing
-basis in (a) can be taken orthonormal. **Deferred**: this is the quadratic-form
-restatement of 9.13, and inherits that result's dependence on the real spectral
-theorem (see the note at 9.13). -/
+basis in (a) can be taken orthonormal — the quadratic-form restatement of 9.13. -/
+
+theorem diagonalize_quadratic_orthonormal {W : Type*} [NormedAddCommGroup W]
+    [InnerProductSpace ℝ W] [FiniteDimensional ℝ W] (q : QuadraticForm ℝ W) :
+    ∃ (e : OrthonormalBasis (Fin (finrank ℝ W)) ℝ W) (l : Fin (finrank ℝ W) → ℝ),
+      ∀ x : Fin (finrank ℝ W) → ℝ,
+        q (∑ i, x i • e i) = ∑ i, l i * (x i) ^ 2 := by
+  obtain ⟨e, hdiag⟩ :=
+    exists_orthonormal_diag _
+      (LinearMap.BilinForm.isSymm_iff.mpr (QuadraticForm.associated_isSymm ℝ q))
+  have hv : LinearMap.IsOrthoᵢ (QuadraticMap.associated q) ⇑e.toBasis := by
+    intro i j hij
+    have h0 := hdiag hij
+    simp only [LinearMap.BilinForm.toMatrix_apply] at h0
+    exact h0
+  refine ⟨e, fun i => q (e i), fun x => ?_⟩
+  have hrepr := QuadraticMap.basisRepr_eq_of_iIsOrtho q e.toBasis hv
+  rw [show q (∑ i, x i • e i) = q.basisRepr e.toBasis x from ?_, hrepr,
+    QuadraticMap.weightedSumSquares_apply]
+  · refine Finset.sum_congr rfl (fun i _ => ?_)
+    rw [OrthonormalBasis.coe_toBasis, smul_eq_mul, pow_two]
+  · rw [QuadraticMap.basisRepr_apply]
+    simp only [OrthonormalBasis.coe_toBasis]
 
 /-! # Exercises 9A -/
 

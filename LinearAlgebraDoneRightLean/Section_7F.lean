@@ -4,6 +4,8 @@ import Mathlib.Analysis.InnerProductSpace.PiL2
 import Mathlib.Analysis.Normed.Operator.NNNorm
 import Mathlib.Analysis.InnerProductSpace.Dual
 import Mathlib.Topology.Algebra.Module.FiniteDimension
+import Mathlib.Data.Fin.Tuple.Sort
+import Mathlib.LinearAlgebra.FiniteDimensional.Lemmas
 import LinearAlgebraDoneRightLean.Section_7C
 import LinearAlgebraDoneRightLean.Section_7D
 import LinearAlgebraDoneRightLean.Section_7E
@@ -21,9 +23,10 @@ decomposition (Section 7E):
   factors as an isometry composed with the positive square root of {lit}`T* T`;
 * the geometry of *ellipsoids*, *parallelepipeds*, *boxes*, and *volume* (7.95–7.111).
 
-The norm and polar-decomposition results are proved in full. The measure-theoretic
-volume results (7.108–7.111) and a few set-geometry image results are deferred in
-prose with reasons, as flagged below.
+The norm and polar-decomposition results are proved in full, as is the headline
+volume theorem 7.111 (proved measure-theoretically in 9C). Only Axler's
+deliberately informal box/volume *definitions* 7.108–7.110 and a few set-geometry
+image results remain in prose with reasons, as flagged below.
 -/
 
 namespace LADR.Section_7F
@@ -60,9 +63,14 @@ theorem opNorm_eq_sSup_closedBall (T : V →ₗ[𝕜] W) :
   rw [opNorm, ← ContinuousLinearMap.sSup_unitClosedBall_eq_norm (LinearMap.toContinuousLinearMap T)]
   simp
 
+/-! 7.82 For {lit}`T ∈ ℒ(V, W)` and {lit}`v ∈ V`, {lit}`‖Tv‖ ≤ s₁‖v‖` with
+{lit}`s₁` the largest singular value. Proved below as
+{lit}`norm_apply_le_iSup_singularValues`, once the norm and its
+singular-value characterization (7.88(a)/7.89) are available. -/
+
 /-! 7.85 The maximum in 7.86 equals the largest singular value; the "≥ each singular
-value" half is {lit}`singularValues_le_opNorm` below and the reverse bound is the
-deferred 7.88(a). -/
+value" half is {lit}`singularValues_le_opNorm` below and the reverse bound is
+7.88(a), proved below as {lit}`opNorm_eq_iSup_singularValues`. -/
 
 /-- 7.89 The fundamental inequality {lit}`‖T v‖ ≤ ‖T‖ ‖v‖`. -/
 theorem opNorm_apply_le (T : V →ₗ[𝕜] W) (v : V) : ‖T v‖ ≤ opNorm T * ‖v‖ := by
@@ -104,21 +112,69 @@ theorem singularValues_le_opNorm (T : V →ₗ[𝕜] W) (i : Fin (finrank 𝕜 V
   rw [norm_image_svdBasis, (svdBasis T).orthonormal.1 i, mul_one] at h
   exact h
 
-/-! 7.88(a) / 7.85 {lit}`‖T‖` equals the largest singular value of {lit}`T`.
+/-- 7.88(a) / 7.85: the operator norm {lit}`‖T‖` equals the supremum of the
+singular values of {lit}`T` (a supremum, so the {lit}`V = 0` case is handled).
 
-**Deferred (upper bound).** The inequality {lit}`sₖ ≤ ‖T‖` is
-{lit}`singularValues_le_opNorm` above. The reverse bound
-{lit}`‖T‖ ≤ maxₖ sₖ` is the operator-norm ↔ singular-value bridge: from the SVD
-{lit}`T v = ∑ sₖ ⟨v, eₖ⟩ fₖ` one gets
-{lit}`‖T v‖² = ∑ sₖ² |⟨v, eₖ⟩|² ≤ (max sₖ)² ‖v‖²` via Parseval/Bessel (6.26/6.30).
-Formalizing this squared-norm expansion against the partially-orthonormal image
-frame {lit}`fₖ` (orthonormal only on the positive-singular-value indices) plus the
-{lit}`Finset.sup'`/`iSup` maximum (with the empty-index edge case when
-{lit}`V = 0`) is a sizeable analytic development; it is stated here in prose to
-avoid a `sorry` on a numbered theorem.
+Following Axler: the easy bound {lit}`singularValues_le_opNorm` gives one
+inequality; for the reverse, expand {lit}`‖T v‖²` as {lit}`⟨v, T* T v⟩` and use
+the eigenbasis of {lit}`T* T` together with Parseval to bound it by
+{lit}`(sup s)² ‖v‖²`, then take square roots. -/
+theorem opNorm_eq_iSup_singularValues (T : V →ₗ[𝕜] W) :
+    opNorm T = ⨆ i, singularValues T i := by
+  have hop_nn : 0 ≤ opNorm T := by rw [opNorm]; exact norm_nonneg _
+  have hbdd : BddAbove (Set.range (singularValues T)) := (Set.finite_range _).bddAbove
+  have hsup_nn : 0 ≤ ⨆ i, singularValues T i := Real.iSup_nonneg (singularValues_nonneg T)
+  refine le_antisymm ?_ (Real.iSup_le (singularValues_le_opNorm T) hop_nn)
+  rw [opNorm_le_iff hsup_nn]
+  intro v
+  set e := svdBasis T with he
+  set M := ⨆ i, singularValues T i with hM
+  have hsym := (adjComp_self_isPositive T).isSymmetric
+  have hTvadj : ⟪T v, T v⟫_𝕜 = ⟪v, (LinearMap.adjoint T ∘ₗ T) v⟫_𝕜 :=
+    (LinearMap.adjoint_inner_right T v (T v)).symm
+  have hq : ⟪v, (LinearMap.adjoint T ∘ₗ T) v⟫_𝕜
+      = ∑ i, (((singularValues T i) ^ 2 : ℝ) : 𝕜) * ((‖⟪e i, v⟫_𝕜‖ ^ 2 : ℝ) : 𝕜) := by
+    rw [← e.sum_inner_mul_inner v ((LinearMap.adjoint T ∘ₗ T) v)]
+    refine Finset.sum_congr rfl (fun i _ => ?_)
+    have h1 : ⟪e i, (LinearMap.adjoint T ∘ₗ T) v⟫_𝕜
+        = (((singularValues T i) ^ 2 : ℝ) : 𝕜) * ⟪e i, v⟫_𝕜 := by
+      rw [← hsym (e i) v, adjComp_apply_svdBasis, inner_smul_left, RCLike.conj_ofReal]
+    rw [h1]
+    have h2 : ⟪v, e i⟫_𝕜 * ⟪e i, v⟫_𝕜 = ((‖⟪e i, v⟫_𝕜‖ ^ 2 : ℝ) : 𝕜) := by
+      rw [← inner_conj_symm v (e i), RCLike.conj_mul, ← RCLike.ofReal_pow]
+    calc ⟪v, e i⟫_𝕜 * ((((singularValues T i) ^ 2 : ℝ) : 𝕜) * ⟪e i, v⟫_𝕜)
+        = (((singularValues T i) ^ 2 : ℝ) : 𝕜) * (⟪v, e i⟫_𝕜 * ⟪e i, v⟫_𝕜) := by ring
+      _ = (((singularValues T i) ^ 2 : ℝ) : 𝕜) * ((‖⟪e i, v⟫_𝕜‖ ^ 2 : ℝ) : 𝕜) := by rw [h2]
+  have hnormsq : ‖T v‖ ^ 2 = ∑ i, (singularValues T i) ^ 2 * ‖⟪e i, v⟫_𝕜‖ ^ 2 := by
+    have hcast : ((‖T v‖ ^ 2 : ℝ) : 𝕜)
+        = ((∑ i, (singularValues T i) ^ 2 * ‖⟪e i, v⟫_𝕜‖ ^ 2 : ℝ) : 𝕜) := by
+      rw [RCLike.ofReal_pow, ← inner_self_eq_norm_sq_to_K, hTvadj, hq]; push_cast; ring
+    exact_mod_cast hcast
+  have hbound : ∑ i, (singularValues T i) ^ 2 * ‖⟪e i, v⟫_𝕜‖ ^ 2 ≤ M ^ 2 * ‖v‖ ^ 2 := by
+    rw [← e.sum_sq_norm_inner_right v, Finset.mul_sum]
+    refine Finset.sum_le_sum (fun i _ => ?_)
+    exact mul_le_mul_of_nonneg_right
+      (pow_le_pow_left₀ (singularValues_nonneg T i) (le_ciSup hbdd i) 2) (sq_nonneg _)
+  have hsq : ‖T v‖ ^ 2 ≤ (M * ‖v‖) ^ 2 := by rw [hnormsq, mul_pow]; exact hbound
+  have h1 := Real.sqrt_le_sqrt hsq
+  rwa [Real.sqrt_sq (norm_nonneg _),
+    Real.sqrt_sq (mul_nonneg hsup_nn (norm_nonneg _))] at h1
 
-7.88(b) {lit}`‖T‖ = max{‖T v‖ : ‖v‖ = 1}` is likewise the restriction of 7.86 from
-the closed unit ball to the unit sphere, deferred for the same reason. -/
+/-- 7.82 For {lit}`T ∈ ℒ(V, W)` and {lit}`v ∈ V`, {lit}`‖T v‖ ≤ s₁ ‖v‖`, where
+{lit}`s₁ = ⨆ᵢ sᵢ` is the largest singular value. Immediate from the fundamental
+inequality 7.89 ({lit}`opNorm_apply_le`) and the identification of the norm with
+the largest singular value 7.88(a) ({lit}`opNorm_eq_iSup_singularValues`). -/
+theorem norm_apply_le_iSup_singularValues (T : V →ₗ[𝕜] W) (v : V) :
+    ‖T v‖ ≤ (⨆ i, singularValues T i) * ‖v‖ := by
+  rw [← opNorm_eq_iSup_singularValues]; exact opNorm_apply_le T v
+
+/-- 7.88(b) {lit}`‖T‖ = max{‖T v‖ : ‖v‖ = 1}`: the norm is the supremum of
+{lit}`‖T v‖` over the *unit sphere*, the restriction of 7.86 from the closed unit
+ball. This is mathlib's {name}`ContinuousLinearMap.sSup_sphere_eq_norm`. -/
+theorem opNorm_eq_sSup_sphere (T : V →ₗ[𝕜] W) :
+    opNorm T = sSup ((fun v => ‖T v‖) '' Metric.sphere (0 : V) 1) := by
+  rw [opNorm, ← ContinuousLinearMap.sSup_sphere_eq_norm (LinearMap.toContinuousLinearMap T)]
+  simp
 
 /-! 7.90 Example: norms
 
@@ -143,18 +199,262 @@ theorem opNorm_adjoint (T : V →ₗ[𝕜] W) : opNorm (LinearMap.adjoint T) = o
   rw [opNorm, opNorm, LinearMap.adjoint_toContinuousLinearMap]
   exact ContinuousLinearMap.adjoint.norm_map _
 
-/-! 7.92 Best approximation by a linear map whose range has dimension {lit}`≤ k`.
+/-! # 7.92 Best approximation by a linear map whose range has dimension `≤ k` -/
 
-For positive singular values {lit}`s₁ ≥ ⋯ ≥ sₘ` and {lit}`1 ≤ k < m`,
-{lit}`min{‖T − S‖ : dim range S ≤ k} = s_{k+1}`, attained by the truncated SVD
-{lit}`Tₖ v = s₁⟨v,e₁⟩f₁ + ⋯ + sₖ⟨v,eₖ⟩fₖ`.
+/-- Pythagoras for an orthonormal family: {lit}`‖∑ aᵢ gᵢ‖² = ∑ ‖aᵢ‖²`. -/
+theorem norm_sum_smul_sq {ι : Type*} [Fintype ι] {g : ι → V} (hg : Orthonormal 𝕜 g)
+    (a : ι → 𝕜) : ‖∑ i, a i • g i‖ ^ 2 = ∑ i, ‖a i‖ ^ 2 := by
+  rw [← @inner_self_eq_norm_sq 𝕜, hg.inner_sum a a, map_sum]
+  exact Finset.sum_congr rfl fun i _ => by
+    rw [RCLike.conj_mul, ← RCLike.ofReal_pow, RCLike.ofReal_re]
 
-**Deferred.** The proof combines the deferred norm ↔ largest-singular-value bridge
-7.88(a) (to compute {lit}`‖T − Tₖ‖ = s_{k+1}`) with a linear-dependence argument
-on {lit}`S e₁, …, S e_{k+1}` for the lower bound, together with the decreasing
-ordering of the singular values (not tracked in this companion's index-by-eigenbasis
-convention, see Section 7E 7.65). Assembling these is beyond the scope of this
-section; stated here in prose to avoid a `sorry` on a numbered theorem. -/
+/-- Pythagoras when the family is orthonormal on {lit}`{i // p i}` and the coefficients
+vanish off it. -/
+theorem norm_sum_smul_sq_subtype {ι : Type*} [Fintype ι] {g : ι → V} {p : ι → Prop}
+    [DecidablePred p] (hg : Orthonormal 𝕜 (fun i : {i // p i} => g i.1)) {a : ι → 𝕜}
+    (ha : ∀ i, ¬ p i → a i = 0) : ‖∑ i, a i • g i‖ ^ 2 = ∑ i, ‖a i‖ ^ 2 := by
+  have e1 : (∑ i, a i • g i) = ∑ i : {i // p i}, a i.1 • g i.1 := by
+    rw [← Finset.sum_subtype (Finset.univ.filter p) (fun x => by simp) (fun i => a i • g i)]
+    exact (Finset.sum_filter_of_ne fun i _ h => by
+      by_contra hp; exact h (by rw [ha i hp, zero_smul])).symm
+  have e2 : (∑ i, ‖a i‖ ^ 2) = ∑ i : {i // p i}, ‖a i.1‖ ^ 2 := by
+    rw [← Finset.sum_subtype (Finset.univ.filter p) (fun x => by simp) (fun i => ‖a i‖ ^ 2)]
+    exact (Finset.sum_filter_of_ne fun i _ h => by
+      by_contra hp; exact h (by simp [ha i hp])).symm
+  rw [e1, e2]; exact norm_sum_smul_sq hg _
+
+/-- The permutation sorting the singular values of {lit}`T` into decreasing order. -/
+noncomputable def svSortPerm (T : V →ₗ[𝕜] V) : Equiv.Perm (Fin (finrank 𝕜 V)) :=
+  Tuple.sort (fun i => -(singularValues T i))
+
+theorem singularValues_svSortPerm_antitone (T : V →ₗ[𝕜] V) {j k : Fin (finrank 𝕜 V)}
+    (hjk : j ≤ k) : singularValues T (svSortPerm T k) ≤ singularValues T (svSortPerm T j) := by
+  have h := Tuple.monotone_sort (fun i => -(singularValues T i)) hjk
+  simpa only [Function.comp_apply, neg_le_neg_iff] using h
+
+theorem svd_apply_sorted (T : V →ₗ[𝕜] V) (v : V) :
+    T v = ∑ j, ((singularValues T (svSortPerm T j) : 𝕜) * ⟪svdBasis T (svSortPerm T j), v⟫_𝕜) •
+      svdImage T (svSortPerm T j) := by
+  rw [svd_apply T v]
+  refine Fintype.sum_equiv (svSortPerm T).symm _ _ (fun i => ?_)
+  simp only [Equiv.apply_symm_apply]
+  rw [smul_smul]
+
+/-- The truncated SVD keeping the top {lit}`k` singular directions. -/
+noncomputable def truncSVD (T : V →ₗ[𝕜] V) (k : ℕ) : V →ₗ[𝕜] V :=
+  ∑ j ∈ Finset.univ.filter (fun j : Fin (finrank 𝕜 V) => (j : ℕ) < k),
+    (singularValues T (svSortPerm T j) : 𝕜) •
+      LinearMap.smulRight (innerₛₗ 𝕜 (svdBasis T (svSortPerm T j)))
+        (svdImage T (svSortPerm T j))
+
+theorem truncSVD_apply (T : V →ₗ[𝕜] V) (k : ℕ) (v : V) :
+    truncSVD T k v = ∑ j ∈ Finset.univ.filter (fun j : Fin (finrank 𝕜 V) => (j : ℕ) < k),
+      ((singularValues T (svSortPerm T j) : 𝕜) * ⟪svdBasis T (svSortPerm T j), v⟫_𝕜) •
+        svdImage T (svSortPerm T j) := by
+  rw [truncSVD, LinearMap.sum_apply]
+  refine Finset.sum_congr rfl fun j _ => ?_
+  rw [LinearMap.smul_apply, LinearMap.smulRight_apply, innerₛₗ_apply_apply, smul_smul]
+
+theorem finrank_range_truncSVD_le (T : V →ₗ[𝕜] V) (k : ℕ) :
+    finrank 𝕜 (LinearMap.range (truncSVD T k)) ≤ k := by
+  classical
+  have hsub : LinearMap.range (truncSVD T k) ≤
+      Submodule.span 𝕜 ↑((Finset.univ.filter (fun j : Fin (finrank 𝕜 V) => (j : ℕ) < k)).image
+        (fun j => svdImage T (svSortPerm T j))) := by
+    rintro _ ⟨v, rfl⟩
+    rw [truncSVD, LinearMap.sum_apply]
+    refine Submodule.sum_mem _ fun j hj => ?_
+    rw [LinearMap.smul_apply, LinearMap.smulRight_apply]
+    refine Submodule.smul_mem _ _ (Submodule.smul_mem _ _ ?_)
+    exact Submodule.subset_span (Finset.mem_coe.mpr
+      (Finset.mem_image_of_mem (fun j => svdImage T (svSortPerm T j)) hj))
+  refine le_trans (le_trans (Submodule.finrank_mono hsub) (finrank_span_finset_le_card _))
+    (le_trans Finset.card_image_le ?_)
+  have h := Finset.card_le_card_of_injOn
+    (s := Finset.univ.filter (fun j : Fin (finrank 𝕜 V) => (j : ℕ) < k))
+    (t := Finset.range k) Fin.val
+    (fun j hj => by
+      simp only [Finset.mem_coe, Finset.mem_filter] at hj
+      exact Finset.mem_range.mpr hj.2)
+    Fin.val_injective.injOn
+  rwa [Finset.card_range] at h
+
+/-- The image vectors reindexed by the sort, orthonormal on positive singular values. -/
+theorem svdImage_sorted_orthonormal (T : V →ₗ[𝕜] V) :
+    Orthonormal 𝕜 (fun j : {j : Fin (finrank 𝕜 V) // singularValues T (svSortPerm T j) ≠ 0} =>
+      svdImage T (svSortPerm T j.1)) :=
+  (svdImage_orthonormal T).comp (fun j => ⟨svSortPerm T j.1, j.2⟩)
+    (fun a b h => Subtype.ext ((svSortPerm T).injective (congrArg Subtype.val h)))
+
+/-- Parseval in the sorted eigenbasis: {lit}`∑ⱼ ‖⟨eⱼ,v⟩‖² = ‖v‖²`. -/
+theorem sum_sq_norm_inner_sorted (T : V →ₗ[𝕜] V) (v : V) :
+    ∑ j, ‖⟪svdBasis T (svSortPerm T j), v⟫_𝕜‖ ^ 2 = ‖v‖ ^ 2 := by
+  rw [Equiv.sum_comp (svSortPerm T) (fun i => ‖⟪svdBasis T i, v⟫_𝕜‖ ^ 2)]
+  exact (svdBasis T).sum_sq_norm_inner_right v
+
+/-- The squared norm of a partial SVD sum: {lit}`‖∑ⱼ [P j] sⱼ⟨eⱼ,v⟩ fⱼ‖² = ∑ⱼ [P j] sⱼ²‖⟨eⱼ,v⟩‖²`. -/
+theorem partialSVD_normSq (T : V →ₗ[𝕜] V) (v : V) (P : Fin (finrank 𝕜 V) → Prop)
+    [DecidablePred P] :
+    ‖∑ j, (if P j then (singularValues T (svSortPerm T j) : 𝕜) *
+        ⟪svdBasis T (svSortPerm T j), v⟫_𝕜 else 0) • svdImage T (svSortPerm T j)‖ ^ 2
+      = ∑ j, if P j then (singularValues T (svSortPerm T j)) ^ 2 *
+          ‖⟪svdBasis T (svSortPerm T j), v⟫_𝕜‖ ^ 2 else 0 := by
+  rw [norm_sum_smul_sq_subtype (svdImage_sorted_orthonormal T)
+    (a := fun j => if P j then (singularValues T (svSortPerm T j) : 𝕜) *
+      ⟪svdBasis T (svSortPerm T j), v⟫_𝕜 else 0)
+    (fun j hj => by simp only [ne_eq, not_not] at hj; simp [hj])]
+  refine Finset.sum_congr rfl fun j _ => ?_
+  split_ifs with hP
+  · rw [norm_mul, mul_pow, RCLike.norm_ofReal, sq_abs]
+  · simp
+
+/-- The operator-norm upper bound from a pointwise bound. -/
+theorem opNorm_le_of_forall {T : V →ₗ[𝕜] V} {c : ℝ} (hc : 0 ≤ c)
+    (h : ∀ v, ‖T v‖ ≤ c * ‖v‖) : opNorm T ≤ c := by
+  rw [opNorm]; exact ContinuousLinearMap.opNorm_le_bound _ hc h
+
+/-- `(T − Tₖ) v = ∑ⱼ [k ≤ j] sⱼ ⟨eⱼ,v⟩ fⱼ` (the tail of the SVD). -/
+theorem sub_truncSVD_apply (T : V →ₗ[𝕜] V) (k : ℕ) (v : V) :
+    (T - truncSVD T k) v = ∑ j : Fin (finrank 𝕜 V),
+      (if k ≤ (j : ℕ) then (singularValues T (svSortPerm T j) : 𝕜) *
+        ⟪svdBasis T (svSortPerm T j), v⟫_𝕜 else 0) • svdImage T (svSortPerm T j) := by
+  rw [LinearMap.sub_apply, svd_apply_sorted, truncSVD_apply, Finset.sum_filter,
+    ← Finset.sum_sub_distrib]
+  refine Finset.sum_congr rfl fun j _ => ?_
+  by_cases h : (j : ℕ) < k
+  · rw [if_pos h, if_neg (not_le.mpr h), sub_self, zero_smul]
+  · rw [if_neg h, if_pos (not_lt.mp h), sub_zero]
+
+/-- `‖T v‖² = ∑ⱼ sⱼ² ‖⟨eⱼ,v⟩‖²`. -/
+theorem normSq_apply (T : V →ₗ[𝕜] V) (v : V) :
+    ‖T v‖ ^ 2 = ∑ j, (singularValues T (svSortPerm T j)) ^ 2 *
+      ‖⟪svdBasis T (svSortPerm T j), v⟫_𝕜‖ ^ 2 := by
+  rw [svd_apply_sorted, norm_sum_smul_sq_subtype (svdImage_sorted_orthonormal T)
+    (a := fun j => (singularValues T (svSortPerm T j) : 𝕜) * ⟪svdBasis T (svSortPerm T j), v⟫_𝕜)
+    (fun j hj => by simp only [ne_eq, not_not] at hj; simp [hj])]
+  refine Finset.sum_congr rfl fun j _ => ?_
+  rw [norm_mul, mul_pow, RCLike.norm_ofReal, sq_abs]
+
+/-- Upper bound: `opNorm (T − truncSVD T k) ≤ s'_k`. -/
+theorem opNorm_sub_truncSVD_le (T : V →ₗ[𝕜] V) {k : ℕ} (hk : k < finrank 𝕜 V) :
+    opNorm (T - truncSVD T k) ≤ singularValues T (svSortPerm T ⟨k, hk⟩) := by
+  classical
+  refine opNorm_le_of_forall (singularValues_nonneg T _) fun v => ?_
+  have key : ‖(T - truncSVD T k) v‖ ^ 2
+      ≤ (singularValues T (svSortPerm T ⟨k, hk⟩)) ^ 2 * ‖v‖ ^ 2 := by
+    rw [sub_truncSVD_apply, partialSVD_normSq]
+    calc ∑ j : Fin (finrank 𝕜 V), (if k ≤ (j : ℕ) then (singularValues T (svSortPerm T j)) ^ 2 *
+            ‖⟪svdBasis T (svSortPerm T j), v⟫_𝕜‖ ^ 2 else 0)
+        ≤ ∑ j, (singularValues T (svSortPerm T ⟨k, hk⟩)) ^ 2 *
+            ‖⟪svdBasis T (svSortPerm T j), v⟫_𝕜‖ ^ 2 := by
+          refine Finset.sum_le_sum fun j _ => ?_
+          split_ifs with h
+          · refine mul_le_mul_of_nonneg_right ?_ (sq_nonneg _)
+            nlinarith [singularValues_nonneg T (svSortPerm T j),
+              singularValues_nonneg T (svSortPerm T ⟨k, hk⟩),
+              singularValues_svSortPerm_antitone T
+                (show (⟨k, hk⟩ : Fin (finrank 𝕜 V)) ≤ j from h)]
+          · positivity
+      _ = (singularValues T (svSortPerm T ⟨k, hk⟩)) ^ 2 *
+            ∑ j, ‖⟪svdBasis T (svSortPerm T j), v⟫_𝕜‖ ^ 2 := (Finset.mul_sum _ _ _).symm
+      _ = (singularValues T (svSortPerm T ⟨k, hk⟩)) ^ 2 * ‖v‖ ^ 2 := by
+          rw [sum_sq_norm_inner_sorted]
+  have hb := Real.sqrt_le_sqrt key
+  rwa [Real.sqrt_sq (norm_nonneg _), Real.sqrt_mul (sq_nonneg _),
+    Real.sqrt_sq (singularValues_nonneg T _), Real.sqrt_sq (norm_nonneg _)] at hb
+
+/-- Lower bound (achieved): `s'_k ≤ opNorm (T − truncSVD T k)`, witnessed by `eₖ`. -/
+theorem le_opNorm_sub_truncSVD (T : V →ₗ[𝕜] V) {k : ℕ} (hk : k < finrank 𝕜 V) :
+    singularValues T (svSortPerm T ⟨k, hk⟩) ≤ opNorm (T - truncSVD T k) := by
+  classical
+  have hnorm : ‖(T - truncSVD T k) (svdBasis T (svSortPerm T ⟨k, hk⟩))‖
+      = singularValues T (svSortPerm T ⟨k, hk⟩) := by
+    rw [sub_truncSVD_apply, Finset.sum_eq_single (⟨k, hk⟩ : Fin (finrank 𝕜 V))]
+    · rw [if_pos (le_refl k), orthonormal_iff_ite.mp (svdBasis T).orthonormal, if_pos rfl,
+        mul_one, ← svdBasis_image_eq, norm_image_svdBasis]
+    · intro j _ hj
+      rw [orthonormal_iff_ite.mp (svdBasis T).orthonormal,
+        if_neg (fun hh => hj ((svSortPerm T).injective hh)), mul_zero, ite_self, zero_smul]
+    · intro h; exact absurd (Finset.mem_univ _) h
+  have happ := opNorm_apply_le (T - truncSVD T k) (svdBasis T (svSortPerm T ⟨k, hk⟩))
+  rw [hnorm, (svdBasis T).orthonormal.1 (svSortPerm T ⟨k, hk⟩), mul_one] at happ
+  exact happ
+
+/-- Lower bound: any `S` with `dim range S ≤ k` has `opNorm (T − S) ≥ s'_k`. On the
+`(k+1)`-dimensional span `W` of the top eigen-directions, `ker S ⊓ W ≠ ⊥` (dimensions),
+so a nonzero `v` there has `(T − S) v = T v` with `‖T v‖ ≥ s'_k ‖v‖`. -/
+theorem le_opNorm_sub_of_rank_le (T : V →ₗ[𝕜] V) {k : ℕ} (hk : k < finrank 𝕜 V)
+    (S : V →ₗ[𝕜] V) (hrank : finrank 𝕜 (LinearMap.range S) ≤ k) :
+    singularValues T (svSortPerm T ⟨k, hk⟩) ≤ opNorm (T - S) := by
+  classical
+  have hle : k + 1 ≤ finrank 𝕜 V := hk
+  set family := fun i : Fin (k + 1) => svdBasis T (svSortPerm T (Fin.castLE hle i)) with hfam
+  set W := Submodule.span 𝕜 (Set.range family) with hWdef
+  have hWdim : finrank 𝕜 W = k + 1 := by
+    have hli : LinearIndependent 𝕜 family :=
+      (svdBasis T).orthonormal.linearIndependent.comp _
+        ((svSortPerm T).injective.comp (Fin.castLE_injective hle))
+    rw [hWdef, finrank_span_eq_card hli, Fintype.card_fin]
+  have hkerdim : finrank 𝕜 V - k ≤ finrank 𝕜 (LinearMap.ker S) := by
+    have h := LinearMap.finrank_range_add_finrank_ker S
+    omega
+  have hinter : LinearMap.ker S ⊓ W ≠ ⊥ := by
+    intro hbot
+    have hsup := Submodule.finrank_sup_add_finrank_inf_eq (LinearMap.ker S) W
+    rw [hbot, finrank_bot, add_zero, hWdim] at hsup
+    have hle2 : finrank 𝕜 ((LinearMap.ker S ⊔ W : Submodule 𝕜 V)) ≤ finrank 𝕜 V :=
+      Submodule.finrank_le _
+    omega
+  obtain ⟨v, hvmem, hvne⟩ := Submodule.exists_mem_ne_zero_of_ne_bot hinter
+  have hSv : S v = 0 := LinearMap.mem_ker.mp hvmem.1
+  have hvW : v ∈ W := hvmem.2
+  have hperp : ∀ j : Fin (finrank 𝕜 V), k + 1 ≤ (j : ℕ) →
+      ⟪svdBasis T (svSortPerm T j), v⟫_𝕜 = 0 := by
+    intro j hj
+    refine Submodule.span_induction (p := fun w _ => ⟪svdBasis T (svSortPerm T j), w⟫_𝕜 = 0)
+      ?_ ?_ ?_ ?_ hvW
+    · rintro _ ⟨i, rfl⟩
+      rw [hfam, orthonormal_iff_ite.mp (svdBasis T).orthonormal]
+      refine if_neg (fun h => ?_)
+      have hji := (svSortPerm T).injective h
+      have hi := i.isLt
+      rw [hji] at hj
+      simp only [Fin.coe_castLE] at hj
+      omega
+    · exact inner_zero_right _
+    · intro x y _ _ hx hy; rw [inner_add_right, hx, hy, add_zero]
+    · intro c x _ hx; rw [inner_smul_right, hx, mul_zero]
+  have hTvSq : (singularValues T (svSortPerm T ⟨k, hk⟩)) ^ 2 * ‖v‖ ^ 2 ≤ ‖T v‖ ^ 2 := by
+    rw [normSq_apply, ← sum_sq_norm_inner_sorted T v, Finset.mul_sum]
+    refine Finset.sum_le_sum fun j _ => ?_
+    by_cases hjk : (j : ℕ) < k + 1
+    · refine mul_le_mul_of_nonneg_right ?_ (sq_nonneg _)
+      nlinarith [singularValues_nonneg T (svSortPerm T ⟨k, hk⟩),
+        singularValues_nonneg T (svSortPerm T j),
+        singularValues_svSortPerm_antitone T
+          (show (j : Fin (finrank 𝕜 V)) ≤ ⟨k, hk⟩ from Nat.lt_succ_iff.mp hjk)]
+    · rw [hperp j (not_lt.mp hjk), norm_zero]; simp
+  have hTSv : ‖(T - S) v‖ = ‖T v‖ := by rw [LinearMap.sub_apply, hSv, sub_zero]
+  have hvpos : 0 < ‖v‖ := norm_pos_iff.mpr hvne
+  have h1 : singularValues T (svSortPerm T ⟨k, hk⟩) * ‖v‖ ≤ ‖T v‖ := by
+    rw [← Real.sqrt_sq (mul_nonneg (singularValues_nonneg T _) (norm_nonneg v)),
+      ← Real.sqrt_sq (norm_nonneg (T v))]
+    apply Real.sqrt_le_sqrt
+    rw [mul_pow]; exact hTvSq
+  have h2 := opNorm_apply_le (T - S) v
+  rw [hTSv] at h2
+  exact le_of_mul_le_mul_right (le_trans h1 h2) hvpos
+
+/-- 7.92 The best rank-`≤ k` approximation of `T` is the truncated SVD: the minimum
+of `‖T − S‖` over operators with `dim range S ≤ k` is the `(k+1)`-th largest
+singular value. -/
+theorem isLeast_opNorm_sub (T : V →ₗ[𝕜] V) {k : ℕ} (hk : k < finrank 𝕜 V) :
+    IsLeast {r : ℝ | ∃ S : V →ₗ[𝕜] V, finrank 𝕜 (LinearMap.range S) ≤ k ∧ opNorm (T - S) = r}
+      (singularValues T (svSortPerm T ⟨k, hk⟩)) := by
+  refine ⟨⟨truncSVD T k, finrank_range_truncSVD_le T k,
+    le_antisymm (opNorm_sub_truncSVD_le T hk) (le_opNorm_sub_truncSVD T hk)⟩, ?_⟩
+  rintro r ⟨S, hrank, rfl⟩
+  exact le_opNorm_sub_of_rank_le T hk S hrank
 
 /-! # Polar Decomposition -/
 
@@ -242,21 +542,130 @@ The examples 7.97 ({lit}`E(2f₁, f₂)` in {lit}`ℝ²`, {lit}`E(4f₁, 3f₂, 
 image of {lit}`Ω ⊆ V` under {lit}`T` is mathlib's set image {lit}`T '' Ω`; in
 particular {lit}`T(V) = range T`. We use {lit}`T '' Ω` directly below. -/
 
-/-! 7.99 Invertible operator takes the ball to an ellipsoid, and 7.101 invertible
-operator takes ellipsoids to ellipsoids.
+/-! 7.99 Invertible operator takes the ball to an ellipsoid.
 
 For invertible {lit}`T` with SVD {lit}`T v = ∑ sₖ ⟨v, eₖ⟩ fₖ`,
-{lit}`T(B) = E(s₁ f₁, …, sₙ fₙ)` (7.99), and consequently {lit}`T` maps every
-ellipsoid to an ellipsoid (7.101, by composing with the diagonal stretch carrying
-{lit}`B` onto the given ellipsoid).
+{lit}`T(B) = E(s₁ f₁, …, sₙ fₙ)`. The proof rests on the coordinate identity
+{lit}`∑ ‖⟨T v, fₖ⟩‖² / sₖ² = ∑ ‖⟨v, eₖ⟩‖² = ‖v‖²` (from {name}`LADR.Section_7E.svd_apply`,
+{lit}`⟪fₖ, T v⟫ = sₖ ⟪eₖ, v⟫`, and Parseval), so {lit}`T v` lies in the ellipsoid
+exactly when {lit}`‖v‖ < 1`. -/
+theorem image_ball_eq_ellipsoid (T : V →ₗ[𝕜] V) (hT : Function.Bijective T) :
+    T '' ball = ellipsoid (𝕜 := 𝕜) (LADR.Section_7E.svdImage T) (LADR.Section_7E.singularValues T) := by
+  set e := LADR.Section_7E.svdBasis T
+  set s := LADR.Section_7E.singularValues T with hs
+  set f := LADR.Section_7E.svdImage T with hf
+  -- every singular value is nonzero (`T` injective)
+  have hspos : ∀ k, s k ≠ 0 := by
+    intro k
+    rw [hs, ← LADR.Section_7E.norm_image_svdBasis T k, ne_eq, norm_eq_zero]
+    intro h
+    exact LADR.Section_7E.svdBasis_ne_zero T k (hT.injective (by rw [h, map_zero]))
+  -- the `fₖ` are orthonormal (all indices are positive-singular-value indices)
+  have hON : ∀ j k, ⟪f j, f k⟫_𝕜 = if j = k then 1 else 0 := by
+    intro j k
+    have h := orthonormal_iff_ite.mp (LADR.Section_7E.svdImage_orthonormal T)
+      ⟨j, hspos j⟩ ⟨k, hspos k⟩
+    simpa using h
+  -- `⟪fₖ, T v⟫ = sₖ ⟪eₖ, v⟫`
+  have hinner : ∀ (v : V) (k), ⟪f k, T v⟫_𝕜 = (s k : 𝕜) * ⟪e k, v⟫_𝕜 := by
+    intro v k
+    rw [LADR.Section_7E.svd_apply T v, inner_sum, Finset.sum_eq_single k]
+    · rw [inner_smul_right, inner_smul_right, hON k k, if_pos rfl, mul_one]
+    · intro j _ hjk
+      rw [inner_smul_right, inner_smul_right, hON k j, if_neg (Ne.symm hjk), mul_zero, mul_zero]
+    · intro h; exact absurd (Finset.mem_univ k) h
+  -- the coordinate identity `∑ ‖⟪fₖ, T v⟫‖²/sₖ² = ‖v‖²`
+  have hkey : ∀ v : V, ∑ k, ‖⟪f k, T v⟫_𝕜‖ ^ 2 / (s k) ^ 2 = ‖v‖ ^ 2 := by
+    intro v
+    rw [← (e).sum_sq_norm_inner_right v]
+    refine Finset.sum_congr rfl fun k _ => ?_
+    rw [hinner v k, div_eq_iff (pow_ne_zero 2 (hspos k)), norm_mul, mul_pow,
+      RCLike.norm_ofReal, sq_abs, mul_comm]
+  ext w
+  simp only [ball, ellipsoid, Set.mem_image, Set.mem_setOf_eq]
+  constructor
+  · rintro ⟨v, hv, rfl⟩
+    rw [hkey v]
+    exact pow_lt_one₀ (norm_nonneg v) hv two_ne_zero
+  · intro hw
+    obtain ⟨v, rfl⟩ := hT.surjective w
+    rw [hkey v] at hw
+    exact ⟨v, by nlinarith [norm_nonneg v], rfl⟩
 
-**Deferred.** Both are set equalities proved by the coordinate computation
-{lit}`∑ |⟨T v, fₖ⟩|² / sₖ² = ∑ |⟨v, eₖ⟩|² = ‖v‖²` (using
-{name}`LADR.Section_7E.svd_apply`, {lit}`⟪fₖ, T v⟫ = sₖ ⟪eₖ, v⟫`, and Parseval),
-together with an explicit construction of the preimage for the reverse inclusion.
-This is a lengthy two-sided set-membership argument; it is stated in prose to keep
-the file focused on the algebraic core (norms and polar decomposition) and to avoid
-a `sorry` on a numbered theorem. -/
+/-- General principle behind 7.99/7.101: an invertible `S` acting diagonally on an
+orthonormal basis (`⟨g k, S v⟩ = r k ⟨g k, v⟩`, all `r k ≠ 0`) carries the ball
+onto the ellipsoid `E(r₁ g₁, …, rₙ gₙ)`. -/
+theorem image_ball_eq_ellipsoid_of_diag {n : ℕ} (S : V →ₗ[𝕜] V) (hS : Function.Bijective S)
+    (g : OrthonormalBasis (Fin n) 𝕜 V) (r : Fin n → ℝ) (hr : ∀ k, r k ≠ 0)
+    (hSg : ∀ (v : V) (k), ⟪g k, S v⟫_𝕜 = (r k : 𝕜) * ⟪g k, v⟫_𝕜) :
+    S '' ball = ellipsoid (𝕜 := 𝕜) (g ·) r := by
+  have hkey : ∀ v : V, ∑ k, ‖⟪g k, S v⟫_𝕜‖ ^ 2 / (r k) ^ 2 = ‖v‖ ^ 2 := by
+    intro v
+    rw [← g.sum_sq_norm_inner_right v]
+    refine Finset.sum_congr rfl fun k _ => ?_
+    rw [hSg v k, div_eq_iff (pow_ne_zero 2 (hr k)), norm_mul, mul_pow,
+      RCLike.norm_ofReal, sq_abs, mul_comm]
+  ext w
+  simp only [ball, ellipsoid, Set.mem_image, Set.mem_setOf_eq]
+  constructor
+  · rintro ⟨v, hv, rfl⟩
+    rw [hkey v]; exact pow_lt_one₀ (norm_nonneg v) hv two_ne_zero
+  · intro hw
+    obtain ⟨v, rfl⟩ := hS.surjective w
+    rw [hkey v] at hw
+    exact ⟨v, by nlinarith [norm_nonneg v], rfl⟩
+
+/-- The diagonal stretch with `S gₖ = rₖ gₖ`, i.e. `S v = ∑ₖ rₖ ⟨v, gₖ⟩ gₖ`. -/
+noncomputable def stretchOp {n : ℕ} (g : OrthonormalBasis (Fin n) 𝕜 V) (r : Fin n → ℝ) :
+    V →ₗ[𝕜] V :=
+  ∑ k, (r k : 𝕜) • LinearMap.smulRight (innerₛₗ 𝕜 (g k)) (g k)
+
+theorem stretchOp_inner {n : ℕ} (g : OrthonormalBasis (Fin n) 𝕜 V) (r : Fin n → ℝ)
+    (v : V) (j : Fin n) : ⟪g j, stretchOp g r v⟫_𝕜 = (r j : 𝕜) * ⟪g j, v⟫_𝕜 := by
+  rw [stretchOp]
+  simp only [LinearMap.sum_apply, LinearMap.smul_apply, LinearMap.smulRight_apply,
+    innerₛₗ_apply_apply, smul_smul]
+  rw [inner_sum, Finset.sum_eq_single j]
+  · rw [inner_smul_right, orthonormal_iff_ite.mp g.orthonormal j j, if_pos rfl, mul_one]
+  · intro k _ hkj
+    rw [inner_smul_right, orthonormal_iff_ite.mp g.orthonormal j k, if_neg (Ne.symm hkj), mul_zero]
+  · intro h; exact absurd (Finset.mem_univ j) h
+
+theorem stretchOp_bijective {n : ℕ} (g : OrthonormalBasis (Fin n) 𝕜 V) (r : Fin n → ℝ)
+    (hr : ∀ k, r k ≠ 0) : Function.Bijective (stretchOp g r) := by
+  have hinj : Function.Injective (stretchOp g r) := by
+    rw [← LinearMap.ker_eq_bot, LinearMap.ker_eq_bot']
+    intro v hv
+    have hall : ∀ j, ⟪g j, v⟫_𝕜 = 0 := by
+      intro j
+      have h := stretchOp_inner g r v j
+      rw [hv, inner_zero_right] at h
+      rcases mul_eq_zero.mp h.symm with h1 | h1
+      · exact absurd (RCLike.ofReal_eq_zero.mp h1) (hr j)
+      · exact h1
+    conv_lhs => rw [← g.sum_repr' v]
+    exact Finset.sum_eq_zero fun j _ => by rw [hall j, zero_smul]
+  exact ⟨hinj, LinearMap.injective_iff_surjective.mp hinj⟩
+
+theorem stretchOp_image_ball {n : ℕ} (g : OrthonormalBasis (Fin n) 𝕜 V) (r : Fin n → ℝ)
+    (hr : ∀ k, r k ≠ 0) : stretchOp g r '' ball = ellipsoid (𝕜 := 𝕜) (g ·) r :=
+  image_ball_eq_ellipsoid_of_diag (stretchOp g r) (stretchOp_bijective g r hr) g r hr
+    (fun v k => stretchOp_inner g r v k)
+
+/-- 7.101 An invertible operator maps every ellipsoid to an ellipsoid. Axler's
+argument: the ellipsoid `E(r₁ g₁, …, rₙ gₙ)` is `stretchOp '' ball`, so its image
+under `T` is `(T ∘ stretchOp) '' ball`, which 7.99 identifies as an ellipsoid
+(with axes the singular values / image vectors of `T ∘ stretchOp`). -/
+theorem image_ellipsoid_is_ellipsoid {n : ℕ} (T : V →ₗ[𝕜] V) (hT : Function.Bijective T)
+    (g : OrthonormalBasis (Fin n) 𝕜 V) (r : Fin n → ℝ) (hr : ∀ k, r k ≠ 0) :
+    ∃ (h : Fin (Module.finrank 𝕜 V) → V) (t : Fin (Module.finrank 𝕜 V) → ℝ),
+      T '' ellipsoid (𝕜 := 𝕜) (g ·) r = ellipsoid (𝕜 := 𝕜) h t := by
+  have hbij : Function.Bijective (T ∘ₗ stretchOp g r) := by
+    rw [LinearMap.coe_comp]; exact hT.comp (stretchOp_bijective g r hr)
+  refine ⟨LADR.Section_7E.svdImage (T ∘ₗ stretchOp g r),
+    LADR.Section_7E.singularValues (T ∘ₗ stretchOp g r), ?_⟩
+  rw [← stretchOp_image_ball g r hr, ← Set.image_comp, ← LinearMap.coe_comp]
+  exact image_ball_eq_ellipsoid (T ∘ₗ stretchOp g r) hbij
 
 /-! 7.102 Definition: {lit}`P(v₁, …, vₙ)`, parallelepiped
 
@@ -318,15 +727,16 @@ subsets by approximation with disjoint boxes (7.109). The headline result 7.111
 states that for invertible {lit}`T ∈ ℒ(V)` and {lit}`Ω ⊆ V`,
 {lit}`volume T(Ω) = (s₁ ⋯ sₙ)(volume Ω)`, where {lit}`s₁ ⋯ sₙ = |det T|` (9.60/9.61).
 
-**Deferred.** Axler himself notes these belong to analysis rather than linear
-algebra and works only with an intuitive notion of volume. A faithful Lean
-treatment requires measure theory: {lit}`volume` is the additive Haar measure
-{lit}`MeasureTheory.Measure.addHaar` on the finite-dimensional real space, and 7.111
-is {name}`MeasureTheory.Measure.addHaar_image_linearMap` / the change-of-variables
-formula with the Jacobian factor {lit}`|det T| = ∏ sᵢ`. This measure-theoretic
-development is out of scope for this section; stated in prose to avoid a `sorry` on
-a numbered theorem. The geometric input 7.107 (boxes to boxes) — the linear-algebra
-heart of 7.111 — is proved above as {lit}`image_box`. -/
+The definitions 7.108/7.109 (volume of a box, and volume of a general set by box
+approximation) and the example 7.110 stay in prose: Axler himself notes these
+belong to analysis rather than linear algebra and works only with an intuitive
+notion of volume. But the **headline theorem 7.111 is proved**, using measure
+theory for {lit}`volume`: on {lit}`ℝⁿ` the additive Haar measure satisfies
+{lit}`volume T(Ω) = (s₁ ⋯ sₙ) · volume Ω`, formalized as
+{lit}`LADR.Section_9C.volume_image_eq_prod_singularValues` (the Haar
+change-of-variables {name}`MeasureTheory.Measure.addHaar_image_linearMap`, 9.61,
+with Jacobian {lit}`|det T|` rewritten as {lit}`∏ sᵢ` by 9.60). The linear-algebra
+input 7.107 (boxes to boxes) is proved above as {lit}`image_box`. -/
 
 /-! # Properties of an Operator as Determined by Its Eigenvalues
 

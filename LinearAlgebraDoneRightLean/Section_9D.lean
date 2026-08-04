@@ -5,6 +5,7 @@ import Mathlib.LinearAlgebra.FreeModule.Finite.Matrix
 import Mathlib.LinearAlgebra.Dual.Lemmas
 import Mathlib.LinearAlgebra.Multilinear.Basic
 import Mathlib.LinearAlgebra.PiTensorProduct
+import Mathlib.LinearAlgebra.PiTensorProduct.Basis
 import Mathlib.LinearAlgebra.Matrix.Trace
 import Mathlib.Analysis.InnerProductSpace.TensorProduct
 import Mathlib.Analysis.InnerProductSpace.Adjoint
@@ -301,13 +302,23 @@ theorem mlinear_9_86_apply {m : ℕ} {Vi : Fin m → Type*} [∀ i, AddCommGroup
   rw [mlinear_9_86, MultilinearMap.compLinearMap_apply, MultilinearMap.mkPiAlgebra_apply]
 
 /-! 9.87 Dimension of the vector space of {lit}`m`-linear functionals:
-{lit}`dim ℬ(V₁, …, Vₘ) = (dim V₁) ⋯ (dim Vₘ)` — DEFERRED.
+{lit}`dim ℬ(V₁, …, Vₘ) = (dim V₁) ⋯ (dim Vₘ)`.
 
-The two-space case is 9.70. The general statement needs the finrank of a
-{name}`MultilinearMap` space over a family {lit}`Fin m → Type*`; mathlib (pin
-v4.30.0-rc2) provides no `finrank`/basis API for {name}`MultilinearMap` (nor for
-{name}`PiTensorProduct`, to which it is dual via {name}`PiTensorProduct.lift`), so
-we defer this to avoid rebuilding that free-module machinery. -/
+The two-space case is 9.70. Via the universal property {name}`PiTensorProduct.lift`
+(a linear equivalence) the space of {lit}`m`-linear functionals is the dual of the
+iterated tensor product {lit}`V₁ ⊗ ⋯ ⊗ Vₘ`, so its dimension equals that of the
+tensor product; the latter is a product of {lit}`dim Vᵢ` by the tensor-product
+basis {name}`Basis.piTensorProduct` (9.90 below). As in 9.70 the dual step is just
+{name}`LADR.Section_3D.finrank_linearMap` into the {lit}`1`-dimensional {lit}`F`. -/
+theorem finrank_multilinearForms {m : ℕ} {Vi : Fin m → Type*}
+    [∀ i, AddCommGroup (Vi i)] [∀ i, Module F (Vi i)] [∀ i, Finite F (Vi i)] :
+    finrank F (MultilinearMap F Vi F) = ∏ i, finrank F (Vi i) := by
+  classical
+  have hb := Basis.piTensorProduct (fun i => Module.finBasis F (Vi i))
+  haveI : Module.Finite F (⨂[F] i, Vi i) := Module.Finite.of_basis hb
+  rw [LinearEquiv.finrank_eq PiTensorProduct.lift, LADR.Section_3D.finrank_linearMap,
+    Module.finrank_self, mul_one, Module.finrank_eq_card_basis hb, Fintype.card_pi]
+  simp [Fintype.card_fin]
 
 /-! 9.88 Definition: tensor product {lit}`V₁ ⊗ ⋯ ⊗ Vₘ`, {lit}`v₁ ⊗ ⋯ ⊗ vₘ`.
 
@@ -322,17 +333,36 @@ example {m : ℕ} {Vi : Fin m → Type*} [∀ i, AddCommGroup (Vi i)]
   PiTensorProduct.tprod F v
 
 /-! 9.89 Dimension of the tensor product:
-{lit}`dim(V₁ ⊗ ⋯ ⊗ Vₘ) = (dim V₁) ⋯ (dim Vₘ)` — DEFERRED.
+{lit}`dim(V₁ ⊗ ⋯ ⊗ Vₘ) = (dim V₁) ⋯ (dim Vₘ)`.
 
-The {lit}`m = 2` case is 9.72. mathlib (pin v4.30.0-rc2) has no
-`finrank`/`Module.Free`/basis instance for {name}`PiTensorProduct`, so we defer,
-as in 9.87. -/
+The {lit}`m = 2` case is 9.72. In general the tensor-product basis 9.90 has index
+{lit}`∏ᵢ κᵢ` (functions choosing one basis vector per factor), so its cardinality —
+and hence the dimension — is the product {lit}`∏ᵢ dim Vᵢ`. -/
+theorem finrank_piTensorProduct {m : ℕ} {Vi : Fin m → Type*}
+    [∀ i, AddCommGroup (Vi i)] [∀ i, Module F (Vi i)] [∀ i, Finite F (Vi i)] :
+    finrank F (⨂[F] i, Vi i) = ∏ i, finrank F (Vi i) := by
+  classical
+  rw [Module.finrank_eq_card_basis
+      (Basis.piTensorProduct (fun i => Module.finBasis F (Vi i))), Fintype.card_pi]
+  simp [Fintype.card_fin]
 
-/-! 9.90 Basis of {lit}`V₁ ⊗ ⋯ ⊗ Vₘ` — DEFERRED.
+/-! 9.90 Basis of {lit}`V₁ ⊗ ⋯ ⊗ Vₘ`.
 
-The {lit}`m = 2` case is 9.74(b) ({name}`Module.Basis.tensorProduct`). mathlib
-(pin v4.30.0-rc2) provides no `Basis` construction for {name}`PiTensorProduct`
-over a general finite index family, so we defer, as in 9.89. -/
+The {lit}`m = 2` case is 9.74(b) ({name}`Module.Basis.tensorProduct`). For a finite
+family, if {lit}`bᵢ` is a basis of {lit}`Vᵢ` (indexed by {lit}`κᵢ`) then the
+elementary tensors {lit}`⨂ᵢ bᵢ(pᵢ)`, one per choice function {lit}`p ∈ ∏ᵢ κᵢ`, form
+a basis of {lit}`V₁ ⊗ ⋯ ⊗ Vₘ`, via {name}`Basis.piTensorProduct`. -/
+noncomputable def basis_piTensorProduct {m : ℕ} {Vi : Fin m → Type*}
+    [∀ i, AddCommGroup (Vi i)] [∀ i, Module F (Vi i)] {κ : Fin m → Type*}
+    (b : ∀ i, Module.Basis (κ i) F (Vi i)) :
+    Module.Basis (∀ i, κ i) F (⨂[F] i, Vi i) :=
+  Basis.piTensorProduct b
+
+theorem basis_piTensorProduct_apply {m : ℕ} {Vi : Fin m → Type*}
+    [∀ i, AddCommGroup (Vi i)] [∀ i, Module F (Vi i)] {κ : Fin m → Type*}
+    (b : ∀ i, Module.Basis (κ i) F (Vi i)) (p : ∀ i, κ i) :
+    basis_piTensorProduct b p = ⨂ₜ[F] i, b i (p i) :=
+  Basis.piTensorProduct_apply b p
 
 /-! 9.91 Definition: {lit}`m`-linear map.
 

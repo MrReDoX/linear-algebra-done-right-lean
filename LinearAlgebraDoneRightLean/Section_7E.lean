@@ -250,13 +250,45 @@ theorem injective_iff_singularValues_ne_zero (T : V →ₗ[𝕜] W) :
 (c) {lit}`T` is surjective {lit}`⟺` the number of positive singular values equals
 {lit}`dim W`.
 
-Part (a) is proved above. Parts (b) and (c) are **deferred**: with singular values
-indexed by the eigenbasis of {lit}`T* T`, counting the positive ones amounts to
-{lit}`Fintype.card {i // singularValues T i ≠ 0} = finrank (range T)`, which
-requires identifying {lit}`dim E(0, T* T)` with {lit}`dim (null T)` and invoking
-rank–nullity. This eigenspace-dimension bookkeeping is a sizeable development
-against the eigenbasis API in this mathlib pin; it is stated here without a Lean
-declaration to avoid a `sorry` on a numbered theorem. -/
+Part (a) is proved above; (b) and (c) follow from the SVD, since the image
+vectors {lit}`fₖ` with {lit}`sₖ ≠ 0` form an orthonormal basis of {lit}`range T`. -/
+
+/-- 7.68(b) The number of positive singular values of {lit}`T` equals
+{lit}`dim range T`: the image vectors {lit}`fₖ` with {lit}`sₖ ≠ 0` are orthonormal
+({name}`svdImage_orthonormal`) and span {lit}`range T` (from the SVD formula), so
+they form an orthonormal basis of {lit}`range T`. -/
+theorem card_pos_singularValues_eq_finrank_range (T : V →ₗ[𝕜] W) :
+    Fintype.card {i : Fin (finrank 𝕜 V) // singularValues T i ≠ 0}
+      = finrank 𝕜 (LinearMap.range T) := by
+  set g : {i : Fin (finrank 𝕜 V) // singularValues T i ≠ 0} → W :=
+    fun i => svdImage T i.1 with hg
+  have hindep : LinearIndependent 𝕜 g := (svdImage_orthonormal T).linearIndependent
+  have hspan : Submodule.span 𝕜 (Set.range g) = LinearMap.range T := by
+    apply le_antisymm
+    · rw [Submodule.span_le]
+      rintro _ ⟨i, rfl⟩
+      simp only [hg, svdImage, if_neg i.2]
+      exact Submodule.smul_mem _ _ ⟨svdBasis T i.1, rfl⟩
+    · rintro _ ⟨v, rfl⟩
+      rw [svd_apply]
+      apply Submodule.sum_mem
+      intro i _
+      by_cases hi : singularValues T i = 0
+      · rw [hi, RCLike.ofReal_zero, zero_smul]; exact Submodule.zero_mem _
+      · exact Submodule.smul_mem _ _ (Submodule.smul_mem _ _
+          (Submodule.subset_span ⟨⟨i, hi⟩, rfl⟩))
+  rw [← hspan]
+  exact (finrank_span_eq_card hindep).symm
+
+/-- 7.68(c) {lit}`T` is surjective iff the number of positive singular values of
+{lit}`T` equals {lit}`dim W`. -/
+theorem surjective_iff_card_pos_singularValues (T : V →ₗ[𝕜] W) :
+    Function.Surjective T ↔
+      Fintype.card {i : Fin (finrank 𝕜 V) // singularValues T i ≠ 0} = finrank 𝕜 W := by
+  rw [card_pos_singularValues_eq_finrank_range, ← LinearMap.range_eq_top]
+  constructor
+  · intro h; rw [h]; exact finrank_top 𝕜 W
+  · intro h; exact Submodule.eq_top_of_finrank_eq h
 
 /-! 7.69 Isometries characterized by having all singular values equal 1
 
@@ -313,30 +345,159 @@ theorem adjoint_svd_apply (T : V →ₗ[𝕜] W) (w : W) :
     RCLike.conj_ofReal, inner_conj_symm]
   ring
 
-/-! 7.75 Singular value decomposition of the pseudoinverse (7.78)
+/-- 7.75 Singular value decomposition of the pseudoinverse (7.78):
+{lit}`T† w = ∑ (⟨fₖ, w⟩ / sₖ) eₖ` (summed over all {lit}`k`; the {lit}`sₖ = 0`
+terms vanish). Following Axler, write {lit}`S w` for the right-hand side. The key
+identity {lit}`T* w = (T* T)(S w)` (both equal {lit}`∑ sₖ ⟨fₖ, w⟩ eₖ` by the SVD
+of the adjoint and {lit}`T* T eₖ = sₖ² eₖ`) shows {lit}`w − T(S w) ∈ ker T* =
+(range T)ᗮ`, so {lit}`T(S w) = P_(range T) w = T(T† w)` (6.69(b)); since both
+{lit}`S w` and {lit}`T† w` lie in {lit}`(ker T)ᗮ`, they are equal. -/
+theorem pinv_svd_apply (T : V →ₗ[𝕜] W) (w : W) :
+    LADR.Section_6C.pinv T w
+      = ∑ i, (singularValues T i : 𝕜)⁻¹ • ⟪svdImage T i, w⟫_𝕜 • svdBasis T i := by
+  set S := ∑ i, (singularValues T i : 𝕜)⁻¹ • ⟪svdImage T i, w⟫_𝕜 • svdBasis T i with hSdef
+  -- svdBasis T i ∈ (ker T)ᗮ when sᵢ ≠ 0, since eᵢ = sᵢ⁻¹ • T*(fᵢ) ∈ range T*.
+  have hTf : ∀ i, singularValues T i ≠ 0 →
+      LinearMap.adjoint T (svdImage T i) = (singularValues T i : 𝕜) • svdBasis T i := by
+    intro i hi
+    rw [svdImage, if_neg hi, map_smul, ← LinearMap.comp_apply, adjComp_apply_svdBasis, smul_smul]
+    congr 1
+    have hne : (singularValues T i : 𝕜) ≠ 0 := by exact_mod_cast hi
+    rw [RCLike.ofReal_pow]; field_simp
+  have hei_perp : ∀ i, singularValues T i ≠ 0 → svdBasis T i ∈ (LinearMap.ker T)ᗮ := by
+    intro i hi
+    have hei : svdBasis T i = (singularValues T i : 𝕜)⁻¹ • LinearMap.adjoint T (svdImage T i) := by
+      rw [hTf i hi, smul_smul, inv_mul_cancel₀ (by exact_mod_cast hi), one_smul]
+    rw [hei]
+    apply Submodule.smul_mem
+    rw [Submodule.mem_orthogonal]
+    intro x hx
+    rw [LinearMap.adjoint_inner_right, LinearMap.mem_ker.mp hx, inner_zero_left]
+  have hS_mem : S ∈ (LinearMap.ker T)ᗮ := by
+    rw [hSdef]
+    apply Submodule.sum_mem
+    intro i _
+    by_cases hi : singularValues T i = 0
+    · rw [hi, RCLike.ofReal_zero, inv_zero, zero_smul]; exact Submodule.zero_mem _
+    · exact Submodule.smul_mem _ _ (Submodule.smul_mem _ _ (hei_perp i hi))
+  -- Key identity: T* w = (T* T)(S).
+  have hkey : LinearMap.adjoint T w = (LinearMap.adjoint T ∘ₗ T) S := by
+    rw [adjoint_svd_apply, hSdef, map_sum]
+    refine Finset.sum_congr rfl fun i _ => ?_
+    rw [map_smul, map_smul, adjComp_apply_svdBasis]
+    by_cases hi : singularValues T i = 0
+    · simp [hi]
+    · simp only [smul_smul]
+      congr 1
+      have hne : (singularValues T i : 𝕜) ≠ 0 := by exact_mod_cast hi
+      rw [RCLike.ofReal_pow]; field_simp
+  -- Hence T(S) = P_(range T) w.
+  have hTS : T S = (LinearMap.range T).starProjection w := by
+    symm
+    apply Submodule.eq_starProjection_of_mem_of_inner_eq_zero (LinearMap.mem_range_self T S)
+    intro y hy
+    obtain ⟨x, rfl⟩ := hy
+    have hadj0 : LinearMap.adjoint T (w - T S) = 0 := by
+      rw [map_sub, hkey, LinearMap.comp_apply, sub_self]
+    rw [← LinearMap.adjoint_inner_left, hadj0, inner_zero_left]
+  -- pinv w and S both lie in (ker T)ᗮ and T maps both to P_(range T) w.
+  have hpinv_mem : LADR.Section_6C.pinv T w ∈ (LinearMap.ker T)ᗮ := by
+    show ((LADR.Section_6C.restrEquiv T).symm
+      ((LinearMap.range T).orthogonalProjection w) : V) ∈ _
+    exact SetLike.coe_mem _
+  have hTeq : T (LADR.Section_6C.pinv T w) = T S := by
+    rw [hTS, ← LinearMap.comp_apply]
+    exact LinearMap.congr_fun (LADR.Section_6C.T_comp_pinv T) w
+  have hdiff_ker : LADR.Section_6C.pinv T w - S ∈ LinearMap.ker T := by
+    rw [LinearMap.mem_ker, map_sub, hTeq, sub_self]
+  have hdiff_perp : LADR.Section_6C.pinv T w - S ∈ (LinearMap.ker T)ᗮ :=
+    Submodule.sub_mem _ hpinv_mem hS_mem
+  have hzero : ⟪LADR.Section_6C.pinv T w - S, LADR.Section_6C.pinv T w - S⟫_𝕜 = 0 :=
+    (Submodule.mem_orthogonal' _ _).mp hdiff_perp _ hdiff_ker
+  rw [← sub_eq_zero]
+  exact inner_self_eq_zero.mp hzero
 
-{lit}`T† w = ∑ (⟨w, fₖ⟩ / sₖ) eₖ`. **Deferred**: the pseudoinverse {lit}`T†`
-({lit}`LADR.Section_6C.pinv`) is available in this companion, and the identity can
-in principle be derived from {lit}`T T† = P_(range T)` (6.69(b)) together with the
-fact that {lit}`f₁, …, fₘ` is an orthonormal basis of {lit}`range T` (Exercise 8a);
-but assembling that projection argument against the pseudoinverse API is a
-substantial addition. It is stated here in prose to avoid a `sorry` on a numbered
-theorem. -/
+/-- The `(k,l)` entry of `A` read off the SVD of `Matrix.toEuclideanLin A`:
+`A k l = ∑ᵢ sᵢ conj(eᵢ l) fᵢ k` (the `sᵢ = 0` terms vanish). -/
+theorem toEuclideanLin_entry_eq_svd {N : ℕ} (A : Matrix (Fin N) (Fin N) 𝕜) (k l : Fin N) :
+    A k l = ∑ i : Fin (finrank 𝕜 (EuclideanSpace 𝕜 (Fin N))),
+      (singularValues (Matrix.toEuclideanLin A) i : 𝕜)
+      * (starRingEnd 𝕜) (svdBasis (Matrix.toEuclideanLin A) i l)
+      * svdImage (Matrix.toEuclideanLin A) i k := by
+  set T := Matrix.toEuclideanLin A with hTdef
+  have hL := congrArg (⇑(EuclideanSpace.equiv (Fin N) 𝕜))
+    (svd_apply T (EuclideanSpace.single l (1 : 𝕜)))
+  rw [map_sum] at hL
+  simp only [map_smul] at hL
+  have hLk := congrFun hL k
+  simp only [Finset.sum_apply, Pi.smul_apply, smul_eq_mul] at hLk
+  have hAkl : A k l = (⇑(EuclideanSpace.equiv (Fin N) 𝕜)
+      (T (EuclideanSpace.single l (1:𝕜)))) k := by
+    rw [hTdef, Matrix.toEuclideanLin_apply]
+    simp [EuclideanSpace.single, Matrix.mulVec_single]
+  rw [hAkl, hLk]
+  refine Finset.sum_congr rfl fun i _ => ?_
+  rw [EuclideanSpace.inner_single_right]
+  simp only [show ∀ (w : EuclideanSpace 𝕜 (Fin N)) (m : Fin N), w.ofLp m = w m from fun _ _ => rfl,
+    show ∀ (w : EuclideanSpace 𝕜 (Fin N)) (m : Fin N),
+      ⇑(EuclideanSpace.equiv (Fin N) 𝕜) w m = w m from fun _ _ => rfl, one_mul]
+  ring
 
-/-! 7.80 Matrix version of the SVD
-
-Every {lit}`p`-by-{lit}`n` matrix {lit}`A` of rank {lit}`m ≥ 1` factors as
-{lit}`A = B D C*` with {lit}`B` ({lit}`p`-by-{lit}`m`) and {lit}`C`
-({lit}`n`-by-{lit}`m`) having orthonormal columns and {lit}`D` an {lit}`m`-by-
-{lit}`m` diagonal matrix with positive diagonal.
-
-**Deferred**: this is the matrix restatement of 7.70, obtained by reading the
-{lit}`fₖ` and {lit}`eₖ` off as the columns of {lit}`B` and {lit}`C` and the
-positive singular values as the diagonal of {lit}`D`. Assembling the three
-matrices with orthonormal columns and verifying {lit}`A = B D C*` is a sizeable
-matrix-bookkeeping development beyond the scope of this section (compare the
-deferred QR factorization 7.58); it is stated here in prose to avoid a `sorry` on
-a numbered theorem. -/
+/-- 7.80 Matrix version of the SVD. A square matrix `A` factors as `A = B D Cᴴ`
+with `B`, `C` having orthonormal columns (`Bᴴ B = Cᴴ C = 1`) and `D` a diagonal
+matrix carrying the positive singular values. Following Axler, the columns of `B`
+are the image vectors `fₖ`, the columns of `C` are the eigenbasis vectors `eₖ`
+(both indexed by the positive singular values), and `D` holds the `sₖ`. -/
+theorem matrix_svd {N : ℕ} (A : Matrix (Fin N) (Fin N) 𝕜) :
+    ∃ (B C : Matrix (Fin N)
+        {i : Fin (finrank 𝕜 (EuclideanSpace 𝕜 (Fin N)))
+          // singularValues (Matrix.toEuclideanLin A) i ≠ 0} 𝕜)
+      (D : Matrix {i : Fin (finrank 𝕜 (EuclideanSpace 𝕜 (Fin N)))
+          // singularValues (Matrix.toEuclideanLin A) i ≠ 0}
+        {i : Fin (finrank 𝕜 (EuclideanSpace 𝕜 (Fin N)))
+          // singularValues (Matrix.toEuclideanLin A) i ≠ 0} 𝕜),
+      Bᴴ * B = 1 ∧ Cᴴ * C = 1
+        ∧ (∀ i, D i i = (singularValues (Matrix.toEuclideanLin A) i.1 : 𝕜))
+        ∧ (∀ i j, i ≠ j → D i j = 0) ∧ A = B * D * Cᴴ := by
+  classical
+  set T := Matrix.toEuclideanLin A with hTdef
+  refine ⟨Matrix.of fun k i => svdImage T i.1 k, Matrix.of fun k i => svdBasis T i.1 k,
+    Matrix.diagonal fun i => (singularValues T i.1 : 𝕜), ?_, ?_,
+    fun i => Matrix.diagonal_apply_eq _ _, fun i j hij => Matrix.diagonal_apply_ne _ hij, ?_⟩
+  · ext i j
+    rw [Matrix.mul_apply, Matrix.one_apply,
+      ← orthonormal_iff_ite.mp (svdImage_orthonormal T) i j, PiLp.inner_apply]
+    refine Finset.sum_congr rfl fun x _ => ?_
+    simp only [Matrix.conjTranspose_apply, Matrix.of_apply, RCLike.inner_apply, RCLike.star_def,
+      Function.comp_apply]
+    ring
+  · ext i j
+    rw [Matrix.mul_apply, Matrix.one_apply,
+      ← orthonormal_iff_ite.mp
+        ((svdBasis T).orthonormal.comp Subtype.val Subtype.val_injective) i j, PiLp.inner_apply]
+    refine Finset.sum_congr rfl fun x _ => ?_
+    simp only [Matrix.conjTranspose_apply, Matrix.of_apply, RCLike.inner_apply, RCLike.star_def,
+      Function.comp_apply]
+    ring
+  · ext k l
+    rw [Matrix.mul_assoc, Matrix.mul_apply, toEuclideanLin_entry_eq_svd A k l]
+    rw [show (∑ i : Fin (finrank 𝕜 (EuclideanSpace 𝕜 (Fin N))),
+        (singularValues T i : 𝕜) * (starRingEnd 𝕜) (svdBasis T i l) * svdImage T i k)
+        = ∑ i : {x : Fin (finrank 𝕜 (EuclideanSpace 𝕜 (Fin N))) // singularValues T x ≠ 0},
+          (singularValues T i.1 : 𝕜) * (starRingEnd 𝕜) (svdBasis T i.1 l) * svdImage T i.1 k
+      from ?_]
+    · refine Finset.sum_congr rfl fun i _ => ?_
+      rw [Matrix.mul_apply, Finset.sum_eq_single i]
+      · rw [Matrix.diagonal_apply_eq, Matrix.of_apply, Matrix.conjTranspose_apply,
+          Matrix.of_apply, RCLike.star_def]; ring
+      · intro b _ hb; rw [Matrix.diagonal_apply_ne _ (Ne.symm hb), zero_mul]
+      · intro h; exact absurd (Finset.mem_univ i) h
+    · rw [← Finset.sum_subtype (Finset.univ.filter fun i => singularValues T i ≠ 0)
+        (fun x => by simp) fun i => (singularValues T i : 𝕜)
+          * (starRingEnd 𝕜) (svdBasis T i l) * svdImage T i k]
+      exact (Finset.sum_filter_of_ne fun i _ hne => by
+        intro hz
+        exact hne (by rw [hz, RCLike.ofReal_zero, zero_mul, zero_mul])).symm
 
 /-! # Examples
 

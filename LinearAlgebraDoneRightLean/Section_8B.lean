@@ -38,11 +38,96 @@ open Module.End (HasEigenvalue HasEigenvector maxGenEigenspace genEigenspace
 open LinearMap (ker range)
 open Module (Finite finrank)
 open Polynomial (aeval X C)
+open LADR.Section_2B (IsBasis)
+open LADR.Section_3C (matrixOf matrixOf_apply)
+open LADR.Section_5C (IsUpperTriangular)
+open LADR.Section_8A (exists_strictUpperTriangular_of_nilpotent)
 
 variable {F : Type*} [Field F]
   {V : Type*} [AddCommGroup V] [Module F V]
 
 /-! # The Generalized Eigenspace Decomposition -/
+
+/-! 8.21 Example: generalized eigenspaces of an operator on {lit}`ℂ³`. For
+{lit}`T(z₁, z₂, z₃) = (4z₂, 0, 5z₃)`, one has {lit}`G(0, T) = {(z₁, z₂, 0)}` and
+{lit}`G(5, T) = {(0, 0, z₃)}`, so {lit}`ℂ³ = G(0, T) ⊕ G(5, T)` — a concrete
+instance of the decomposition 8.22 (the generalized eigenvectors of this same
+operator appear in 8A's Example 8.10). We formalize all three claims. Since
+{lit}`dim ℂ³ = 3`, the generalized eigenspace {lit}`G(λ, T)` is
+{lit}`null(T − λI)³` (8.20), computed here from the explicit cubes. -/
+
+section Example_8_21
+
+open scoped Matrix
+
+/-- The operator {lit}`T(z₁, z₂, z₃) = (4z₂, 0, 5z₃)` on {lit}`ℂ³` of Example 8.21. -/
+def T_8_21 : Module.End ℂ (Fin 3 → ℂ) where
+  toFun z := ![4 * z 1, 0, 5 * z 2]
+  map_add' x y := by funext i; fin_cases i <;> simp <;> ring
+  map_smul' a x := by funext i; fin_cases i <;> simp <;> ring
+
+/-- {lit}`T³(z₁, z₂, z₃) = (0, 0, 125 z₃)`. -/
+theorem T_8_21_cube (z : Fin 3 → ℂ) : (T_8_21 ^ 3) z = ![0, 0, 125 * z 2] := by
+  funext i; fin_cases i <;> simp [pow_succ, Module.End.mul_apply, T_8_21] <;> ring
+
+/-- {lit}`(T − 5I)³(z₁, z₂, z₃) = (−125 z₁ + 300 z₂, −125 z₂, 0)`. -/
+theorem T_8_21_sub_cube (z : Fin 3 → ℂ) :
+    ((T_8_21 - (5:ℂ) • (1 : Module.End ℂ (Fin 3 → ℂ))) ^ 3) z
+      = ![-125 * z 0 + 300 * z 1, -125 * z 1, 0] := by
+  funext i
+  fin_cases i <;>
+    simp [pow_succ, Module.End.mul_apply, LinearMap.sub_apply, LinearMap.smul_apply,
+      Module.End.one_apply, Matrix.vecHead, Matrix.vecTail, Pi.smul_apply, smul_eq_mul, T_8_21] <;>
+    ring
+
+/-- 8.21: {lit}`G(0, T) = {(z₁, z₂, 0)}`, the vectors with vanishing third
+coordinate. -/
+theorem maxGenEigenspace_zero_8_21 :
+    maxGenEigenspace T_8_21 0 = LinearMap.ker (LinearMap.proj 2) := by
+  rw [Module.End.maxGenEigenspace_eq_genEigenspace_finrank, Module.End.genEigenspace_nat]
+  simp only [Module.finrank_pi, Fintype.card_fin]
+  ext z
+  simp only [LinearMap.mem_ker, LinearMap.proj_apply]
+  constructor
+  · intro h; have := congrFun h 2; simpa [T_8_21_cube] using this
+  · intro h; funext i; fin_cases i <;> simp [T_8_21_cube, h]
+
+/-- 8.21: {lit}`G(5, T) = {(0, 0, z₃)}`, the vectors with vanishing first two
+coordinates. -/
+theorem maxGenEigenspace_five_8_21 :
+    maxGenEigenspace T_8_21 5 =
+      LinearMap.ker (LinearMap.proj 0) ⊓ LinearMap.ker (LinearMap.proj (1 : Fin 3)) := by
+  rw [Module.End.maxGenEigenspace_eq_genEigenspace_finrank, Module.End.genEigenspace_nat]
+  simp only [Module.finrank_pi, Fintype.card_fin]
+  ext z
+  simp only [LinearMap.mem_ker, Submodule.mem_inf, LinearMap.proj_apply]
+  constructor
+  · intro h
+    have h0 := congrFun h 0; have h1 := congrFun h 1
+    simp only [T_8_21_sub_cube, Matrix.cons_val_zero, Matrix.cons_val_one, Pi.zero_apply] at h0 h1
+    have hz1 : z 1 = 0 := by linear_combination (-1/125 : ℂ) * h1
+    have hz0 : z 0 = 0 := by linear_combination (-1/125 : ℂ) * h0 + (12/5 : ℂ) * hz1
+    exact ⟨hz0, hz1⟩
+  · rintro ⟨hz0, hz1⟩; funext i; fin_cases i <;> simp [T_8_21_sub_cube, hz0, hz1]
+
+/-- 8.21: {lit}`ℂ³ = G(0, T) ⊕ G(5, T)`, packaged as complementarity of the two
+generalized eigenspaces. -/
+theorem isCompl_maxGenEigenspace_8_21 :
+    IsCompl (maxGenEigenspace T_8_21 0) (maxGenEigenspace T_8_21 5) := by
+  rw [maxGenEigenspace_zero_8_21, maxGenEigenspace_five_8_21]
+  constructor
+  · rw [disjoint_iff, eq_bot_iff]
+    intro z hzmem
+    simp only [Submodule.mem_inf, LinearMap.mem_ker, LinearMap.proj_apply] at hzmem
+    obtain ⟨h2, h0, h1⟩ := hzmem
+    simp only [Submodule.mem_bot]; funext i; fin_cases i <;> simp_all
+  · rw [codisjoint_iff, eq_top_iff]
+    intro z _
+    rw [Submodule.mem_sup]
+    exact ⟨![z 0, z 1, 0], by simp [LinearMap.mem_ker], ![0, 0, z 2],
+      by simp [Submodule.mem_inf, LinearMap.mem_ker], by funext i; fin_cases i <;> simp⟩
+
+end Example_8_21
 
 /-! 8.22 Generalized eigenspace decomposition.
 
@@ -261,15 +346,34 @@ theorem minpoly_dvd_charpoly {V : Type*} [AddCommGroup V] [Module ℂ V] [Finite
   rw [charpoly_eq_charpoly]
   exact LinearMap.minpoly_dvd_charpoly T
 
-/-! 8.31 Multiplicity of an eigenvalue equals the number of times it appears on
-the diagonal of an upper-triangular matrix representing {lit}`T`.
-
-**Deferred.** This result is stated in terms of the matrix
-{lit}`ℳ(T, (v₁, …, vₙ))` of {lit}`T` with respect to a basis making it upper
-triangular. The matrix-of-a-basis machinery (Axler 3.32) and the existence of an
-upper-triangular basis (Axler 5.44) are not developed in these companion
-sections — as with the analogous deferral of 8.18(c) in Section 8A — so we do not
-state 8.31 here in order to avoid an unproved numbered claim. -/
+/-- 8.31 Multiplicity of an eigenvalue equals the number of times it appears on
+the diagonal of an upper-triangular matrix representing {lit}`T`. Following Axler:
+the characteristic polynomial is basis-independent ({name}`LinearMap.charpoly_toMatrix`)
+and, for an upper-triangular matrix, factors as {lit}`∏ₖ (z − Aₖₖ)`
+({name}`Matrix.charpoly_of_upperTriangular`); so the multiplicity of {lit}`μ` (the
+root multiplicity of the characteristic polynomial, 8.23) is the number of
+diagonal entries equal to {lit}`μ`. -/
+theorem multiplicity_eq_diagonal_count {V : Type*} [AddCommGroup V] [Module ℂ V]
+    [Finite ℂ V] (T : V →ₗ[ℂ] V) (μ : ℂ) {n : ℕ} {v : Fin n → V} (hv : IsBasis ℂ v)
+    (hUT : (matrixOf hv hv T).BlockTriangular id) :
+    multiplicity T μ = (Finset.univ.filter fun k => matrixOf hv hv T k k = μ).card := by
+  classical
+  rw [multiplicity_eq_rootMultiplicity,
+    show LinearMap.charpoly T = (matrixOf hv hv T).charpoly from
+      (LinearMap.charpoly_toMatrix T hv.toModuleBasis).symm,
+    Matrix.charpoly_of_upperTriangular _ hUT, ← Polynomial.count_roots]
+  have hroots : (∏ i : Fin n, (X - C (matrixOf hv hv T i i))).roots
+      = Finset.univ.val.map fun i => matrixOf hv hv T i i := by
+    rw [show (∏ i : Fin n, (X - C (matrixOf hv hv T i i)))
+        = ((Finset.univ.val.map fun i => matrixOf hv hv T i i).map fun a => X - C a).prod from by
+      rw [Multiset.map_map]; rfl]
+    exact Polynomial.roots_multiset_prod_X_sub_C _
+  rw [hroots, Multiset.count_map]
+  congr 1
+  rw [Finset.filter_val]
+  congr 1
+  ext k
+  simp [eq_comm]
 
 /-! # Block Diagonal Matrices -/
 
@@ -284,17 +388,59 @@ another {lit}`2`-by-{lit}`2` block. Omitted (see 8.35). -/
 
 /-! 8.37 Block diagonal matrix with upper-triangular blocks.
 
-**Deferred.** For {lit}`F = ℂ`, there is a basis with respect to which {lit}`T`
-has a block diagonal matrix whose {lit}`k`-th block is a {lit}`dₖ`-by-{lit}`dₖ`
-upper-triangular matrix with {lit}`λₖ` on the diagonal. The proof chooses, on
-each {lit}`G(λₖ, T)`, a basis making {lit}`(T − λₖI)|_{G(λₖ,T)}` strictly upper
-triangular (8.18(c)) and assembles them via 8.22(c). Both the strictly-upper-
-triangular normal form of a nilpotent operator (8.18(c), deferred in Section 8A)
-and the block-diagonal matrix-of-a-basis formalism (8.35) are outside the scope
-of these companion sections, so we defer 8.37 rather than state an unproved
-numbered claim. The mathematical core — {lit}`V = ⊕ G(λₖ, T)` with
-{lit}`(T − λₖI)|_{G(λₖ,T)}` nilpotent — is fully proved above in
-{name}`isInternal_maxGenEigenspace` and {name}`isNilpotent_restrict_sub_algebraMap`. -/
+For {lit}`F = ℂ`, there is a basis with respect to which {lit}`T` has a block
+diagonal matrix whose {lit}`k`-th block is upper triangular with {lit}`λₖ` on the
+diagonal. The block-diagonal structure is the generalized eigenspace decomposition
+{lit}`V = ⊕ G(λₖ, T)` ({name}`isInternal_maxGenEigenspace`); the content of each
+block is the theorem below — {lit}`T` restricted to {lit}`G(μ, T)` has an
+upper-triangular matrix with {lit}`μ` on the diagonal, since
+{lit}`(T − μI)|_{G(μ,T)}` is nilpotent (8.18(c)). -/
+
+/-- 8.37 (per generalized eigenspace). `T` restricted to `G(μ, T)` has, with
+respect to a basis making `(T − μI)|_{G(μ,T)}` strictly upper triangular (8.18(c)),
+an upper-triangular matrix with `μ` on the diagonal. -/
+theorem exists_upperTriangular_restrict_maxGenEigenspace [Finite F V] (T : V →ₗ[F] V)
+    (μ : F) (hT : Set.MapsTo T (maxGenEigenspace T μ) (maxGenEigenspace T μ)) :
+    ∃ (n : ℕ) (e : Fin n → maxGenEigenspace T μ) (he : IsBasis F e),
+      IsUpperTriangular (matrixOf he he (T.restrict hT)) ∧
+      ∀ k, matrixOf he he (T.restrict hT) k k = μ := by
+  classical
+  set N := ((T : Module.End F V) - algebraMap F (Module.End F V) μ).restrict
+    (mapsTo_maxGenEigenspace_of_comm (Algebra.mul_sub_algebraMap_commutes T μ) μ) with hNdef
+  have hNnil : IsNilpotent N := isNilpotent_restrict_sub_algebraMap T μ
+  have hvec : ∀ x : maxGenEigenspace T μ, (T.restrict hT) x = N x + μ • x := by
+    intro x
+    apply Subtype.ext
+    simp only [LinearMap.restrict_coe_apply, hNdef, Submodule.coe_add, Submodule.coe_smul,
+      LinearMap.sub_apply, Module.algebraMap_end_apply]
+    abel
+  by_cases hnt : Nontrivial (maxGenEigenspace T μ)
+  · obtain ⟨n, e, he, hUT, hdiag⟩ := exists_strictUpperTriangular_of_nilpotent N hNnil
+    refine ⟨n, e, he, ?_, fun k => ?_⟩
+    · intro i j hji
+      rw [matrixOf_apply, hvec (e j)]
+      simp only [map_add, map_smul, Finsupp.add_apply, Finsupp.smul_apply]
+      have hN0 : he.toModuleBasis.repr (N (e j)) i = 0 := by
+        rw [← matrixOf_apply]; exact hUT i j hji
+      have he0 : he.toModuleBasis.repr (e j) i = 0 := by
+        rw [← IsBasis.toModuleBasis_apply he j, he.toModuleBasis.repr_self_apply,
+          if_neg (ne_of_lt hji)]
+      rw [hN0, he0, smul_zero, add_zero]
+    · rw [matrixOf_apply, hvec (e k)]
+      simp only [map_add, map_smul, Finsupp.add_apply, Finsupp.smul_apply]
+      have hN0 : he.toModuleBasis.repr (N (e k)) k = 0 := by
+        rw [← matrixOf_apply]; exact hdiag k
+      have he1 : he.toModuleBasis.repr (e k) k = 1 := by
+        rw [← IsBasis.toModuleBasis_apply he k, he.toModuleBasis.repr_self_apply, if_pos rfl]
+      rw [hN0, he1, smul_eq_mul, mul_one, zero_add]
+  · haveI : Subsingleton (maxGenEigenspace T μ) := not_nontrivial_iff_subsingleton.mp hnt
+    refine ⟨0, Fin.elim0, ⟨linearIndependent_empty_type, ?_⟩, fun i j _ => i.elim0,
+      fun k => k.elim0⟩
+    show Submodule.span F (Set.range (Fin.elim0 : Fin 0 → maxGenEigenspace T μ)) = ⊤
+    rw [Set.range_eq_empty, Submodule.span_empty, eq_top_iff]
+    intro x _
+    rw [Subsingleton.elim x 0]
+    exact Submodule.zero_mem _
 
 /-! 8.38 Example: block diagonal matrix via generalized eigenvectors — for the
 operator of 8.24, with respect to the basis {lit}`(1,0,0), (0,1,0), (10,2,1)` of

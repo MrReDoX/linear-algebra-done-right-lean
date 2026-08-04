@@ -22,6 +22,7 @@ import LinearAlgebraDoneRightLean.Section_3A
 import LinearAlgebraDoneRightLean.Section_3B
 import LinearAlgebraDoneRightLean.Section_5A
 import LinearAlgebraDoneRightLean.Section_5B
+import LinearAlgebraDoneRightLean.Section_5C
 import CompanionHelper
 
 /-!
@@ -37,6 +38,9 @@ open LADR.Section_5B (isEigenvalue_iff_isRoot aeval_eq_zero_iff_minpoly_dvd
   minpoly_eq_prod_roots)
 open Module.End (HasEigenvalue HasEigenvector maxGenEigenspace genEigenspace
   mem_maxGenEigenspace independent_genEigenspace disjoint_genEigenspace)
+open LADR.Section_3C (matrixOf)
+open LADR.Section_5C (IsUpperTriangular exists_upperTriangular_iff_minpoly_eq_prod
+  isEigenvalue_iff_diag)
 open LinearMap (ker range)
 open Module (Finite finrank)
 open Polynomial (aeval)
@@ -398,11 +402,13 @@ theorem isNilpotent_of_zero_only_eigenvalue {V : Type*} [AddCommGroup V]
 Axler proves the equivalence of three conditions: (a) {lit}`T` is nilpotent;
 (b) the minimal polynomial of {lit}`T` is {lit}`zᵐ` for some positive integer
 {lit}`m`; (c) there is a basis with respect to which the matrix of {lit}`T` is
-strictly upper triangular. We prove the equivalence (a) ↔ (b) in full. The
-matrix condition (c) is **deferred**: it requires the matrix-of-basis and
-triangularization machinery (Axler 5.40/5.44) which is not developed in these
-companion sections, so we do not state it here in order to avoid an unproved
-numbered claim. -/
+strictly upper triangular. We prove the equivalence (a) ↔ (b) as
+`isNilpotent_iff_minpoly_eq_X_pow`, and the "(a) ⟹ (c)" direction as
+`exists_strictUpperTriangular_of_nilpotent` below — following Axler, since the
+minimal polynomial {lit}`zᵐ` splits, 5.44 gives a basis with an upper-triangular
+matrix (Section 5C `exists_upperTriangular_iff_minpoly_eq_prod`), and its diagonal
+entries are eigenvalues (5.41) hence {lit}`0`, so the matrix is strictly upper
+triangular (zero on and below the diagonal). -/
 
 theorem isNilpotent_iff_minpoly_eq_X_pow [Finite F V] [Nontrivial V] (T : V →ₗ[F] V) :
     IsNilpotent T ↔ ∃ m : ℕ, 0 < m ∧ minpoly F T = Polynomial.X ^ m := by
@@ -428,6 +434,26 @@ theorem isNilpotent_iff_minpoly_eq_X_pow [Finite F V] [Nontrivial V] (T : V →�
     have haeval := minpoly.aeval F T
     rw [heq, map_pow, Polynomial.aeval_X] at haeval
     exact haeval
+
+/-- 8.18(c) A nilpotent operator has a basis with respect to which its matrix is
+strictly upper triangular: upper triangular with all diagonal entries {lit}`0`
+(equivalently, all entries on and below the diagonal are {lit}`0`). -/
+theorem exists_strictUpperTriangular_of_nilpotent [Finite F V] [Nontrivial V]
+    (T : V →ₗ[F] V) (hT : IsNilpotent T) :
+    ∃ (n : ℕ) (v : Fin n → V) (hv : IsBasis F v),
+      IsUpperTriangular (matrixOf hv hv T) ∧ ∀ k, matrixOf hv hv T k k = 0 := by
+  obtain ⟨m, hm, hminpoly⟩ := (isNilpotent_iff_minpoly_eq_X_pow T).mp hT
+  have hprod : minpoly F T = ∏ _k : Fin m, (Polynomial.X - Polynomial.C (0 : F)) := by
+    rw [hminpoly]
+    simp only [map_zero, sub_zero, Finset.prod_const, Finset.card_univ, Fintype.card_fin]
+  obtain ⟨n, v, hv, hA⟩ :=
+    (exists_upperTriangular_iff_minpoly_eq_prod T).mpr ⟨m, fun _ => 0, hprod⟩
+  refine ⟨n, v, hv, hA, fun k => ?_⟩
+  have heig : HasEigenvalue T (matrixOf hv hv T k k) :=
+    (isEigenvalue_iff_diag hv T hA _).mpr ⟨k, rfl⟩
+  have hroot := (isEigenvalue_iff_isRoot T _).mp heig
+  rw [hminpoly, Polynomial.IsRoot.def, Polynomial.eval_pow, Polynomial.eval_X] at hroot
+  exact (pow_eq_zero_iff (by omega : m ≠ 0)).mp hroot
 
 /-! # Exercises -/
 
@@ -590,13 +616,13 @@ theorem exercise_8A_23 :
       (∀ lam : ℝ, HasEigenvalue T lam → lam = 0) ∧ ¬ IsNilpotent T := by
   sorry
 
-/-! 8A.24 (deferred): for each item in Example 8.15, exhibit a basis putting the
-nilpotent operator into the strictly-upper-triangular normal form of 8.18(c). This
-depends on the matrix-of-a-basis normal-form theory (8.18(c)), which is deferred in
-this section. -/
+/-! 8A.24 (exercise): for each item in Example 8.15, exhibit a basis putting the
+nilpotent operator into the strictly-upper-triangular normal form of 8.18(c).
+8.18(c) itself is proved above ({lit}`exists_strictUpperTriangular_of_nilpotent`);
+the per-example exhibition is left as an exercise. -/
 
-/-! 8A.25 (deferred): on an inner product space, a nilpotent operator has an
-orthonormal basis giving the strictly-upper-triangular form of 8.18(c). Same
-dependency on the deferred 8.18(c) normal form. -/
+/-! 8A.25 (exercise): on an inner product space, a nilpotent operator has an
+orthonormal basis giving the strictly-upper-triangular form of 8.18(c). Left as an
+exercise. -/
 
 end LADR.Section_8A
