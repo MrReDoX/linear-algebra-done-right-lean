@@ -1,6 +1,7 @@
 import Mathlib.LinearAlgebra.Alternating.Basic
 import Mathlib.LinearAlgebra.Determinant
 import Mathlib.LinearAlgebra.Multilinear.Basic
+import Mathlib.LinearAlgebra.Multilinear.TensorProduct
 import Mathlib.LinearAlgebra.Dimension.Finite
 import Mathlib.LinearAlgebra.FiniteDimensional.Basic
 import Mathlib.GroupTheory.Perm.Fin
@@ -35,11 +36,30 @@ forms `V⁽ᵐ⁾ₐₗₜ` are mathlib's {name}`AlternatingMap`, written
 `v₁, …, vₘ` becomes application to a function `v : Fin m → V`, and Axler's
 condition "`vⱼ = vₖ` for some `j ≠ k`" is {name}`AlternatingMap.map_eq_zero_of_eq`. -/
 
-/-! 9.26 Example: {lit}`m`-linear forms. Two of Axler's examples: the product
-{lit}`β(v₁, v₂, v₃, v₄) = α(v₁, v₂) ρ(v₃, v₄)` of two bilinear forms is a
-{lit}`4`-linear form; and {lit}`β(T₁, …, Tₘ) = tr(T₁ ⋯ Tₘ)` is an {lit}`m`-linear
-form on {lit}`ℒ(V)`. The type of {lit}`m`-linear forms is {name}`MultilinearMap`
-(9.25); these particular instances are recorded in prose. -/
+/-! 9.26 Example: {lit}`m`-linear forms. The type of `m`-linear forms is
+{name}`MultilinearMap` (9.25). Axler's first example is the product
+{lit}`β(v₁, v₂, v₃, v₄) = α(v₁, v₂) ρ(v₃, v₄)` of two bilinear forms `α, ρ`,
+which is a `4`-linear form. We build it from mathlib combinators: the two
+factors act on disjoint pairs of slots, so `β` is the tensor product
+{name}`MultilinearMap.domCoprod` of `α` and `ρ` on `Fin 2 ⊕ Fin 2`, followed by
+multiplication {name}`LinearMap.mul'` `F F : F ⊗ F → F`, reindexed along
+{name}`finSumFinEquiv` `: Fin 2 ⊕ Fin 2 ≃ Fin 4`. (Axler's second example,
+{lit}`β(T₁, …, Tₘ) = tr(T₁ ⋯ Tₘ)` on {lit}`ℒ(V)`, is left in prose.) -/
+open scoped Matrix in
+/-- 9.26: the product `β(v₁,v₂,v₃,v₄) = α(v₁,v₂)·ρ(v₃,v₄)` of two bilinear forms
+is a `4`-linear form. -/
+noncomputable def prodBilinear (α ρ : MultilinearMap F (fun _ : Fin 2 => V) F) :
+    MultilinearMap F (fun _ : Fin 4 => V) F :=
+  ((LinearMap.mul' F F).compMultilinearMap (α.domCoprod ρ)).domDomCongr finSumFinEquiv
+
+open scoped Matrix in
+@[simp] theorem prodBilinear_apply (α ρ : MultilinearMap F (fun _ : Fin 2 => V) F)
+    (v : Fin 4 → V) : prodBilinear α ρ v = α ![v 0, v 1] * ρ ![v 2, v 3] := by
+  rw [prodBilinear, MultilinearMap.domDomCongr_apply, LinearMap.compMultilinearMap_apply,
+    MultilinearMap.domCoprod_apply, LinearMap.mul'_apply]
+  congr 1
+  · congr 1; funext i; fin_cases i <;> rfl
+  · congr 1; funext i; fin_cases i <;> rfl
 
 /-! 9.27 Definition: alternating forms, `V⁽ᵐ⁾ₐₗₜ`
 

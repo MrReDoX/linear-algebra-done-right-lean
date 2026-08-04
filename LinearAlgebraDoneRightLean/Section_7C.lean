@@ -31,9 +31,31 @@ theorem isPositive_iff_symmetric_nonneg (T : V →ₗ[𝕜] V) :
     T.IsPositive ↔ LinearMap.IsSymmetric T ∧ ∀ v, 0 ≤ RCLike.re ⟪T v, v⟫_𝕜 :=
   ⟨fun h => ⟨h.1, h.2⟩, fun h => ⟨h.1, h.2⟩⟩
 
-/-! 7.35 Example: positive operators. Concrete instances — orthogonal projections,
-{lit}`R*R`, and operators with nonnegative eigenvalues — illustrating Definition
-7.34. Recorded in prose. -/
+/-! 7.35 Example: positive operators. Axler gives three illustrations of
+Definition 7.34: (a) the operator on {lit}`𝐅²` with matrix {lit}`!![2,-1;-1,1]`;
+(b) an orthogonal projection {lit}`P_U` ("as you should verify"); and (c)
+{lit}`T² + bT + cI` when {lit}`T` is self-adjoint and {lit}`b² < 4c` ("as shown by
+the proof of 7.26"). We formalize the concrete instance (a): its quadratic form is
+{lit}`⟨T(w,z),(w,z)⟩ = 2|w|² - 2 Re(w̄z) + |z|² = |w - z|² + |w|² ≥ 0`. -/
+open scoped Matrix ComplexOrder in
+/-- 7.35(a): the operator on {lit}`ℂ²` whose matrix in the standard basis is
+{lit}`!![2, -1; -1, 1]` is a positive operator, because its quadratic form equals
+{lit}`|w - z|² + |w|² ≥ 0`. -/
+theorem toEuclideanLin_isPositive :
+    (Matrix.toEuclideanLin (!![2, -1; -1, 1] : Matrix (Fin 2) (Fin 2) ℂ)).IsPositive := by
+  rw [Matrix.isPositive_toEuclideanLin_iff, Matrix.posSemidef_iff_dotProduct_mulVec]
+  refine ⟨?_, fun x => ?_⟩
+  · ext i j; fin_cases i <;> fin_cases j <;> simp [Matrix.conjTranspose_apply]
+  · have hval : star x ⬝ᵥ (!![2, -1; -1, 1] : Matrix (Fin 2) (Fin 2) ℂ).mulVec x
+        = ((Complex.normSq (x 0 - x 1) + Complex.normSq (x 0) : ℝ) : ℂ) := by
+      simp only [dotProduct, Fin.sum_univ_two, Matrix.mulVec, Matrix.cons_val_zero,
+        Matrix.cons_val_one, Pi.star_apply, RCLike.star_def, Matrix.of_apply,
+        Matrix.cons_val', Matrix.empty_val', Matrix.cons_val_fin_one]
+      apply Complex.ext <;>
+        simp [Complex.normSq_apply, Complex.mul_re, Complex.mul_im, Complex.sub_re, Complex.sub_im,
+          Complex.conj_re, Complex.conj_im] <;> ring
+    rw [hval]
+    exact_mod_cast add_nonneg (Complex.normSq_nonneg _) (Complex.normSq_nonneg _)
 
 /-! 7.36 Definition: square root
 

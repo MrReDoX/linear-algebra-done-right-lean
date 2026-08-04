@@ -52,7 +52,82 @@ variable {F : Type*} [Field F]
 {lit}`T(z₁, z₂, z₃) = (4z₂, 0, 5z₃)`, one has {lit}`G(0, T) = {(z₁, z₂, 0)}` and
 {lit}`G(5, T) = {(0, 0, z₃)}`, so {lit}`ℂ³ = G(0, T) ⊕ G(5, T)` — a concrete
 instance of the decomposition 8.22 (the generalized eigenvectors of this same
-operator appear in 8A's Example 8.10). Recorded in prose. -/
+operator appear in 8A's Example 8.10). We formalize all three claims. Since
+{lit}`dim ℂ³ = 3`, the generalized eigenspace {lit}`G(λ, T)` is
+{lit}`null(T − λI)³` (8.20), computed here from the explicit cubes. -/
+
+section Example_8_21
+
+open scoped Matrix
+
+/-- The operator {lit}`T(z₁, z₂, z₃) = (4z₂, 0, 5z₃)` on {lit}`ℂ³` of Example 8.21. -/
+def T_8_21 : Module.End ℂ (Fin 3 → ℂ) where
+  toFun z := ![4 * z 1, 0, 5 * z 2]
+  map_add' x y := by funext i; fin_cases i <;> simp <;> ring
+  map_smul' a x := by funext i; fin_cases i <;> simp <;> ring
+
+/-- {lit}`T³(z₁, z₂, z₃) = (0, 0, 125 z₃)`. -/
+theorem T_8_21_cube (z : Fin 3 → ℂ) : (T_8_21 ^ 3) z = ![0, 0, 125 * z 2] := by
+  funext i; fin_cases i <;> simp [pow_succ, Module.End.mul_apply, T_8_21] <;> ring
+
+/-- {lit}`(T − 5I)³(z₁, z₂, z₃) = (−125 z₁ + 300 z₂, −125 z₂, 0)`. -/
+theorem T_8_21_sub_cube (z : Fin 3 → ℂ) :
+    ((T_8_21 - (5:ℂ) • (1 : Module.End ℂ (Fin 3 → ℂ))) ^ 3) z
+      = ![-125 * z 0 + 300 * z 1, -125 * z 1, 0] := by
+  funext i
+  fin_cases i <;>
+    simp [pow_succ, Module.End.mul_apply, LinearMap.sub_apply, LinearMap.smul_apply,
+      Module.End.one_apply, Matrix.vecHead, Matrix.vecTail, Pi.smul_apply, smul_eq_mul, T_8_21] <;>
+    ring
+
+/-- 8.21: {lit}`G(0, T) = {(z₁, z₂, 0)}`, the vectors with vanishing third
+coordinate. -/
+theorem maxGenEigenspace_zero_8_21 :
+    maxGenEigenspace T_8_21 0 = LinearMap.ker (LinearMap.proj 2) := by
+  rw [Module.End.maxGenEigenspace_eq_genEigenspace_finrank, Module.End.genEigenspace_nat]
+  simp only [Module.finrank_pi, Fintype.card_fin]
+  ext z
+  simp only [LinearMap.mem_ker, LinearMap.proj_apply]
+  constructor
+  · intro h; have := congrFun h 2; simpa [T_8_21_cube] using this
+  · intro h; funext i; fin_cases i <;> simp [T_8_21_cube, h]
+
+/-- 8.21: {lit}`G(5, T) = {(0, 0, z₃)}`, the vectors with vanishing first two
+coordinates. -/
+theorem maxGenEigenspace_five_8_21 :
+    maxGenEigenspace T_8_21 5 =
+      LinearMap.ker (LinearMap.proj 0) ⊓ LinearMap.ker (LinearMap.proj (1 : Fin 3)) := by
+  rw [Module.End.maxGenEigenspace_eq_genEigenspace_finrank, Module.End.genEigenspace_nat]
+  simp only [Module.finrank_pi, Fintype.card_fin]
+  ext z
+  simp only [LinearMap.mem_ker, Submodule.mem_inf, LinearMap.proj_apply]
+  constructor
+  · intro h
+    have h0 := congrFun h 0; have h1 := congrFun h 1
+    simp only [T_8_21_sub_cube, Matrix.cons_val_zero, Matrix.cons_val_one, Pi.zero_apply] at h0 h1
+    have hz1 : z 1 = 0 := by linear_combination (-1/125 : ℂ) * h1
+    have hz0 : z 0 = 0 := by linear_combination (-1/125 : ℂ) * h0 + (12/5 : ℂ) * hz1
+    exact ⟨hz0, hz1⟩
+  · rintro ⟨hz0, hz1⟩; funext i; fin_cases i <;> simp [T_8_21_sub_cube, hz0, hz1]
+
+/-- 8.21: {lit}`ℂ³ = G(0, T) ⊕ G(5, T)`, packaged as complementarity of the two
+generalized eigenspaces. -/
+theorem isCompl_maxGenEigenspace_8_21 :
+    IsCompl (maxGenEigenspace T_8_21 0) (maxGenEigenspace T_8_21 5) := by
+  rw [maxGenEigenspace_zero_8_21, maxGenEigenspace_five_8_21]
+  constructor
+  · rw [disjoint_iff, eq_bot_iff]
+    intro z hzmem
+    simp only [Submodule.mem_inf, LinearMap.mem_ker, LinearMap.proj_apply] at hzmem
+    obtain ⟨h2, h0, h1⟩ := hzmem
+    simp only [Submodule.mem_bot]; funext i; fin_cases i <;> simp_all
+  · rw [codisjoint_iff, eq_top_iff]
+    intro z _
+    rw [Submodule.mem_sup]
+    exact ⟨![z 0, z 1, 0], by simp [LinearMap.mem_ker], ![0, 0, z 2],
+      by simp [Submodule.mem_inf, LinearMap.mem_ker], by funext i; fin_cases i <;> simp⟩
+
+end Example_8_21
 
 /-! 8.22 Generalized eigenspace decomposition.
 
