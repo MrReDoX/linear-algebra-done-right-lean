@@ -117,9 +117,53 @@ theorem spectral_eigenvalues_real (T : V →ₗ[𝕜] V) (hT : LinearMap.IsSymme
 
 /-! # Complex Spectral Theorem -/
 
-/-! 7.30 Example: an orthonormal basis of eigenvectors (real case). A concrete
-self-adjoint operator on {lit}`ℝ²`/{lit}`ℝ³` diagonalized by an orthonormal
-eigenbasis, illustrating the real spectral theorem 7.29. Recorded in prose. -/
+/-! 7.30 Example: an orthonormal basis of eigenvectors (real case). For the
+self-adjoint operator on {lit}`ℝ³` with matrix {lit}`!![14,-13,8; -13,14,8; 8,8,-7]`,
+the vectors {lit}`(1,-1,0), (1,1,1), (1,1,-2)` (normalized by {lit}`√2, √3, √6`)
+form an orthonormal basis of eigenvectors, with eigenvalues {lit}`27, 9, -15`. This
+illustrates the real spectral theorem 7.29. We verify each eigenvalue equation and
+the pairwise orthogonality and squared norms of the three vectors. -/
+
+section Example_7_30
+
+open scoped Matrix
+
+/-- Real scalar inner product is multiplication (used to compute coordinate inner
+products below). -/
+private theorem rinner (a b : ℝ) : ⟪a, b⟫_ℝ = a * b := by rw [real_inner_comm]; rfl
+
+/-- The self-adjoint matrix of Example 7.30. -/
+noncomputable def A_7_30 : Matrix (Fin 3) (Fin 3) ℝ := !![14, -13, 8; -13, 14, 8; 8, 8, -7]
+
+/-- The eigenvector {lit}`(1, -1, 0)` (eigenvalue {lit}`27`). -/
+noncomputable def v_7_30_a : EuclideanSpace ℝ (Fin 3) := (WithLp.equiv 2 _).symm ![1, -1, 0]
+/-- The eigenvector {lit}`(1, 1, 1)` (eigenvalue {lit}`9`). -/
+noncomputable def v_7_30_b : EuclideanSpace ℝ (Fin 3) := (WithLp.equiv 2 _).symm ![1, 1, 1]
+/-- The eigenvector {lit}`(1, 1, -2)` (eigenvalue {lit}`-15`). -/
+noncomputable def v_7_30_c : EuclideanSpace ℝ (Fin 3) := (WithLp.equiv 2 _).symm ![1, 1, -2]
+
+theorem A_7_30_eigenvalue_27 : Matrix.toEuclideanLin A_7_30 v_7_30_a = (27 : ℝ) • v_7_30_a := by
+  ext i; fin_cases i <;> simp [A_7_30, v_7_30_a, Matrix.toEuclideanLin] <;> norm_num
+theorem A_7_30_eigenvalue_9 : Matrix.toEuclideanLin A_7_30 v_7_30_b = (9 : ℝ) • v_7_30_b := by
+  ext i; fin_cases i <;> simp [A_7_30, v_7_30_b, Matrix.toEuclideanLin] <;> norm_num
+theorem A_7_30_eigenvalue_neg15 :
+    Matrix.toEuclideanLin A_7_30 v_7_30_c = (-15 : ℝ) • v_7_30_c := by
+  ext i; fin_cases i <;> simp [A_7_30, v_7_30_c, Matrix.toEuclideanLin] <;> norm_num
+
+theorem v_7_30_ortho_ab : ⟪v_7_30_a, v_7_30_b⟫_ℝ = 0 := by
+  rw [PiLp.inner_apply]; simp [rinner, v_7_30_a, v_7_30_b, Fin.sum_univ_three] <;> norm_num
+theorem v_7_30_ortho_ac : ⟪v_7_30_a, v_7_30_c⟫_ℝ = 0 := by
+  rw [PiLp.inner_apply]; simp [rinner, v_7_30_a, v_7_30_c, Fin.sum_univ_three] <;> norm_num
+theorem v_7_30_ortho_bc : ⟪v_7_30_b, v_7_30_c⟫_ℝ = 0 := by
+  rw [PiLp.inner_apply]; simp [rinner, v_7_30_b, v_7_30_c, Fin.sum_univ_three] <;> norm_num
+theorem v_7_30_normSq_a : ⟪v_7_30_a, v_7_30_a⟫_ℝ = 2 := by
+  rw [PiLp.inner_apply]; simp [rinner, v_7_30_a, Fin.sum_univ_three] <;> norm_num
+theorem v_7_30_normSq_b : ⟪v_7_30_b, v_7_30_b⟫_ℝ = 3 := by
+  rw [PiLp.inner_apply]; simp [rinner, v_7_30_b, Fin.sum_univ_three] <;> norm_num
+theorem v_7_30_normSq_c : ⟪v_7_30_c, v_7_30_c⟫_ℝ = 6 := by
+  rw [PiLp.inner_apply]; simp [rinner, v_7_30_c, Fin.sum_univ_three] <;> norm_num
+
+end Example_7_30
 
 /-! 7.31 Complex spectral theorem
 
@@ -218,9 +262,39 @@ theorem complex_spectral {W : Type*} [NormedAddCommGroup W] [InnerProductSpace �
     ((LADR.Section_5C.tfae_upperTriangular he T).out 0 2).mp hUT
   exact ⟨n, e, normal_ut_diagonal T hN e hflag⟩
 
-/-! 7.33 Example: an orthonormal basis of eigenvectors (complex case). A concrete
-normal operator on {lit}`ℂ²` diagonalized by an orthonormal eigenbasis,
-illustrating the complex spectral theorem 7.31. Recorded in prose. -/
+/-! 7.33 Example: an orthonormal basis of eigenvectors (complex case). For the
+normal operator {lit}`T(w, z) = (2w - 3z, 3w + 2z)` on {lit}`ℂ²` (matrix
+{lit}`!![2,-3; 3,2]`), the vectors {lit}`(i, 1), (-i, 1)` (normalized by {lit}`√2`)
+form an orthonormal basis of eigenvectors, with eigenvalues {lit}`2 + 3i, 2 - 3i`.
+This illustrates the complex spectral theorem 7.31. -/
+
+section Example_7_33
+
+open scoped Matrix
+
+/-- The normal matrix of Example 7.33. -/
+noncomputable def A_7_33 : Matrix (Fin 2) (Fin 2) ℂ := !![2, -3; 3, 2]
+
+/-- The eigenvector {lit}`(i, 1)` (eigenvalue {lit}`2 + 3i`). -/
+noncomputable def v_7_33_a : EuclideanSpace ℂ (Fin 2) := (WithLp.equiv 2 _).symm ![Complex.I, 1]
+/-- The eigenvector {lit}`(-i, 1)` (eigenvalue {lit}`2 - 3i`). -/
+noncomputable def v_7_33_b : EuclideanSpace ℂ (Fin 2) := (WithLp.equiv 2 _).symm ![-Complex.I, 1]
+
+theorem A_7_33_eigenvalue_add :
+    Matrix.toEuclideanLin A_7_33 v_7_33_a = (2 + 3 * Complex.I) • v_7_33_a := by
+  ext i; fin_cases i <;> simp [A_7_33, v_7_33_a, Matrix.toEuclideanLin, Complex.ext_iff]
+theorem A_7_33_eigenvalue_sub :
+    Matrix.toEuclideanLin A_7_33 v_7_33_b = (2 - 3 * Complex.I) • v_7_33_b := by
+  ext i; fin_cases i <;> simp [A_7_33, v_7_33_b, Matrix.toEuclideanLin, Complex.ext_iff]
+
+theorem v_7_33_ortho : ⟪v_7_33_a, v_7_33_b⟫_ℂ = 0 := by
+  rw [PiLp.inner_apply]; simp [v_7_33_a, v_7_33_b, Fin.sum_univ_two, Complex.ext_iff]
+theorem v_7_33_normSq_a : ⟪v_7_33_a, v_7_33_a⟫_ℂ = 2 := by
+  rw [PiLp.inner_apply]; simp [v_7_33_a, Fin.sum_univ_two, Complex.ext_iff] <;> norm_num
+theorem v_7_33_normSq_b : ⟪v_7_33_b, v_7_33_b⟫_ℂ = 2 := by
+  rw [PiLp.inner_apply]; simp [v_7_33_b, Fin.sum_univ_two, Complex.ext_iff] <;> norm_num
+
+end Example_7_33
 
 /-! # Exercises 7B -/
 
