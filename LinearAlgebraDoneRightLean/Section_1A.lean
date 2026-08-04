@@ -125,12 +125,11 @@ theorem exercise_1A_6 (α : ℂ) (hα : α ≠ 0) : ∃! β : ℂ, α * β = 1 :
           have : α.re ^ 2 ≤ 0 := by
             have := congrArg (fun x => x - α.im ^ 2) hsum
             grind
-          -- exact le_antisymm this hre_sq_nonneg
           grind
         exact h₁
       have : α.im = 0 := by
         have hsum := a
-        have h₁ : α.im ^ 2 = 0:= by grind
+        have h₁ : α.im ^ 2 = 0 := by grind
         grind
       rw [Complex.ext_iff] at hα
       simp_all only [zero_re, zero_im, and_true, ne_eq, OfNat.ofNat_ne_zero, not_false_eq_true, zero_pow, add_zero,
