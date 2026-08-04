@@ -6,9 +6,9 @@ import Mathlib.Tactic.Linarith
 import Mathlib.Tactic.Linter.Style
 import Mathlib.Tactic.Recall
 import Mathlib.Tactic.Ring
--- Why there's no?
+
 import Mathlib.Tactic
----
+
 import CompanionHelper
 
 /-!
@@ -125,12 +125,12 @@ theorem exercise_1A_6 (α : ℂ) (hα : α ≠ 0) : ∃! β : ℂ, α * β = 1 :
           have : α.re ^ 2 ≤ 0 := by
             have := congrArg (fun x => x - α.im ^ 2) hsum
             grind
-          grind
-        exact h₁
+          simp_all only [_root_.sq_nonpos_iff, ne_eq, OfNat.ofNat_ne_zero, not_false_eq_true, zero_pow]
+        trivial
       have : α.im = 0 := by
         have hsum := a
         have h₁ : α.im ^ 2 = 0 := by grind
-        grind
+        simp_all only [add_zero, Std.le_refl, ne_eq, OfNat.ofNat_ne_zero, not_false_eq_true, pow_eq_zero_iff, zero_pow]
       rw [Complex.ext_iff] at hα
       simp_all only [zero_re, zero_im, and_true, ne_eq, OfNat.ofNat_ne_zero, not_false_eq_true, zero_pow, add_zero,
         Std.le_refl, pow_eq_zero_iff]
@@ -142,7 +142,7 @@ theorem exercise_1A_6 (α : ℂ) (hα : α ≠ 0) : ∃! β : ℂ, α * β = 1 :
         ring_nf
       rw [this]
       simp [hns]
-      grind
+      field_simp; norm_num
   · rintro γ hγ
     have h1 : α.re * γ.re - α.im * γ.im = 1 := by
       simpa [Complex.mul_re, Complex.one_re] using congrArg Complex.re hγ
@@ -150,17 +150,22 @@ theorem exercise_1A_6 (α : ℂ) (hα : α ≠ 0) : ∃! β : ℂ, α * β = 1 :
       simpa [Complex.mul_im, Complex.one_im] using congrArg Complex.im hγ
     have key1 : normSq α * γ.re = α.re := by
       rw [Complex.normSq_apply]
-      grind
+      field_simp;
+      grind => ring
     have key2 : normSq α * γ.im = -α.im := by
       rw [Complex.normSq_apply]
-      grind
+      ring_nf
+      grind => ring
+      -- grind => ring
     apply Complex.ext
     · show γ.re = α.re / normSq α
       field_simp [hns]
-      grind
+      rw [mul_comm] at key1
+      trivial
     · show γ.im = -α.im / normSq α
       field_simp [hns]
-      grind
+      rw [mul_comm] at key2
+      trivial
 
 
 /-! 1.5 Definition: −α, subtraction, 1/α, division -/
