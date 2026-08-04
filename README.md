@@ -104,11 +104,17 @@ or, where it needs machinery genuinely absent from the pinned mathlib or relies 
 Axler's own informal/analytic constructions, recorded with an explicit prose note.
 Exercises remain as `sorry`. There are no silent `sorry`s on numbered results, and
 no numbered item is omitted. **Every named Axler result (numbered theorem) is
-proved in Lean** — none is left as a prose deferral. The only prose-only items are
-Axler's own informal *definitions* (e.g. the intuitive box/volume definitions
-7.108–7.110 and the matrix-of-a-basis Jordan-form definition 8.44, both captured
-elsewhere in a formal, matrix-free way) and a handful of purely computational or
-integral-inner-product worked *examples*.
+proved in Lean** — none is left as a prose deferral. The concrete worked
+*examples* are likewise formalized: the orthonormal-eigenbasis diagonalizations
+7.30/7.33, the positive operator 7.35(a), the square root 7.37, the positive
+square root 7.41, the annihilating polynomial 5.28, the generalized-eigenspace
+decomposition 8.21, the traces 8.48/8.53, and the product of bilinear forms 9.26
+are all real Lean computations. The only prose-only items that remain are Axler's
+own informal *definitions* (e.g. the intuitive box/volume definitions 7.108–7.110
+and the matrix-of-a-basis Jordan-form definition 8.44, both captured elsewhere in
+a formal, matrix-free way) and the integral-inner-product worked *examples*
+6.34/6.41/6.63, whose `L²[a,b]` space is available in the project only as
+skippable, `sorry`-backed infrastructure.
 
 \* A `✓*` marks a section that prose-defers one or more numbered results. These
 deferrals cluster around a few missing pieces: the *matrix-of-a-basis normal-form
